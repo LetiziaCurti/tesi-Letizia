@@ -1,5 +1,5 @@
 # tesi-Letizia
-Repository con i files della tesi 
+Repository con i files della Tesi di Letizia Curti
 
 
 

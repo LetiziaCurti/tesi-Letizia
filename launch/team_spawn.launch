@@ -1,0 +1,14 @@
+<launch> 
+<!-- Turtlesim Node-->
+ <node pkg="turtlesim" type="turtlesim_node" name="sim"/>
+ 
+<node pkg="rosservice" type="rosservice" name="create_master" args='call --wait /turtle1/teleport_absolute "{x: 1,y: 1, theta: 0}" '/>
+
+<!-- spawn more turtles -->
+<node pkg="rosservice" type="rosservice" name="create_task1" args='call --wait /spawn "{x: 6,y: 8.5, theta: -1.5, name: task1}" '/>
+
+<node pkg="rosservice" type="rosservice" name="create_robot1" args='call --wait /spawn "{x: 3,y: 5.54, theta: 1.5, name: robot1}" '/>
+<node pkg="rosservice" type="rosservice" name="create_robot2" args='call --wait /spawn "{x: 8,y: 5.54, theta: 1.5, name: robot2}"'/>
+
+<node pkg="rosservice" type="rosservice" name="clear_path" args='call --wait /clear '/>
+</launch>

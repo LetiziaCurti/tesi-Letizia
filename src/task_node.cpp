@@ -10,7 +10,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
-#include "poste_pkg/AgentStatus.h"  
+#include "task_assign/AgentStatus.h"  
 
 using namespace std;
 
@@ -50,7 +50,7 @@ void poseCallback(const turtlesim::Pose::ConstPtr& msg)
 void publishIniStatus() 
 {
   
-    poste_pkg::AgentStatus status_msg;
+    task_assign::AgentStatus status_msg;
 
     status_msg.header.stamp = ros::Time::now();
     status_msg.t = ros::Time::now();
@@ -77,7 +77,7 @@ void publishIniStatus()
 // Quando riceve un messaggio dal master in cui il suo stato e tornato a false, vuol dire che il robot
 // a cui era stato assegnato ha finito di eseguirlo, assignment torna false e (nel main) il task 
 // ricomincia a pubblicare il suo stato
-void AssignCallback(const poste_pkg::AgentStatus::ConstPtr& status_msg)
+void AssignCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
 {
     //check: deve essere arrivato qualcosa
     if(status_msg->is_ready)
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     sub = node.subscribe(task_name + "/pose", 10, &poseCallback);
 
     // Publish and subscribe to team status messages
-    status_pub = node.advertise<poste_pkg::AgentStatus>("task_arrival_topic", 10);
+    status_pub = node.advertise<task_assign::AgentStatus>("task_arrival_topic", 10);
     
     assignment_sub = node.subscribe("assignment_topic", 20, &AssignCallback);
     sleep(1);

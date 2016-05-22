@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(poste_pkg)
+project(task_assign)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -46,13 +46,13 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-FILES
-RobotStatus.msg
-Agent.msg
-AgentStatus.msg
-SecondAgent.msg
-)
+ add_message_files(
+   FILES
+   AgentStatus.msg
+   SecondAgent.msg
+#   Message1.msg
+#   Message2.msg
+ )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -69,11 +69,11 @@ SecondAgent.msg
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
+ generate_messages(
    DEPENDENCIES
    std_msgs
    geometry_msgs
-)
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -106,7 +106,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES poste_pkg
+#  LIBRARIES task_assign
   CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime
 #  DEPENDS system_lib
 )
@@ -123,38 +123,32 @@ include_directories(
 )
 
 ## Declare a C++ library
-# add_library(poste_pkg
-#   src/${PROJECT_NAME}/poste_pkg.cpp
+# add_library(task_assign
+#   src/${PROJECT_NAME}/task_assign.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(poste_pkg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(task_assign ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(poste_pkg_node src/poste_pkg_node.cpp)
-# add_executable(agent_queue src/move.cpp)
-# add_executable(active_agent src/synchro_team.cpp)
+# add_executable(task_assign_node src/task_assign_node.cpp)
 add_executable(robot_node src/robot_node.cpp)
 add_executable(task_node src/task_node.cpp)
 add_executable(central_node src/central_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(poste_pkg_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-# add_dependencies(agent_queue ${PROJECT_NAME}_gencpp)
-# add_dependencies(active_agent ${PROJECT_NAME}_gencpp)
+# add_dependencies(task_assign_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(robot_node ${PROJECT_NAME}_gencpp)
 add_dependencies(task_node ${PROJECT_NAME}_gencpp)
 add_dependencies(central_node ${PROJECT_NAME}_gencpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(poste_pkg_node
+# target_link_libraries(task_assign_node
 #   ${catkin_LIBRARIES}
 # )
-# target_link_libraries(agent_queue ${catkin_LIBRARIES})
-# target_link_libraries(active_agent ${catkin_LIBRARIES})
 target_link_libraries(robot_node ${catkin_LIBRARIES})
 target_link_libraries(task_node ${catkin_LIBRARIES})
 target_link_libraries(central_node ${catkin_LIBRARIES})
@@ -174,18 +168,18 @@ target_link_libraries(central_node ${catkin_LIBRARIES})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS poste_pkg poste_pkg_node
+# install(TARGETS task_assign task_assign_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
 ## Mark cpp header files for installation
-#  install(DIRECTORY include/${PROJECT_NAME}/
-#    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#    FILES_MATCHING PATTERN "*.h"
-#    PATTERN ".svn" EXCLUDE
-#  )
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#   FILES_MATCHING PATTERN "*.h"
+#   PATTERN ".svn" EXCLUDE
+# )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
@@ -199,12 +193,13 @@ target_link_libraries(central_node ${catkin_LIBRARIES})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_poste_pkg.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_task_assign.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
 
 add_definitions(-std=gnu++11)

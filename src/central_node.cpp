@@ -11,7 +11,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
-#include "poste_pkg/AgentStatus.h"  
+#include "task_assign/AgentStatus.h"  
 
 
 using namespace std;
@@ -68,7 +68,7 @@ inline const char * const BoolToString(bool b)
 // messaggio ad eccezione del campo robot_assign in cui viene messo lo status del robot corrispondente
 void publishAssignment() 
 {
-    poste_pkg::AgentStatus status_msg; 
+    task_assign::AgentStatus status_msg; 
     
     status_msg.header.stamp = ros::Time::now();
     status_msg.t = tToAssign.t;
@@ -102,7 +102,7 @@ void publishAssignment()
 // Callback con cui il master legge "assignment_topic" per vedere se ci sono robot che hanno finito, e quindi task che si liberano
 // In corrispondenza dei task liberi il master rimette a false il campo status della struttura_agente_task corrispondente in 
 // tasks_buffer e elimina la coppia che ha terminato da map_assignment
-void FreeCallback(const poste_pkg::AgentStatus::ConstPtr& status_msg)
+void FreeCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
 {
     if(status_msg->is_ready && !status_msg->status && !status_msg->robot_assign.status)
     {
@@ -131,7 +131,7 @@ void FreeCallback(const poste_pkg::AgentStatus::ConstPtr& status_msg)
 // a true (il master modifica la struttura_agente_robot e la struttura_agente_task corrispondenti dentro i buffers rispettivi)
 // Poi viene pubblicato su "assignment_topic" (con publishAssignment()) il messaggio in cui si ha il task con il robot associato 
 // (il cui status è dentro msg.robot_assign)
-void TotalCallback(const poste_pkg::AgentStatus::ConstPtr& status_msg)
+void TotalCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
 {
     //check: deve essere arrivato qualcosa
     if(status_msg->is_ready && status_msg->x!=-1 && status_msg->y!=-1 && status_msg->theta!=200)
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
     task_status_sub = node.subscribe("task_arrival_topic", 20, &TotalCallback);   
     robot_status_sub = node.subscribe("robot_arrival_topic", 20, &TotalCallback);
     
-    assignment_pub = node.advertise<poste_pkg::AgentStatus>("assignment_topic", 10);
+    assignment_pub = node.advertise<task_assign::AgentStatus>("assignment_topic", 10);
     assignment_sub = node.subscribe("assignment_topic", 20, &FreeCallback);
     sleep(1);
     

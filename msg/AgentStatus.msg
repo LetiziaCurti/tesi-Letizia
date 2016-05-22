@@ -6,7 +6,7 @@ bool is_ready
 string type
 bool status
 
-poste_pkg/SecondAgent robot_assign
+task_assign/SecondAgent robot_assign
 
 float32 x
 float32 y

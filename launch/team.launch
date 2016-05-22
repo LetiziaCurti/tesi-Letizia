@@ -12,3 +12,4 @@
   <node name="robot2" pkg="task_assign" type="robot_node" args="robot2" output="screen"/> 
   
 </launch>
+

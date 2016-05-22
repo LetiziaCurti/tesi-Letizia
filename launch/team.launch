@@ -1,8 +1,14 @@
 <launch> 
-  <node name="master" pkg="poste_pkg" type="central_node" args="master" output="screen"/>
 
-  <node name="task1" pkg="poste_pkg" type="task_node" args="task1" output="screen"/>
+  <node name="master" pkg="task_assign" type="central_node" args="5" output="screen"/>
+
+  <node name="task1" pkg="task_assign" type="task_node" args="task1" output="screen"/>
+  <node name="task2" pkg="task_assign" type="task_node" args="task2" output="screen"/>
+  <node name="task3" pkg="task_assign" type="task_node" args="task3" output="screen"/>
+  <node name="task4" pkg="task_assign" type="task_node" args="task4" output="screen"/>
+  <node name="task5" pkg="task_assign" type="task_node" args="task5" output="screen"/>
+ 
+  <node name="robot1" pkg="task_assign" type="robot_node" args="robot1" output="screen"/> 
+  <node name="robot2" pkg="task_assign" type="robot_node" args="robot2" output="screen"/> 
   
-  <node name="robot1" pkg="poste_pkg" type="robot_node" args="robot1" output="screen"/> 
-  <node name="robot2" pkg="poste_pkg" type="robot_node" args="robot2" output="screen"/> 
 </launch>

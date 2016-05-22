@@ -9,7 +9,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
-#include "poste_pkg/AgentStatus.h"   
+#include "task_assign/AgentStatus.h"   
 #include <sys/stat.h>
 #include <iostream>
 
@@ -61,7 +61,7 @@ void poseCallback(const turtlesim::Pose::ConstPtr& msg)
 // Il robot pubblica il suo stato su "robot_arrival_topic"
 void publishIniStatus() 
 {
-    poste_pkg::AgentStatus status_msg; 
+    task_assign::AgentStatus status_msg; 
 
     status_msg.header.stamp = ros::Time::now();
     status_msg.t = ros::Time::now();
@@ -123,7 +123,7 @@ void moveGoal(turtlesim::Pose goal_pose, double distance_tolerance)
 // e il suo stato (nel campo msg.robot_assign), rimettendo a false gli status suo e del task eseguito
 void publishFreeStatus() 
 {
-    poste_pkg::AgentStatus status_msg; 
+    task_assign::AgentStatus status_msg; 
 
     status_msg.header.stamp = ros::Time::now();
     status_msg.t = ros::Time::now();
@@ -162,7 +162,7 @@ void publishFreeStatus()
 // Pubblica il proprio stato di ready su "robots_arrival_topic" finché non riceve un assignment, 
 // dopodiché smette di pubblicare il suo stato e memorizza la posizione del task da raggiungere
 // in task_pose
-void AssignCallback(const poste_pkg::AgentStatus::ConstPtr& status_msg)
+void AssignCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
 {
     if(assignment) return;
     
@@ -218,9 +218,9 @@ int main(int argc, char **argv)
     sub = node.subscribe(robot_name + "/pose", 10, &poseCallback);
 
     // Publish and subscribe to team status messages
-    status_pub = node.advertise<poste_pkg::AgentStatus>("robot_arrival_topic", 10);
+    status_pub = node.advertise<task_assign::AgentStatus>("robot_arrival_topic", 10);
     
-    assignment_pub = node.advertise<poste_pkg::AgentStatus>("assignment_topic", 10);
+    assignment_pub = node.advertise<task_assign::AgentStatus>("assignment_topic", 10);
     assignment_sub = node.subscribe("assignment_topic", 20, &AssignCallback);
     sleep(1); 
     
@@ -255,8 +255,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-
-
-
-

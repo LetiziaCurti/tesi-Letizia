@@ -205,77 +205,72 @@ void TotalCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
 	    }
 	    
 	    
-		
-	    // si dovrebbe avere NUM_SPORTELLI = tasks_buffer.size() e non fissato all'inizio 
-	    if(tasks_buffer.size()>=NUM_SPORTELLI)
+	    if(robots_buffer.size()>0)
 	    {
-		if(robots_buffer.size()>0)
+		//prendo il primo robot in coda con status false e lo metto in rToAssign
+		int counter_r=0;
+		struct agent current_r;
+		for(auto elem: robots_time)
 		{
-		    //prendo il primo robot in coda con status false e lo metto in rToAssign
-		    int counter_r=0;
-		    struct agent current_r;
-		    for(auto elem: robots_time)
+		    if(!(robots_buffer[elem.second]).status)
 		    {
-			if(!(robots_buffer[elem.second]).status)
-			{
-			    current_r = robots_buffer[elem.second];
-			    break;
-			}
-			counter_r++;
+			current_r = robots_buffer[elem.second];
+			break;
 		    }
-		    if(counter_r!=robots_time.size())
-			rToAssign = current_r;
+		    counter_r++;
 		}
+		if(counter_r!=robots_time.size())
+		    rToAssign = current_r;
+	    }
 
-	      
-		if(tasks_buffer.size()>0)
+	  
+	    if(tasks_buffer.size()>0)
+	    {
+		//prendo il primo task in coda con status false e lo metto in tToAssign
+		int counter_t=0;
+		struct agent current_t;
+		for(auto elem: tasks_time)
 		{
-		    //prendo il primo task in coda con status false e lo metto in tToAssign
-		    int counter_t=0;
-		    struct agent current_t;
-		    for(auto elem: tasks_time)
+		    if(!(tasks_buffer[elem.second]).status)
 		    {
-			if(!(tasks_buffer[elem.second]).status)
-			{
-			    current_t = tasks_buffer[elem.second];
-			    break;
-			}
-			counter_t++;
+			current_t = tasks_buffer[elem.second];
+			break;
 		    }
-		    if(counter_t!=tasks_time.size())
-			tToAssign = current_t;
+		    counter_t++;
 		}
-	      
-	      
-		if(rToAssign.id!="" && tToAssign.id!="")
-		{   
-		    giaInAssign = false;
-		    for(auto elem : map_assignment)
-		    {
-			if(rToAssign.id==elem.first || tToAssign.id==elem.second)
-			  giaInAssign = true;
-		    }
-		    if(map_assignment.size()<NUM_SPORTELLI && !giaInAssign)
-		    {
-			rToAssign.status=true;
-			tToAssign.status=true;
-			
-			map_assignment[rToAssign.id]=tToAssign.id;
-		    
-			robots_buffer[rToAssign.id].status=true;
-			tasks_buffer[tToAssign.id].status=true;
-		    
-			publishAssignment();
-		    }
-		}
-	      
-		  
+		if(counter_t!=tasks_time.size())
+		    tToAssign = current_t;
+	    }
+	  
+	  
+	    if(rToAssign.id!="" && tToAssign.id!="")
+	    {   
+		giaInAssign = false;
 		for(auto elem : map_assignment)
 		{
-		    ROS_INFO_STREAM("In map_assignment c'e': "<< elem.first <<" - "<<elem.second);
+		    if(rToAssign.id==elem.first || tToAssign.id==elem.second)
+		      giaInAssign = true;
 		}
-	      
+		if(map_assignment.size()<NUM_SPORTELLI && !giaInAssign)
+		{
+		    rToAssign.status=true;
+		    tToAssign.status=true;
+		    
+		    map_assignment[rToAssign.id]=tToAssign.id;
+		
+		    robots_buffer[rToAssign.id].status=true;
+		    tasks_buffer[tToAssign.id].status=true;
+		
+		    publishAssignment();
+		}
 	    }
+	  
+	      
+	    for(auto elem : map_assignment)
+	    {
+		ROS_INFO_STREAM("In map_assignment c'e': "<< elem.first <<" - "<<elem.second);
+	    }
+	      
 	}
     }
 }

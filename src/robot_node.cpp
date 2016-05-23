@@ -2,9 +2,8 @@
 // il robot comunica il suo stato (nome, status=false(not busy), posizione) al central 
 // node (che lo impila nella coda in base al suo tempo di arrivo) scrivendo su "robot_arrival_topic", 
 // finché non riceve un assignment dal central node (legge "assignment_topic")
-// Dopodiché pubblica su "cmd_vel topic" per raggiungere con moveGoal il task e successivamente l'uscita
-// Raggiunta l'uscita pubblica su "assignment_topic" che sia lui che il task a lui assegnato sono liberi 
-// e "muore"
+// Dopodiché pubblica su "cmd_vel topic" per raggiungere con moveGoal il task (e successivamente l'uscita)
+// (Raggiunta l'uscita) poi pubblica su "assignment_topic" che lui è libero
 
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
@@ -129,7 +128,7 @@ void publishFreeStatus()
     status_msg.t = ros::Time::now();
     status_msg.robot_id = task_name;
     status_msg.is_ready = true;
-    status_msg.status = false; //rimetto lo stato del task a false
+    status_msg.status = true; //tengo lo stato del task a true (anche se dovrebbe essere comunicato false al task per fargli capire che è stato terminato)
     status_msg.type = "task";
     status_msg.x = task_pose.x;
     status_msg.y = task_pose.y;
@@ -152,7 +151,7 @@ void publishFreeStatus()
 //     sleep(1.0);
     assignment_pub.publish(status_msg);
     
-    ROS_INFO_STREAM(robot_name <<" has finished the assignment. So "<< task_name << " is free.");
+    ROS_INFO_STREAM(robot_name <<" has finished the assignment. So "<< task_name << " is executed.");
 }
 
 
@@ -223,35 +222,35 @@ int main(int argc, char **argv)
     assignment_pub = node.advertise<task_assign::AgentStatus>("assignment_topic", 10);
     assignment_sub = node.subscribe("assignment_topic", 20, &AssignCallback);
     sleep(1); 
-    
-	
+
+
+
     ros::Rate rate(10);
-    while (ros::ok() && !assignment) 
+    while (ros::ok()) 
     {
-	publishIniStatus();
+	while(!assignment && ros::ok())
+	{
+	    publishIniStatus();  
+	    ros::spinOnce();
+	    rate.sleep();
+	}
+	while(assignment && ros::ok())
+	{  
+	    // il robot si muove verso il task
+	    ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
+	    moveGoal(task_pose,distance_tolerance);
+// 	    // il robot si muove verso l'uscita
+// 	    ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO THE EXIT");
+// 	    moveGoal(uscita,distance_tolerance);
+	    
+	    assignment=false;
+	}
+	
+	publishFreeStatus();
 	ros::spinOnce(); 
 	rate.sleep();
     }
-    
-    if(assignment && ros::ok())
-    {
-	// il robot si muove verso il task
-	ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO THE GOAL");
-	moveGoal(task_pose,distance_tolerance);
-	// il robot si muove verso l'uscita
-	ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO THE EXIT");
-	moveGoal(uscita,distance_tolerance);
-    }
-    
-    // dico al master che ho finito e quindi che torniamo liberi io e il task
-    assignment=false;
-    ros::Rate looprate(100);
-    while(ros::ok())
-    {
-	publishFreeStatus();
-	ros::spinOnce(); 
-	looprate.sleep();
-    }
-
+ 
     return 0;
 }
+

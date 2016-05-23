@@ -1,9 +1,11 @@
 // nodo che modella l'agente task
 // il task comunica il suo stato (nome, status=false(not busy), posizione) al central node 
 // (che lo impila nella coda in base al suo tempo di arrivo) scrivendo su "task_arrival_topic",
-// finché non riceve un assignment dal central node (legge "assignment_topic")
+// finché non riceve un assignment dal central node (legge "assignment_topic") e poi muore
+
+// Da aggiungere:
 // Mentre è impegnato rimane in ascolto del suo stato leggendo da "assignment_topic", quando riceve dal 
-// master di essere stato liberato ricomincia a pubblicare il suo stato fino ad un nuovo assignment
+// master che il suo stato è tornato a false pubblica che è stato eseguito e muore
 
 
 
@@ -124,24 +126,25 @@ int main(int argc, char **argv)
     publishIniStatus();
     
     ros::Rate rate(10);
-    while (ros::ok()) 
+
+    while(!assignment && ros::ok())
     {
-	while(!assignment && ros::ok())
-	{
-	    publishIniStatus();  
-	    ros::spinOnce();
-	    rate.sleep();
-	}
-	while(assignment && ros::ok())
-	{  
-	    ros::spinOnce();
-	    rate.sleep();
-	}
-	
-	publishIniStatus();
-	ros::spinOnce(); 
+	publishIniStatus();  
+	ros::spinOnce();
 	rate.sleep();
     }
+    
+    // il task dovrebbe ricevere dal master che il robot a lui assegnato ha finito di eseguirlo (va aggiunto questo messaggio)
+    // e dopo pubblicare che è stato eseguito e morire
+//     while(assignment && ros::ok())
+//     {  
+// 	ros::spinOnce();
+// 	rate.sleep();
+//     }
+//     if(!assignment)     // e qui assignment dovrebbe diventare false se è vera (status_msg->robot_id==task_name && status_msg->status==false)
+// 	ROS_INFO_STREAM(task_name << " è stato eseguito");
+
+    
 
 
 

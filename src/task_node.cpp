@@ -13,6 +13,8 @@
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
 #include "task_assign/AgentStatus.h"  
+#include "task_assign/IniStatus.h"
+#include "task_assign/AssignMsg.h"
 
 using namespace std;
 
@@ -47,7 +49,7 @@ public:
 	sub = node.subscribe(task_name + "/pose", 10, &Task::poseCallback,this);
 
 	// Publish and subscribe to team status messages
-	status_pub = node.advertise<task_assign::AgentStatus>("task_arrival_topic", 10);
+	status_pub = node.advertise<task_assign::IniStatus>("task_arrival_topic", 10);
 	
 	assignment_sub = node.subscribe("assignment_topic", 20, &Task::AssignCallback,this);
     }
@@ -68,7 +70,7 @@ public:
     void publishIniStatus() 
     {
       
-	task_assign::AgentStatus status_msg;
+	task_assign::IniStatus status_msg;
 
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.t = ros::Time::now();
@@ -95,21 +97,23 @@ public:
     // Quando riceve un messaggio dal master in cui il suo stato e tornato a false, vuol dire che il robot
     // a cui era stato assegnato ha finito di eseguirlo, assignment torna false e (nel main) il task 
     // ricomincia a pubblicare il suo stato
-    void AssignCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
+    void AssignCallback(const task_assign::AssignMsg::ConstPtr& assign_msg)
     {
-	//check: deve essere arrivato qualcosa
-	if(status_msg->is_ready)
+	for(auto elem : assign_msg->assign_vect)
 	{
-	    ROS_INFO_STREAM(task_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
-	
-	    // se il task che è arrivato ha come robot assegnato me, metto assignment a true così
-	    // smetto di pubblicare il mio stato
-	    if(status_msg->robot_id==task_name && status_msg->status==true)
-		assignment = true;
-	    else
-		assignment = false;
+	    //check: deve essere arrivato qualcosa
+	    if(elem.task_name!="")
+	    {
+		ROS_INFO_STREAM(task_name << " is listening " << elem.task_name << " with robot assigned " << elem.rob_name);
+	    
+		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
+		// smetto di pubblicare il mio stato
+		if(elem.task_name==task_name && elem.task_status==true)
+		    assignment = true;
+		else
+		    assignment = false;
+	    }
 	}
-
     }
 
 

@@ -10,6 +10,7 @@
 #include "turtlesim/Pose.h"
 #include "task_assign/AgentStatus.h"   
 #include "task_assign/IniStatus.h" 
+#include "task_assign/OneAssign.h"
 #include "task_assign/AssignMsg.h"
 #include <sys/stat.h>
 #include <iostream>
@@ -49,7 +50,7 @@ public:
 
     bool assignment = false;
     string task_name;
-    int pos;
+    int posizione;
     
 
     Robot(ros::NodeHandle& node, string name) 
@@ -154,21 +155,28 @@ public:
     // e il suo stato (nel campo msg.robot_assign), rimettendo a false gli status suo e del task eseguito
     void publishFreeStatus() 
     {
-	task_assign::AssignMsg assign_msg; 
+	task_assign::OneAssign status_msg; 
+
+	status_msg.task_id = task_name;
+	status_msg.t_ready = true;
+	status_msg.t_status = true; //tengo lo stato del task a true (anche se dovrebbe essere comunicato false al task per fargli capire che è stato terminato)
+	status_msg.task_x = task_pose.x;
+	status_msg.task_y = task_pose.y;
+	status_msg.task_theta = task_pose.theta;
 	
-	assign_msg.assign_vect[pos].task_name = task_name;
-	assign_msg.assign_vect[pos].task_status = true;  //tengo lo stato del task a true (anche se dovrebbe essere comunicato false al task per fargli capire che è stato terminato)
-	assign_msg.assign_vect[pos].task_x = task_pose.x;
-	assign_msg.assign_vect[pos].task_y = task_pose.y;
-	assign_msg.assign_vect[pos].task_theta = task_pose.theta;
+	//pubblico robot_assign
+	status_msg.rob_id = robot_name;
+	status_msg.r_status = false;  //rimetto il mio stato su false
+
 	
-	assign_msg.assign_vect[pos].rob_name = robot_name;
-	assign_msg.assign_vect[pos].rob_status = false;  //rimetto il mio stato su false
+	task_assign::AssignMsg assign_msg;
 	
-	
+	assign_msg.assign_vect.at(posizione) = status_msg;
+
 	// Wait for the publisher to connect to subscribers
+    //     sleep(1.0);
 	assignment_pub.publish(assign_msg);
-    
+	
 	ROS_INFO_STREAM(robot_name <<" has finished the assignment. So "<< task_name << " is executed.");
     }
 
@@ -179,31 +187,32 @@ public:
     // Pubblica il proprio stato di ready su "robots_arrival_topic" finché non riceve un assignment, 
     // dopodiché smette di pubblicare il suo stato e memorizza la posizione del task da raggiungere
     // in task_pose
-    void AssignCallback(const task_assign::AssignMsg::ConstPtr& assign_msg)
+    void AssignCallback(const task_assign::AssignMsg::ConstPtr& status_msg)
     {
 	if(assignment) return;
 	
-	int i = 0;
-	for(auto elem : assign_msg->assign_vect)
+	int i=0;
+	for(auto elem : status_msg->assign_vect)
 	{
 	    //check: deve essere arrivato qualcosa
-	    if(elem.task_x!=0 && elem.task_y!=0 && elem.task_theta!=0)
+	    if(elem.t_ready && elem.task_x!=0 && elem.task_y!=0 && elem.task_theta!=0)
 	    {
-		ROS_INFO_STREAM(robot_name << " is listening " << elem.task_name << " with robot assigned " << elem.rob_name);
+// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
 	    
 		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
 		// smetto di pubblicare il mio stato
-		if(elem.rob_name==robot_name && elem.rob_status==true)
+		if(elem.rob_id==robot_name && elem.r_status==true)
 		{
 		    assignment = true;
-		    pos = i;  // è la mia posizione nell'assignment array
+		    posizione = i;
 		}
 		
 		if(!assignment)
 		    publishIniStatus();
 		else
 		{
-		    task_name = elem.task_name;
+// 		    posizione = i;
+		    task_name = elem.task_id;
 		    
 		    task_pose.x = elem.task_x;
 		    task_pose.y = elem.task_y;
@@ -213,7 +222,7 @@ public:
 		} 
 		
 		i++;
-	    }
+	    }   
 	}
     }
 
@@ -262,4 +271,3 @@ int main(int argc, char **argv)
  
     return 0;
 }
-

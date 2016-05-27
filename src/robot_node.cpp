@@ -7,8 +7,7 @@
 
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
-#include "turtlesim/Pose.h"
-#include "task_assign/AgentStatus.h"   
+#include "turtlesim/Pose.h"  
 #include "task_assign/IniStatus.h" 
 #include "task_assign/OneAssign.h"
 #include "task_assign/AssignMsg.h"
@@ -74,7 +73,7 @@ public:
 	// Publish and subscribe to team status messages
 	status_pub = node.advertise<task_assign::IniStatus>("robot_arrival_topic", 10);
 	
-	assignment_pub = node.advertise<task_assign::AssignMsg>("assignment_topic", 10);
+	assignment_pub = node.advertise<task_assign::OneAssign>("free_assign_topic", 10);
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
     }
 
@@ -169,13 +168,13 @@ public:
 	status_msg.r_status = false;  //rimetto il mio stato su false
 
 	
-	task_assign::AssignMsg assign_msg;
+// 	task_assign::AssignMsg assign_msg;
 	
-	assign_msg.assign_vect.at(posizione) = status_msg;
+// 	assign_msg.assign_vect.at(posizione) = status_msg;
 
 	// Wait for the publisher to connect to subscribers
     //     sleep(1.0);
-	assignment_pub.publish(assign_msg);
+	assignment_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM(robot_name <<" has finished the assignment. So "<< task_name << " is executed.");
     }

@@ -13,6 +13,7 @@
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
 #include "task_assign/AgentStatus.h"  
+#include "task_assign/IniStatus.h"
 
 using namespace std;
 
@@ -47,7 +48,7 @@ public:
 	sub = node.subscribe(task_name + "/pose", 10, &Task::poseCallback,this);
 
 	// Publish and subscribe to team status messages
-	status_pub = node.advertise<task_assign::AgentStatus>("task_arrival_topic", 10);
+	status_pub = node.advertise<task_assign::IniStatus>("task_arrival_topic", 10);
 	
 	assignment_sub = node.subscribe("assignment_topic", 20, &Task::AssignCallback,this);
     }
@@ -68,7 +69,7 @@ public:
     void publishIniStatus() 
     {
       
-	task_assign::AgentStatus status_msg;
+	task_assign::IniStatus status_msg;
 
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.t = ros::Time::now();

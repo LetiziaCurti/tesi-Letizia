@@ -10,8 +10,7 @@
 #include <string>
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
-#include "turtlesim/Pose.h"
-#include "task_assign/AgentStatus.h"  
+#include "turtlesim/Pose.h" 
 #include "task_assign/IniStatus.h"
 #include "task_assign/OneAssign.h"
 #include "task_assign/AssignMsg.h"
@@ -93,29 +92,31 @@ void publishAssignment()
 // Callback con cui il master legge "assignment_topic" per vedere se ci sono robot che hanno finito, e che quindi tornano disponibili
 // In corrispondenza dei robot liberi il master rimette a false il campo status della struttura_agente_robot corrispondente in 
 // robots_buffer e elimina la coppia che ha terminato da map_assignment
-void FreeCallback(const task_assign::AssignMsg::ConstPtr& status_msg)
+void FreeCallback(const task_assign::OneAssign::ConstPtr& status_msg)
 {
-    int i=0;
-    for(auto elem : status_msg->assign_vect)
+    if(status_msg->t_ready && status_msg->t_status && !status_msg->r_status)
     {
-	if(elem.t_ready && elem.t_status && !elem.r_status)
-	{
-	    ROS_INFO_STREAM("Master is listening the ended assignment: "<< elem.task_id << " - " << elem.rob_id);
-	    
-// 	    tasks_buffer[elem.task_id].status=false;
-	    
-	    robots_buffer[elem.rob_id].status=false;
-	    
-	    // elimino l'assignment dalla mappa
-	    map_assignment.erase(elem.rob_id);
-	    
-	    // elimino l'assignment dal vettore
-// 	    if(vect_assignment[i].task_id==elem.task_id)
-	    vect_assignment.erase(vect_assignment.begin()+i);
-	    
-	}
+	ROS_INFO_STREAM("Master is listening the ended assignment: "<< status_msg->task_id << " - " << status_msg->rob_id);
 	
-	i++;
+// 	tasks_buffer[status_msg->task_id].status=true;
+	
+	robots_buffer[status_msg->rob_id].status=false;
+	
+	// elimino l'assignment dalla mappa
+	map_assignment.erase(status_msg->rob_id);
+	
+	// elimino l'assignment dal vettore
+	int i = 0;
+	for(auto elem : vect_assignment)
+	{
+	    if(elem.task_id==status_msg->task_id)
+	    {
+		vect_assignment.erase(vect_assignment.begin()+i);
+		break;
+	    }
+	    
+	    i++;
+	}
     }
 }
 
@@ -306,7 +307,7 @@ int main(int argc, char **argv)
     robot_status_sub = node.subscribe("robot_arrival_topic", 20, &TotalCallback);
     
     assignment_pub = node.advertise<task_assign::AssignMsg>("assignment_topic", 10);
-    assignment_sub = node.subscribe("assignment_topic", 20, &FreeCallback);
+    assignment_sub = node.subscribe("free_assign_topic", 20, &FreeCallback);
     sleep(1);
     
     ros::Rate rate(10);

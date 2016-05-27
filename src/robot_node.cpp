@@ -9,6 +9,7 @@
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
 #include "task_assign/AgentStatus.h"   
+#include "task_assign/IniStatus.h" 
 #include <sys/stat.h>
 #include <iostream>
 
@@ -68,7 +69,7 @@ public:
 	sub = node.subscribe(robot_name + "/pose", 10, &Robot::poseCallback,this);
 
 	// Publish and subscribe to team status messages
-	status_pub = node.advertise<task_assign::AgentStatus>("robot_arrival_topic", 10);
+	status_pub = node.advertise<task_assign::IniStatus>("robot_arrival_topic", 10);
 	
 	assignment_pub = node.advertise<task_assign::AgentStatus>("assignment_topic", 10);
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
@@ -89,7 +90,7 @@ public:
     // Il robot pubblica il suo stato su "robot_arrival_topic"
     void publishIniStatus() 
     {
-	task_assign::AgentStatus status_msg; 
+	task_assign::IniStatus status_msg; 
 
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.t = ros::Time::now();

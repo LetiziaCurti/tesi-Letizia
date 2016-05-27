@@ -11,8 +11,7 @@
 
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
-#include "turtlesim/Pose.h"
-#include "task_assign/AgentStatus.h"  
+#include "turtlesim/Pose.h"  
 #include "task_assign/IniStatus.h"
 #include "task_assign/OneAssign.h"
 #include "task_assign/AssignMsg.h"

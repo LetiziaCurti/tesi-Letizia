@@ -50,8 +50,10 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    AgentStatus.msg
    SecondAgent.msg
-#   Message1.msg
-#   Message2.msg
+   IniStatus.msg
+   AssignMsg.msg
+   SingleAssign.msg
+   OneAssign.msg
  )
 
 ## Generate services in the 'srv' folder

@@ -1,1 +1,1 @@
-task_assign/SingleAssign[] assign_vect
+task_assign/OneAssign[] assign_vect

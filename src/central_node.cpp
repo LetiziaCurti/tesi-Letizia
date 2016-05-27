@@ -12,6 +12,7 @@
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"
 #include "task_assign/AgentStatus.h"  
+#include "task_assign/IniStatus.h"
 
 
 using namespace std;
@@ -131,7 +132,7 @@ void FreeCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
 // a true (il master modifica la struttura_agente_robot e la struttura_agente_task corrispondenti dentro i buffers rispettivi)
 // Poi viene pubblicato su "assignment_topic" (con publishAssignment()) il messaggio in cui si ha il task con il robot associato 
 // (il cui status è dentro msg.robot_assign)
-void TotalCallback(const task_assign::AgentStatus::ConstPtr& status_msg)
+void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 {
     //check: deve essere arrivato qualcosa
     if(status_msg->is_ready && status_msg->x!=-1 && status_msg->y!=-1 && status_msg->theta!=200)

@@ -207,8 +207,8 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 		ROS_INFO_STREAM("Central node is publishing tasks_buffer "<< elem.second);
 	    }
 	    
-	    
-	    if(robots_buffer.size()>0)
+
+	    if(robots_buffer.size()>0 && tasks_buffer.size()>0)
 	    {
 		//prendo il primo robot in coda con status false e lo metto in rToAssign
 		int counter_r=0;
@@ -224,11 +224,8 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 		}
 		if(counter_r!=robots_time.size())
 		    rToAssign = current_r;
-	    }
 
-	  
-	    if(tasks_buffer.size()>0)
-	    {
+		
 		//prendo il primo task in coda con status false e lo metto in tToAssign
 		int counter_t=0;
 		struct agent current_t;
@@ -281,7 +278,7 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 		    publishAssignment();
 		}
 	    }
-	  
+	    
 	    // il central node pubblica tutta la map_assignment  
 	    for(auto elem : map_assignment)
 	    {

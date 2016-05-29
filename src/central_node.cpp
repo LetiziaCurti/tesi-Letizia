@@ -222,7 +222,7 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 		    }
 		    counter_r++;
 		}
-		if(counter_r!=robots_time.size())
+		if(counter_r<=robots_time.size())
 		    rToAssign = current_r;
 
 		
@@ -238,7 +238,7 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 		    }
 		    counter_t++;
 		}
-		if(counter_t!=tasks_time.size())
+		if(counter_t<=tasks_time.size())
 		    tToAssign = current_t;
 	    }
 	  

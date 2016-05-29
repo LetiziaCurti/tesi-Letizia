@@ -40,11 +40,11 @@ struct agent
 };
 
 
-struct agent task, robot;
-struct agent rToAssign, tToAssign;
+// struct agent task, robot;
+// struct agent rToAssign, tToAssign;
 
 
-task_assign::OneAssign newAssign;
+// task_assign::OneAssign newAssign;
 vector<task_assign::OneAssign> vect_assignment;
 
 
@@ -83,8 +83,12 @@ void publishAssignment()
     // Wait for the publisher to connect to subscribers
     sleep(1.0);
     assignment_pub.publish(status_msg);
+
     
-    ROS_INFO_STREAM("Master is publishing the assignment: "<< tToAssign.id << " - " << rToAssign.id);
+    for(auto elem : vect_assignment)
+    {
+	ROS_INFO_STREAM("Master is publishing the assignment: "<< elem.task_id << " - " << elem.rob_id);
+    }
 }
 
 
@@ -135,7 +139,14 @@ void FreeCallback(const task_assign::OneAssign::ConstPtr& status_msg)
 // Poi viene pubblicato su "assignment_topic" (con publishAssignment()) il messaggio in cui si ha il task con il robot associato 
 // (il cui status è dentro msg.robot_assign)
 void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
-{
+{	
+    struct agent task, robot;
+    struct agent rToAssign, tToAssign;
+    vector<agent> current_r;
+    vector<agent> current_t;
+    task_assign::OneAssign newAssign;
+    
+    
     //check: deve essere arrivato qualcosa
     if(status_msg->is_ready && status_msg->x!=-1 && status_msg->y!=-1 && status_msg->theta!=200)
     {
@@ -210,73 +221,70 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 
 	    if(robots_buffer.size()>0 && tasks_buffer.size()>0)
 	    {
-		//prendo il primo robot in coda con status false e lo metto in rToAssign
-		int counter_r=0;
-		struct agent current_r;
+		//metto  in current_r tutti i robot con status false (sono liberi)
 		for(auto elem: robots_time)
 		{
 		    if(!(robots_buffer[elem.second]).status)
-		    {
-			current_r = robots_buffer[elem.second];
-			break;
-		    }
-		    counter_r++;
+			current_r.push_back(robots_buffer[elem.second]);
 		}
-		if(counter_r<=robots_time.size())
-		    rToAssign = current_r;
 
 		
-		//prendo il primo task in coda con status false e lo metto in tToAssign
-		int counter_t=0;
-		struct agent current_t;
+		//metto  in current_t tutti i task con status false (sono da eseguire)
 		for(auto elem: tasks_time)
 		{
 		    if(!(tasks_buffer[elem.second]).status)
-		    {
-			current_t = tasks_buffer[elem.second];
-			break;
-		    }
-		    counter_t++;
+			current_t.push_back(tasks_buffer[elem.second]);
 		}
-		if(counter_t<=tasks_time.size())
-		    tToAssign = current_t;
 	    }
-	  
-	  
-	    if(rToAssign.id!="" && tToAssign.id!="")
-	    {   
-		giaInAssign = false;
-		for(auto elem : map_assignment)
+	    
+
+	    //se ci sono almeno un robot libero e un task da eseguire, scorro current_r e current_t e creo un vettore
+	    //di assignment (vect_assignment) e map_assignment che contiene solo i nomi
+	    if(!current_r.empty() && !current_t.empty())
+	    {
+		for(int i=0; i<min(current_r.size(),current_t.size()); i++)
 		{
-		    if(rToAssign.id==elem.first || tToAssign.id==elem.second)
-		      giaInAssign = true;
+		    rToAssign = current_r[i];
+		    tToAssign = current_t[i];
+
+	      
+		    if(rToAssign.id!="" && tToAssign.id!="")
+		    {   
+			giaInAssign = false;
+			for(auto elem : map_assignment)
+			{
+			    if(rToAssign.id==elem.first || tToAssign.id==elem.second)
+			      giaInAssign = true;
+			}
+			if(map_assignment.size()<NUM_SPORTELLI && !giaInAssign)
+			{
+			    rToAssign.status=true;
+			    tToAssign.status=true;
+			    
+			    // costruisco map_assignment
+			    map_assignment[rToAssign.id]=tToAssign.id;
+			    
+			    // costruisco vect_assignment
+			    newAssign.t_ready = tToAssign.ready;
+			    newAssign.task_id = tToAssign.id;
+			    newAssign.t_status = tToAssign.status;
+			    newAssign.task_x = tToAssign.x;
+			    newAssign.task_y = tToAssign.y;
+			    newAssign.task_theta = tToAssign.theta;
+			    newAssign.rob_id = rToAssign.id;
+			    newAssign.r_status = rToAssign.status;
+			    
+			    vect_assignment.push_back(newAssign);
+			    
+			
+			    robots_buffer[rToAssign.id].status=true;
+			    tasks_buffer[tToAssign.id].status=true;
+			
+// 			    publishAssignment();
+			}
+		    }
 		}
-		if(map_assignment.size()<NUM_SPORTELLI && !giaInAssign)
-		{
-		    rToAssign.status=true;
-		    tToAssign.status=true;
-		    
-		    // costruisco map_assignment
-		    map_assignment[rToAssign.id]=tToAssign.id;
-		    
-		    // costruisco vect_assignment
-		    newAssign.t_ready = tToAssign.ready;
-		    newAssign.task_id = tToAssign.id;
-		    newAssign.t_status = tToAssign.status;
-		    newAssign.task_x = tToAssign.x;
-		    newAssign.task_y = tToAssign.y;
-		    newAssign.task_theta = tToAssign.theta;
-		    newAssign.rob_id = rToAssign.id;
-		    newAssign.r_status = rToAssign.status;
-		    
-		    vect_assignment.push_back(newAssign);
-		    
-		
-		    robots_buffer[rToAssign.id].status=true;
-		    tasks_buffer[tToAssign.id].status=true;
-		
-		    publishAssignment();
-		}
+		publishAssignment();
 	    }
 	    
 	    // il central node pubblica tutta la map_assignment  

@@ -30,6 +30,7 @@ struct agent
 {
     ros::Time t;
     string id;
+    int id_marker;
     bool ready;
     bool status;
     string type;
@@ -172,6 +173,7 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 		if(counter_t==tasks_buffer.size())
 		{
 		    task.id = status_msg->robot_id;
+		    task.id_marker = status_msg->id;
 		    task.ready = status_msg->is_ready;
 		    task.status = status_msg->status;
 		    task.type = status_msg->type;
@@ -267,6 +269,7 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 			    // costruisco vect_assignment
 			    newAssign.t_ready = tToAssign.ready;
 			    newAssign.task_id = tToAssign.id;
+			    newAssign.t_id_marker = tToAssign.id_marker;
 			    newAssign.t_status = tToAssign.status;
 			    newAssign.task_x = tToAssign.x;
 			    newAssign.task_y = tToAssign.y;

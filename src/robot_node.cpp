@@ -141,7 +141,7 @@ public:
 	marker.color.r = 1.0f;
 	marker.color.g = 0.0f;
 	marker.color.b = 0.0f;
-	marker.color.a = 1.0;
+	marker.color.a = 0.7;
 
 	marker.lifetime = ros::Duration();
 
@@ -187,7 +187,7 @@ public:
     }
     
     
-     void deleteMarker(turtlesim::Pose task_pose, int t_id)
+    void deleteMarker(turtlesim::Pose task_pose, int t_id)
     {
 	visualization_msgs::Marker marker;
 	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
@@ -223,7 +223,7 @@ public:
 	marker.color.r = 1.0f;
 	marker.color.g = 1.0f;
 	marker.color.b = 0.0f;
-	marker.color.a = 1.0;
+	marker.color.a = 0.7;
 
 	marker.lifetime = ros::Duration();
 
@@ -316,7 +316,6 @@ public:
     {
 	if(assignment) return;
 	
-	int i=0;
 	for(auto elem : status_msg->assign_vect)
 	{
 	    //check: deve essere arrivato qualcosa
@@ -329,12 +328,6 @@ public:
 		if(elem.rob_id==robot_name && elem.r_status==true)
 		{
 		    assignment = true;
-		}
-		
-		if(!assignment)
-		    publishIniStatus();
-		else
-		{
 		    task_name = elem.task_id;
 		    task_id_marker = elem.t_id_marker;
 		    
@@ -342,10 +335,29 @@ public:
 		    task_pose.y = elem.task_y;
 		    task_pose.theta = elem.task_theta;
 		    
-		    ROS_INFO("the task pose is: x: %.2f, y: %.2f, theta: %.2f", task_pose.x, task_pose.y, task_pose.theta);
-		} 
-		
-		i++;
+		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
+		}
+		else
+		    publishIniStatus();
+
+// 		if(elem.rob_id==robot_name && elem.r_status==true)
+// 		{
+// 		    assignment = true;
+// 		}
+// 		
+// 		if(!assignment)
+// 		    publishIniStatus();
+// 		else
+// 		{
+// 		    task_name = elem.task_id;
+// 		    task_id_marker = elem.t_id_marker;
+// 		    
+// 		    task_pose.x = elem.task_x;
+// 		    task_pose.y = elem.task_y;
+// 		    task_pose.theta = elem.task_theta;
+// 		    
+// 		    ROS_INFO("the task pose is: x: %.2f, y: %.2f, theta: %.2f", task_pose.x, task_pose.y, task_pose.theta);
+// 		} 
 	    }   
 	}
     }
@@ -373,14 +385,12 @@ int main(int argc, char **argv)
     {
 	while(!robot.assignment && ros::ok())
 	{
-// 	  robot.publishMarker();
 	    robot.publishIniStatus();  
 	    ros::spinOnce();
 	    rate.sleep();
 	}
 	while(robot.assignment && ros::ok())
 	{  
-// 	  robot.publishMarker();
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
 	    robot.moveGoal(robot.task_pose, DISTANCE_TOLERANCE);

@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <iostream>
 #include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
 
 #define DISTANCE_TOLERANCE 0.01
 
@@ -36,12 +37,14 @@ class Robot
 public:
   
     std::string robot_name;
+    int id_marker;
 
     ros::Subscriber assignment_sub;
     ros::Publisher assignment_pub;
     ros::Publisher status_pub;
     ros::Publisher pub;
     ros::Subscriber sub;
+    ros::Publisher marker_pub;
 
     ros::Time t_arrive;
     turtlesim::Pose turtlesim_pose;
@@ -50,12 +53,13 @@ public:
 
     bool assignment = false;
     string task_name;
-    int posizione;
+    int task_id_marker;
     
 
-    Robot(ros::NodeHandle& node, string name) 
+    Robot(ros::NodeHandle& node, string name, int id) 
     {
 	robot_name = name;
+	id_marker = id;
 	
 	turtlesim_pose.x=-1;
 	turtlesim_pose.y=-1;
@@ -76,6 +80,8 @@ public:
 	
 	assignment_pub = node.advertise<task_assign::OneAssign>("free_assign_topic", 10);
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
+	
+	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     }
 
 
@@ -94,6 +100,62 @@ public:
 	q.setRPY(0, 0, msg->theta);
 	transform.setRotation(q);
 	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", robot_name));
+	
+	publishMarker(turtlesim_pose);
+    }
+    
+    
+    void publishMarker(turtlesim::Pose turtlesim_pose)
+    {
+	visualization_msgs::Marker marker;
+	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "robot_node";
+	marker.id = id_marker;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = visualization_msgs::Marker::SPHERE;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = turtlesim_pose.x;
+	marker.pose.position.y = turtlesim_pose.y;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = turtlesim_pose.theta;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 1.5;
+	marker.scale.y = 1.5;
+	marker.scale.z = 1.5;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 1.0f;
+	marker.color.g = 0.0f;
+	marker.color.b = 0.0f;
+	marker.color.a = 1.0;
+
+	marker.lifetime = ros::Duration();
+
+	// Publish the marker
+	while (marker_pub.getNumSubscribers() < 1)
+	{
+	  if (!ros::ok())
+	  {
+	    break;
+	  }
+	  ROS_WARN_ONCE("Please create a subscriber to the marker");
+	  sleep(1);
+	}
+	marker_pub.publish(marker);
     }
 
 
@@ -122,6 +184,61 @@ public:
 	status_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its initial status "<< BoolToString(status_msg.status));
+    }
+    
+    
+     void deleteMarker(turtlesim::Pose task_pose, int t_id)
+    {
+	visualization_msgs::Marker marker;
+	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "task_node";
+	marker.id = t_id;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = visualization_msgs::Marker::CUBE;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::DELETE;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = task_pose.x;
+	marker.pose.position.y = task_pose.y;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = task_pose.theta;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 1.0;
+	marker.scale.y = 1.0;
+	marker.scale.z = 1.0;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 1.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 0.0f;
+	marker.color.a = 1.0;
+
+	marker.lifetime = ros::Duration();
+
+	// Publish the marker
+	while (marker_pub.getNumSubscribers() < 1)
+	{
+	  if (!ros::ok())
+	  {
+// 	    return 0;
+	    break;
+	  }
+	  ROS_WARN_ONCE("Please create a subscriber to the marker");
+	  sleep(1);
+	}
+	marker_pub.publish(marker);
     }
 
 
@@ -212,15 +329,14 @@ public:
 		if(elem.rob_id==robot_name && elem.r_status==true)
 		{
 		    assignment = true;
-		    posizione = i;
 		}
 		
 		if(!assignment)
 		    publishIniStatus();
 		else
 		{
-// 		    posizione = i;
 		    task_name = elem.task_id;
+		    task_id_marker = elem.t_id_marker;
 		    
 		    task_pose.x = elem.task_x;
 		    task_pose.y = elem.task_y;
@@ -245,7 +361,8 @@ int main(int argc, char **argv)
     
     ros::NodeHandle node;
     string name = std::string(argv[1]);
-    Robot robot(node, name);
+    int id = atoi(argv[2]);
+    Robot robot(node, name, id);
 
     sleep(1); 
 
@@ -256,12 +373,14 @@ int main(int argc, char **argv)
     {
 	while(!robot.assignment && ros::ok())
 	{
+// 	  robot.publishMarker();
 	    robot.publishIniStatus();  
 	    ros::spinOnce();
 	    rate.sleep();
 	}
 	while(robot.assignment && ros::ok())
 	{  
+// 	  robot.publishMarker();
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
 	    robot.moveGoal(robot.task_pose, DISTANCE_TOLERANCE);
@@ -269,8 +388,12 @@ int main(int argc, char **argv)
 // 	    ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO THE EXIT");
 // 	    moveGoal(uscita,distance_tolerance);
 	    
+	    robot.deleteMarker(robot.task_pose, robot.task_id_marker);
+	    
 	    robot.assignment=false;
 	}
+	
+// 	robot.publishMarker();
 	
 	robot.publishFreeStatus();
 	ros::spinOnce(); 

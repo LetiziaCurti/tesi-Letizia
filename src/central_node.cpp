@@ -29,6 +29,7 @@ struct agent
 {
     ros::Time t;
     string id;
+    int id_marker;
     bool ready;
     bool status;
     string type;
@@ -75,6 +76,7 @@ void publishAssignment()
     status_msg.header.stamp = ros::Time::now();
     status_msg.t = tToAssign.t;
     status_msg.robot_id = tToAssign.id;
+    status_msg.id = tToAssign.id_marker;
     status_msg.is_ready = tToAssign.ready;
     status_msg.status = tToAssign.status; 
     status_msg.type = tToAssign.type;
@@ -159,6 +161,7 @@ void TotalCallback(const task_assign::IniStatus::ConstPtr& status_msg)
 		if(counter_t==tasks_buffer.size())
 		{
 		    task.id = status_msg->robot_id;
+		    task.id_marker = status_msg->id;
 		    task.ready = status_msg->is_ready;
 		    task.status = status_msg->status;
 		    task.type = status_msg->type;

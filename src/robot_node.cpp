@@ -13,6 +13,7 @@
 #include "task_assign/AssignMsg.h"
 #include <sys/stat.h>
 #include <iostream>
+#include <tf/transform_broadcaster.h>
 
 #define DISTANCE_TOLERANCE 0.01
 
@@ -85,6 +86,14 @@ public:
 	turtlesim_pose.x = msg -> x;
 	turtlesim_pose.y = msg -> y;
 	turtlesim_pose.theta = msg -> theta;
+	
+	static tf::TransformBroadcaster br;
+	tf::Transform transform;
+	transform.setOrigin( tf::Vector3(msg->x, msg->y, 0.0) );
+	tf::Quaternion q;
+	q.setRPY(0, 0, msg->theta);
+	transform.setRotation(q);
+	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", robot_name));
     }
 
 
@@ -129,7 +138,7 @@ public:
     // 	  Proportional Controller
 	    
     // 	  linear velocity in the x-axis
-	      vel_msg.linear.x = 1*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+	      vel_msg.linear.x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
 	      vel_msg.linear.y = 0;
 	      vel_msg.linear.z = 0;
 	    

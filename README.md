@@ -4,10 +4,15 @@ Repository con i files della tesi di Letizia Curti
 branch: modifiche
 
 
-modificati i msgs:
+*modificati i msgs:
 
 -i task e i robot pubblicano un nuovo msg (IniStatus) sui rispettivi topic
 
 -il central node pubblica un nuovo msg (AssignMsg) che contiene il vettore degli assignment (ciò che prima stava in map assignment)
 
 -il central node e i robot nodes si scambiano i "free messages" su un nuovo topic (free_assign_topic) e non più su assignment topic
+
+
+*aggiunta pubblicazione del ref frame in tf
+
+*aggiunta visualizzazione su rviz (a partire da turtlesim)

@@ -115,7 +115,7 @@ public:
 	marker.color.r = 1.0f;
 	marker.color.g = 1.0f;
 	marker.color.b = 0.0f;
-	marker.color.a = 1.0;
+	marker.color.a = 0.7;
 
 	marker.lifetime = ros::Duration();
 
@@ -211,8 +211,8 @@ int main(int argc, char **argv)
 
     while(!task.assignment && ros::ok())
     {
-	task.publishIniStatus();  
 	task.publishMarker();
+	task.publishIniStatus();  
 	ros::spinOnce();
 	rate.sleep();
     }

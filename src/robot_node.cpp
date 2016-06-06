@@ -254,7 +254,7 @@ public:
     // 	  Proportional Controller
 	    
     // 	  linear velocity in the x-axis
-	      vel_msg.linear.x = 1*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+	      vel_msg.linear.x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
 	      vel_msg.linear.y = 0;
 	      vel_msg.linear.z = 0;
 	    

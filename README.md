@@ -16,3 +16,5 @@ branch: modifiche
 *aggiunta pubblicazione dei ref frame in tf
 
 *aggiunta visualizzazione su rviz (a partire da turtlesim)
+
+*i task arrivano in tempi differenti

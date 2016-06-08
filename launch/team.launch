@@ -6,13 +6,14 @@
 
   <node name="master" pkg="task_assign" type="central_node" args="7" output="screen"/>
 
-  <node name="task1" pkg="task_assign" type="task_node" args="task1 1" output="screen"/>
-  <node name="task3" pkg="task_assign" type="task_node" args="task3 3" output="screen"/>
-  <node name="task4" pkg="task_assign" type="task_node" args="task4 4" output="screen"/>
-  <node name="task2" pkg="task_assign" type="task_node" args="task2 2" output="screen"/>
-  <node name="task5" pkg="task_assign" type="task_node" args="task5 5" output="screen"/>
-  <node name="task6" pkg="task_assign" type="task_node" args="task6 6" output="screen"/>
-  <node name="task7" pkg="task_assign" type="task_node" args="task7 7" output="screen"/>
+  <node name="task1" pkg="task_assign" type="task_node" args="task1 1 5" output="screen"/>
+  <node name="task3" pkg="task_assign" type="task_node" args="task3 3 10" output="screen"/>
+  <node name="task4" pkg="task_assign" type="task_node" args="task4 4 35" output="screen"/>
+  <node name="task2" pkg="task_assign" type="task_node" args="task2 2 15" output="screen"/>
+  <node name="task5" pkg="task_assign" type="task_node" args="task5 5 15" output="screen"/>
+  <node name="task6" pkg="task_assign" type="task_node" args="task6 6 20" output="screen"/>
+  <node name="task7" pkg="task_assign" type="task_node" args="task7 7 30" output="screen"/>
+  <node name="task8" pkg="task_assign" type="task_node" args="task8 8 50" output="screen"/>
  
   <node name="robot1" pkg="task_assign" type="robot_node" args="robot1 1" output="screen"/> 
   <node name="robot2" pkg="task_assign" type="robot_node" args="robot2 2" output="screen"/> 

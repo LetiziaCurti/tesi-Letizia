@@ -76,6 +76,8 @@ public:
 	q.setRPY(0, 0, msg->theta);
 	transform.setRotation(q);
 	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", task_name));
+	
+	publishMarker();
     }
     
     
@@ -200,6 +202,9 @@ int main(int argc, char **argv)
     ros::NodeHandle node;
     string name = std::string(argv[1]);
     int id = atoi(argv[2]);
+    int ritardo = atoi(argv[3]);
+    sleep(ritardo);
+        
     Task task(node, name, id);
 
     sleep(1);
@@ -211,7 +216,7 @@ int main(int argc, char **argv)
 
     while(!task.assignment && ros::ok())
     {
-	task.publishMarker();
+// 	task.publishMarker();
 	task.publishIniStatus();  
 	ros::spinOnce();
 	rate.sleep();

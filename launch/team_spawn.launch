@@ -11,8 +11,9 @@
 <node pkg="rosservice" type="rosservice" name="create_task4" args='call --wait /spawn "{x: 5.54,y: 5.54, theta: -1.5, name: task4}" '/>
 <node pkg="rosservice" type="rosservice" name="create_task2" args='call --wait /spawn "{x: 2,y: 5, theta: -1.5, name: task2}" '/>
 <node pkg="rosservice" type="rosservice" name="create_task5" args='call --wait /spawn "{x: 8,y: 4, theta: -1.5, name: task5}" '/>
-<node pkg="rosservice" type="rosservice" name="create_task6" args='call --wait /spawn "{x: 1,y: 4, theta: -1.5, name: task6}" '/>
+<node pkg="rosservice" type="rosservice" name="create_task6" args='call --wait /spawn "{x: 1,y: 1, theta: -1.5, name: task6}" '/>
 <node pkg="rosservice" type="rosservice" name="create_task7" args='call --wait /spawn "{x: 10,y: 10, theta: -1.5, name: task7}" '/>
+<node pkg="rosservice" type="rosservice" name="create_task8" args='call --wait /spawn "{x: 10,y: 1, theta: -1.5, name: task8}" '/>
 
 <node pkg="rosservice" type="rosservice" name="create_robot1" args='call --wait /spawn "{x: 5.54,y: 1, theta: 1.5, name: robot1}" '/>
 <node pkg="rosservice" type="rosservice" name="create_robot2" args='call --wait /spawn "{x: 4,y: 1, theta: 1.5, name: robot2}" '/>

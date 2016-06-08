@@ -293,13 +293,9 @@ public:
 	status_msg.rob_id = robot_name;
 	status_msg.r_status = false;  //rimetto il mio stato su false
 
-	
-// 	task_assign::AssignMsg assign_msg;
-	
-// 	assign_msg.assign_vect.at(posizione) = status_msg;
 
 	// Wait for the publisher to connect to subscribers
-    //     sleep(1.0);
+// 	sleep(1.0);
 	assignment_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM(robot_name <<" has finished the assignment. So "<< task_name << " is executed.");
@@ -339,25 +335,6 @@ public:
 		}
 		else
 		    publishIniStatus();
-
-// 		if(elem.rob_id==robot_name && elem.r_status==true)
-// 		{
-// 		    assignment = true;
-// 		}
-// 		
-// 		if(!assignment)
-// 		    publishIniStatus();
-// 		else
-// 		{
-// 		    task_name = elem.task_id;
-// 		    task_id_marker = elem.t_id_marker;
-// 		    
-// 		    task_pose.x = elem.task_x;
-// 		    task_pose.y = elem.task_y;
-// 		    task_pose.theta = elem.task_theta;
-// 		    
-// 		    ROS_INFO("the task pose is: x: %.2f, y: %.2f, theta: %.2f", task_pose.x, task_pose.y, task_pose.theta);
-// 		} 
 	    }   
 	}
     }

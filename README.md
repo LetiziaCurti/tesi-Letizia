@@ -13,8 +13,8 @@ branch: modifiche
 -il central node e i robot nodes si scambiano i "free messages" su un nuovo topic (free_assign_topic) e non più su assignment topic
 
 
-*aggiunta pubblicazione dei ref frame in tf
+*pubblicazione dei ref frame in tf
 
-*aggiunta visualizzazione su rviz (a partire da turtlesim)
+*visualizzazione su rviz svincolata da turtlesim
 
 *i task arrivano in tempi differenti

@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -52,8 +53,9 @@ find_package(catkin REQUIRED COMPONENTS
    SecondAgent.msg
    IniStatus.msg
    AssignMsg.msg
-   SingleAssign.msg
    OneAssign.msg
+   task.msg
+   vect_task.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -139,6 +141,10 @@ include_directories(
 add_executable(robot_node src/robot_node.cpp)
 add_executable(task_node src/task_node.cpp)
 add_executable(central_node src/central_node.cpp)
+add_executable(users_node src/users_node.cpp)
+# add_executable(robot_node src/robot_node_2.cpp)
+# add_executable(task_node src/task_node_2.cpp)
+# add_executable(central_node src/central_node_2.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -146,6 +152,7 @@ add_executable(central_node src/central_node.cpp)
 add_dependencies(robot_node ${PROJECT_NAME}_gencpp)
 add_dependencies(task_node ${PROJECT_NAME}_gencpp)
 add_dependencies(central_node ${PROJECT_NAME}_gencpp)
+add_dependencies(users_node ${PROJECT_NAME}_gencpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(task_assign_node
@@ -154,6 +161,7 @@ add_dependencies(central_node ${PROJECT_NAME}_gencpp)
 target_link_libraries(robot_node ${catkin_LIBRARIES})
 target_link_libraries(task_node ${catkin_LIBRARIES})
 target_link_libraries(central_node ${catkin_LIBRARIES})
+target_link_libraries(users_node ${catkin_LIBRARIES})
 
 #############
 ## Install ##

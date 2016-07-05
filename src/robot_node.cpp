@@ -2,8 +2,8 @@
 // il robot comunica il suo stato (nome, status=false(not busy), posizione) al central 
 // node (che lo impila nella coda in base al suo tempo di arrivo) scrivendo su "robot_arrival_topic", 
 // finché non riceve un assignment dal central node (legge "assignment_topic")
-// Dopodiché pubblica su "cmd_vel topic" per raggiungere con moveGoal il task (e successivamente l'uscita)
-// (Raggiunta l'uscita) poi pubblica su "assignment_topic" che lui è libero
+// Dopodiché si muove per raggiungere con moveGoal il task.
+// Infine pubblica su "assignment_topic" che è tornato libero
 
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
@@ -30,6 +30,11 @@ double getDistance(double x1, double y1, double x2, double y2)
   return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
 }
 
+struct pose{
+    float x;
+    float y;
+    float theta;  
+};
 
 
 class Robot
@@ -38,6 +43,7 @@ public:
   
     std::string robot_name;
     int id_marker;
+    struct pose turtlesim_pose;
 
     ros::Subscriber assignment_sub;
     ros::Publisher assignment_pub;
@@ -47,8 +53,7 @@ public:
     ros::Publisher marker_pub;
 
     ros::Time t_arrive;
-    turtlesim::Pose turtlesim_pose;
-    turtlesim::Pose task_pose;
+    struct pose task_pose;
     turtlesim::Pose uscita;
 
     bool assignment = false;
@@ -56,24 +61,19 @@ public:
     int task_id_marker;
     
 
-    Robot(ros::NodeHandle& node, string name, int id) 
+    Robot(ros::NodeHandle& node, string name, int id, struct pose pos) 
     {
 	robot_name = name;
 	id_marker = id;
 	
-	turtlesim_pose.x=-1;
-	turtlesim_pose.y=-1;
-	turtlesim_pose.theta=200;
+	turtlesim_pose.x = pos.x;
+	turtlesim_pose.y = pos.y;
+	turtlesim_pose.theta = pos.theta;
 	
 	uscita.x = 10;
 	uscita.y = 1;
 	uscita.theta = 0;
 	
-	
-	// A publisher for the movement data
-	pub = node.advertise<geometry_msgs::Twist>(robot_name + "/cmd_vel", 10);
-	// A listener for pose
-	sub = node.subscribe(robot_name + "/pose", 10, &Robot::poseCallback,this);
 
 	// Publish and subscribe to team status messages
 	status_pub = node.advertise<task_assign::IniStatus>("robot_arrival_topic", 10);
@@ -84,28 +84,8 @@ public:
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     }
 
-
-    // Callback con cui il robot legge la sua posizione dal /sim node
-    void poseCallback(const turtlesim::Pose::ConstPtr& msg)
-    {
-	//ROS_INFO("x: %.2f, y: %.2f, theta: %.2f", msg->x, msg->y, msg->theta);
-	turtlesim_pose.x = msg -> x;
-	turtlesim_pose.y = msg -> y;
-	turtlesim_pose.theta = msg -> theta;
-	
-	static tf::TransformBroadcaster br;
-	tf::Transform transform;
-	transform.setOrigin( tf::Vector3(msg->x, msg->y, 0.0) );
-	tf::Quaternion q;
-	q.setRPY(0, 0, msg->theta);
-	transform.setRotation(q);
-	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", robot_name));
-	
-	publishMarker(turtlesim_pose);
-    }
     
-    
-    void publishMarker(turtlesim::Pose turtlesim_pose)
+    void publishMarker(struct pose p)
     {
 	visualization_msgs::Marker marker;
 	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
@@ -124,12 +104,12 @@ public:
 	marker.action = visualization_msgs::Marker::ADD;
 
 	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-	marker.pose.position.x = turtlesim_pose.x;
-	marker.pose.position.y = turtlesim_pose.y;
+	marker.pose.position.x = p.x;
+	marker.pose.position.y = p.y;
 	marker.pose.position.z = 0;
 	marker.pose.orientation.x = 0.0;
 	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = turtlesim_pose.theta;
+	marker.pose.orientation.z = p.theta;
 	marker.pose.orientation.w = 1.0;
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
@@ -157,9 +137,9 @@ public:
 	}
 	marker_pub.publish(marker);
     }
-
-
-
+ 
+ 
+ 
     // Il robot pubblica il suo stato su "robot_arrival_topic"
     void publishIniStatus() 
     {
@@ -187,7 +167,7 @@ public:
     }
     
     
-    void deleteMarker(turtlesim::Pose task_pose, int t_id)
+    void deleteMarker(struct pose task_pose, int t_id)
     {
 	visualization_msgs::Marker marker;
 	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
@@ -240,38 +220,54 @@ public:
 	}
 	marker_pub.publish(marker);
     }
-
+    
+        
+    // Function con cui viene data al robot la posizione passata in argomento, che viene poi inviata a tf
+    void broadcastPose(struct pose posa, std::string name)
+    {
+	static tf::TransformBroadcaster br;
+	tf::Transform transform;
+	transform.setOrigin( tf::Vector3(posa.x, posa.y, 0.0) );
+	tf::Quaternion q;
+	q.setRPY(0, 0, posa.theta);
+	transform.setRotation(q);
+	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", name));
+	
+	publishMarker(posa);
+    }
 
 
     // Function for bringing the robot in the position of the task to accomplish and then in the position of
     // the exit
-    void moveGoal(turtlesim::Pose goal_pose, double distance_tolerance)
+    void moveGoal(struct pose goal_pose, string goal_name, double distance_tolerance)
     {
-      
-	geometry_msgs::Twist vel_msg;
-
-	ros::Rate loop_rate(10);
-	do{
-    // 	  Proportional Controller
-	    
-    // 	  linear velocity in the x-axis
-	      vel_msg.linear.x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
-	      vel_msg.linear.y = 0;
-	      vel_msg.linear.z = 0;
-	    
-    // 	  angular velocity in the z-axis
-	      vel_msg.angular.x = 0;
-	      vel_msg.angular.y = 0;
-	      vel_msg.angular.z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
-	    
-	      pub.publish(vel_msg);
-	      ros::spinOnce();
-	      loop_rate.sleep();  
-	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
+	float pos_x = 0.0;
+	float pos_y = 0.0;
+	float theta = 0.0;
 	
-	vel_msg.linear.x = 0;
-	vel_msg.angular.z = 0;
-	pub.publish(vel_msg);
+	double vel_x;
+	double vel_z;
+	double time = 0.1;
+	
+	
+	ros::Rate rate(10);
+	do{
+	      publishMarker(turtlesim_pose);
+	      broadcastPose(turtlesim_pose,robot_name);
+	      
+	      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y);
+	      vel_z = 4*sin((atan2(task_pose.y - turtlesim_pose.y, task_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
+	      
+	      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
+	      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
+	      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
+
+	      ros::spinOnce();
+	      rate.sleep(); 
+	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y)>distance_tolerance);
+	
+	deleteMarker(task_pose, task_id_marker);
+
     }
 
 
@@ -351,7 +347,12 @@ int main(int argc, char **argv)
     ros::NodeHandle node;
     string name = std::string(argv[1]);
     int id = atoi(argv[2]);
-    Robot robot(node, name, id);
+    
+    struct pose pose;
+    pose.x = atof(argv[3]);
+    pose.y = atof(argv[4]);
+    pose.theta = atof(argv[5]);
+    Robot robot(node, name, id, pose);
 
     sleep(1); 
 
@@ -362,6 +363,7 @@ int main(int argc, char **argv)
     {
 	while(!robot.assignment && ros::ok())
 	{
+	    robot.broadcastPose(robot.turtlesim_pose, name);
 	    robot.publishIniStatus();  
 	    ros::spinOnce();
 	    rate.sleep();
@@ -370,18 +372,12 @@ int main(int argc, char **argv)
 	{  
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
-	    robot.moveGoal(robot.task_pose, DISTANCE_TOLERANCE);
-// 	    // il robot si muove verso l'uscita
-// 	    ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO THE EXIT");
-// 	    moveGoal(uscita,distance_tolerance);
-	    
-	    robot.deleteMarker(robot.task_pose, robot.task_id_marker);
+	    robot.moveGoal(robot.task_pose, robot.task_name, DISTANCE_TOLERANCE);
 	    
 	    robot.assignment=false;
 	}
 	
-// 	robot.publishMarker();
-	
+	robot.broadcastPose(robot.turtlesim_pose, name);
 	robot.publishFreeStatus();
 	ros::spinOnce(); 
 	rate.sleep();
@@ -389,3 +385,4 @@ int main(int argc, char **argv)
  
     return 0;
 }
+

@@ -14,6 +14,8 @@
 #include "turtlesim/Pose.h"
 #include "task_assign/AgentStatus.h"  
 #include "task_assign/IniStatus.h"
+#include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
 
 using namespace std;
 
@@ -30,16 +32,19 @@ public:
     ros::Publisher status_pub;
     ros::Subscriber sub;
     ros::Subscriber assignment_sub;
+    ros::Publisher marker_pub;
 
     std::string task_name;
+    int id_marker;
     turtlesim::Pose turtlesim_pose;
 
     bool assignment = false;
 
 
-    Task(ros::NodeHandle& node, string name) 
+    Task(ros::NodeHandle& node, string name, int id) 
     {
 	task_name = name;
+	id_marker = id;
     
 	turtlesim_pose.x=-1;
 	turtlesim_pose.y=-1;
@@ -51,6 +56,7 @@ public:
 	status_pub = node.advertise<task_assign::IniStatus>("task_arrival_topic", 10);
 	
 	assignment_sub = node.subscribe("assignment_topic", 20, &Task::AssignCallback,this);
+	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     }
 
 
@@ -61,6 +67,70 @@ public:
 	turtlesim_pose.x = msg -> x;
 	turtlesim_pose.y = msg -> y;
 	turtlesim_pose.theta = msg -> theta;
+	
+	static tf::TransformBroadcaster br;
+	tf::Transform transform;
+	transform.setOrigin( tf::Vector3(msg->x, msg->y, 0.0) );
+	tf::Quaternion q;
+	q.setRPY(0, 0, msg->theta);
+	transform.setRotation(q);
+	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", task_name));
+    }
+    
+    
+    
+    void publishMarker()
+    {
+	visualization_msgs::Marker marker;
+	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "task_node";
+	marker.id = id_marker;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = visualization_msgs::Marker::CUBE;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = turtlesim_pose.x;
+	marker.pose.position.y = turtlesim_pose.y;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = turtlesim_pose.theta;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 1.0;
+	marker.scale.y = 1.0;
+	marker.scale.z = 1.0;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 1.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 0.0f;
+	marker.color.a = 1.0;
+
+	marker.lifetime = ros::Duration();
+
+	// Publish the marker
+	while (marker_pub.getNumSubscribers() < 1)
+	{
+	  if (!ros::ok())
+	  {
+// 	    return 0;
+	    break;
+	  }
+	  ROS_WARN_ONCE("Please create a subscriber to the marker");
+	  sleep(1);
+	}
+	marker_pub.publish(marker);
     }
 
 
@@ -74,6 +144,7 @@ public:
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.t = ros::Time::now();
 	status_msg.robot_id = task_name;
+	status_msg.id = id_marker;
 	status_msg.is_ready = true;
 	status_msg.status = false; //I am available (not busy)
 	status_msg.type = "task";
@@ -126,7 +197,8 @@ int main(int argc, char **argv)
     
     ros::NodeHandle node;
     string name = std::string(argv[1]);
-    Task task(node, name);
+    int id = atoi(argv[2]);
+    Task task(node, name, id);
 
     sleep(1);
     
@@ -137,6 +209,7 @@ int main(int argc, char **argv)
 
     while(!task.assignment && ros::ok())
     {
+	task.publishMarker();
 	task.publishIniStatus();  
 	ros::spinOnce();
 	rate.sleep();

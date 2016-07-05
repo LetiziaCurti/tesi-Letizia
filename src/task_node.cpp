@@ -3,10 +3,6 @@
 // (che lo impila nella coda in base al suo tempo di arrivo) scrivendo su "task_arrival_topic",
 // finché non riceve un assignment dal central node (legge "assignment_topic") e poi muore
 
-// Da aggiungere:
-// Mentre è impegnato rimane in ascolto del suo stato leggendo da "assignment_topic", quando riceve dal 
-// master che il suo stato è tornato a false pubblica che è stato eseguito e muore
-
 
 
 #include "ros/ros.h"
@@ -25,6 +21,11 @@ inline const char * const BoolToString(bool b)
   return b ? "true" : "false";
 }
 
+struct pose{
+    float x;
+    float y;
+    float theta;  
+};
 
 class Task
 {
@@ -42,16 +43,16 @@ public:
     bool assignment = false;
 
 
-    Task(ros::NodeHandle& node, string name, int id) 
+    Task(ros::NodeHandle& node, string name, int id, struct pose pos) 
     {
 	task_name = name;
 	id_marker = id;
     
-	turtlesim_pose.x=-1;
-	turtlesim_pose.y=-1;
-	turtlesim_pose.theta=200;
+	turtlesim_pose.x = pos.x;
+	turtlesim_pose.y = pos.y;
+	turtlesim_pose.theta = pos.theta;
     
-	sub = node.subscribe(task_name + "/pose", 10, &Task::poseCallback,this);
+// 	sub = node.subscribe(task_name + "/pose", 10, &Task::poseCallback,this);
 
 	// Publish and subscribe to team status messages
 	status_pub = node.advertise<task_assign::IniStatus>("task_arrival_topic", 10);
@@ -60,20 +61,17 @@ public:
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     }
 
-
-    // Callback con cui il task legge la sua posizione dal /sim node
-    void poseCallback(const turtlesim::Pose::ConstPtr& msg)
+    
+    // Function con cui viene data al robot la posizione passata in argomento, che viene poi inviata a tf
+    void broadcastPose(struct pose p)
     {
 	//ROS_INFO("x: %.2f, y: %.2f, theta: %.2f", msg->x, msg->y, msg->theta);
-	turtlesim_pose.x = msg -> x;
-	turtlesim_pose.y = msg -> y;
-	turtlesim_pose.theta = msg -> theta;
 	
 	static tf::TransformBroadcaster br;
 	tf::Transform transform;
-	transform.setOrigin( tf::Vector3(msg->x, msg->y, 0.0) );
+	transform.setOrigin( tf::Vector3(p.x, p.y, 0.0) );
 	tf::Quaternion q;
-	q.setRPY(0, 0, msg->theta);
+	q.setRPY(0, 0, p.theta);
 	transform.setRotation(q);
 	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", task_name));
 	
@@ -204,8 +202,13 @@ int main(int argc, char **argv)
     int id = atoi(argv[2]);
     int ritardo = atoi(argv[3]);
     sleep(ritardo);
+    struct pose pose;
+    pose.x = atof(argv[4]);
+    pose.y = atof(argv[5]);
+    pose.theta = atof(argv[6]);
+
         
-    Task task(node, name, id);
+    Task task(node, name, id, pose);
 
     sleep(1);
     
@@ -216,22 +219,11 @@ int main(int argc, char **argv)
 
     while(!task.assignment && ros::ok())
     {
-// 	task.publishMarker();
+	task.broadcastPose(pose);
 	task.publishIniStatus();  
 	ros::spinOnce();
 	rate.sleep();
     }
-
-    
-    // il task dovrebbe ricevere dal master che il robot a lui assegnato ha finito di eseguirlo (va aggiunto questo messaggio)
-    // e dopo pubblicare che è stato eseguito e morire
-//     while(assignment && ros::ok())
-//     {  
-// 	ros::spinOnce();
-// 	rate.sleep();
-//     }
-//     if(!assignment)     // e qui assignment dovrebbe diventare false se è vera (status_msg->robot_id==task_name && status_msg->status==false)
-// 	ROS_INFO_STREAM(task_name << " è stato eseguito");
 
 
     return 0;

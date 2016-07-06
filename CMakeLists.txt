@@ -142,6 +142,11 @@ add_executable(robot_node src/robot_node.cpp)
 add_executable(task_node src/task_node.cpp)
 add_executable(central_node src/central_node.cpp)
 add_executable(users_node src/users_node.cpp)
+add_executable(task_manager src/task_manager.cpp)
+add_executable(motion_planner src/motion_planner.cpp)
+add_executable(obstacle_node src/obstacle_node.cpp)
+add_executable(master src/master.cpp)
+add_executable(robot src/robot.cpp)
 # add_executable(robot_node src/robot_node_2.cpp)
 # add_executable(task_node src/task_node_2.cpp)
 # add_executable(central_node src/central_node_2.cpp)
@@ -153,6 +158,11 @@ add_dependencies(robot_node ${PROJECT_NAME}_gencpp)
 add_dependencies(task_node ${PROJECT_NAME}_gencpp)
 add_dependencies(central_node ${PROJECT_NAME}_gencpp)
 add_dependencies(users_node ${PROJECT_NAME}_gencpp)
+add_dependencies(task_manager ${PROJECT_NAME}_gencpp)
+add_dependencies(motion_planner ${PROJECT_NAME}_gencpp)
+add_dependencies(obstacle_node ${PROJECT_NAME}_gencpp)
+add_dependencies(master ${PROJECT_NAME}_gencpp)
+add_dependencies(robot ${PROJECT_NAME}_gencpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(task_assign_node
@@ -162,6 +172,12 @@ target_link_libraries(robot_node ${catkin_LIBRARIES})
 target_link_libraries(task_node ${catkin_LIBRARIES})
 target_link_libraries(central_node ${catkin_LIBRARIES})
 target_link_libraries(users_node ${catkin_LIBRARIES})
+target_link_libraries(task_manager ${catkin_LIBRARIES})
+target_link_libraries(motion_planner ${catkin_LIBRARIES})
+target_link_libraries(obstacle_node ${catkin_LIBRARIES})
+target_link_libraries(master ${catkin_LIBRARIES})
+target_link_libraries(robot ${catkin_LIBRARIES})
+
 
 #############
 ## Install ##

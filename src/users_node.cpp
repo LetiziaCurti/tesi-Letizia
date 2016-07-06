@@ -1,8 +1,4 @@
-// Nodo che modella l'agente master
-// il nodo sta sempre in ascolto dei topics di cui è subscriber, chiamando una funzione di publish
-// direttamente dalla callback in cui fa assignment
-
-
+// Nodo che modella le richieste degli utenti
 
 
 #include <iostream>

@@ -1,0 +1,14 @@
+<launch> 
+  
+  <node name="users" pkg="task_assign" type="users_node" output="screen"/> 
+  <node name="task_manager" pkg="task_assign" type="task_manager" output="screen"/> 
+  <node name="motion_planner" pkg="task_assign" type="motion_planner" output="screen"/> 
+  <node name="obstacles" pkg="task_assign" type="obstacle_node" output="screen"/> 
+  <node name="master" pkg="task_assign" type="master" output="screen"/> 
+  
+  <node name="robota" pkg="task_assign" type="robot" args="robot1 1 5.54 1 1.5" output="screen"/> 
+  <node name="robotb" pkg="task_assign" type="robot" args="robot2 2 4 1 1.5" output="screen"/> 
+  <node name="robotc" pkg="task_assign" type="robot" args="robot3 3 3 2 1.5" output="screen"/> 
+  
+  
+</launch>

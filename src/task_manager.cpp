@@ -47,8 +47,8 @@ struct couple_task
 
 // gli elementi dei vettori potrebbero essere già dei type task_Assign::task così quando il nodo deve pubblicare il vettore 
 // task_to_assign è già un vettore di elementi task, altrimenti le struct couple_task vanno copiate tutte nei type masg
-vector<struct couple_task> new_task;          		//vettore in cui vengono messi i nuovi task in arrivo da users_node
-vector<struct couple_task> executed_task;		//vettore in cui vengono messi i task eseguiti comunicati dal motion planner
+vector<task_assign::task> new_task;          		//vettore in cui vengono messi i nuovi task in arrivo da users_node
+vector<task_assign::task> executed_task;		//vettore in cui vengono messi i task eseguiti comunicati dal motion planner
 
 vector<task_assign::task> task_to_assign;    		//n(t): vettore dei task da assegnare che cambia nel tempo
 
@@ -59,7 +59,7 @@ int dim_n(0);
 void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 {
     bool add_task(true);
-    struct couple_task task;
+//     struct couple_task task;
     
     for(auto elem : msg->task_vect)
     {
@@ -67,29 +67,30 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 	for(auto newel : new_task)
 	{
 	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
-	      add_task = false;
+		add_task = false;
 	}
 	
 	if(add_task)
 	{
-	   task.ar_time = elem.ar_time;
-	   task.id1 = elem.id1;
-	   task.name1 = elem.name1;
-	   task.status1 = elem.status1;
-	   task.wait1 = elem.wait1;
-	   task.x1 = elem.x1;
-	   task.y1 = elem.y1;
-	   task.theta1 = elem.theta1;
+// 	   task.ar_time = elem.ar_time;
+// 	   task.id1 = elem.id1;
+// 	   task.name1 = elem.name1;
+// 	   task.status1 = elem.status1;
+// 	   task.wait1 = elem.wait1;
+// 	   task.x1 = elem.x1;
+// 	   task.y1 = elem.y1;
+// 	   task.theta1 = elem.theta1;
+// 	   
+// 	   task.id2 = elem.id2;
+// 	   task.name2 = elem.name2;
+// 	   task.status2 = elem.status2;
+// 	   task.wait2 = elem.wait2;
+// 	   task.x2 = elem.x2;
+// 	   task.y2 = elem.y2;
+// 	   task.theta2 = elem.theta2;
 	   
-	   task.id2 = elem.id2;
-	   task.name2 = elem.name2;
-	   task.status2 = elem.status2;
-	   task.wait2 = elem.wait2;
-	   task.x2 = elem.x2;
-	   task.y2 = elem.y2;
-	   task.theta2 = elem.theta2;
-	   
-	   new_task.push_back(task);
+	    
+	    new_task.push_back(elem);
 	}
     }
 }
@@ -99,7 +100,7 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 {   
     bool add_task(true);
-    struct couple_task task;
+//     struct couple_task task;
     
     for(auto elem : msg->task_vect)
     {
@@ -107,29 +108,29 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 	for(auto newel : executed_task)
 	{
 	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
-	      add_task = false;
+		add_task = false;
 	}
 	
 	if(add_task)
 	{
-	   task.ar_time = elem.ar_time;
-	   task.id1 = elem.id1;
-	   task.name1 = elem.name1;
-	   task.status1 = elem.status1;
-	   task.wait1 = elem.wait1;
-	   task.x1 = elem.x1;
-	   task.y1 = elem.y1;
-	   task.theta1 = elem.theta1;
+// 	   task.ar_time = elem.ar_time;
+// 	   task.id1 = elem.id1;
+// 	   task.name1 = elem.name1;
+// 	   task.status1 = elem.status1;
+// 	   task.wait1 = elem.wait1;
+// 	   task.x1 = elem.x1;
+// 	   task.y1 = elem.y1;
+// 	   task.theta1 = elem.theta1;
+// 	   
+// 	   task.id2 = elem.id2;
+// 	   task.name2 = elem.name2;
+// 	   task.status2 = elem.status2;
+// 	   task.wait2 = elem.wait2;
+// 	   task.x2 = elem.x2;
+// 	   task.y2 = elem.y2;
+// 	   task.theta2 = elem.theta2;
 	   
-	   task.id2 = elem.id2;
-	   task.name2 = elem.name2;
-	   task.status2 = elem.status2;
-	   task.wait2 = elem.wait2;
-	   task.x2 = elem.x2;
-	   task.y2 = elem.y2;
-	   task.theta2 = elem.theta2;
-	   
-	   executed_task.push_back(task);
+	   executed_task.push_back(elem);
 	}
     }
 }
@@ -138,6 +139,44 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 // mette insieme executed_task(k), new_task(k) e task_to_assign(k-1) ed elabora un nuovo task_to_assign(k)
 void taskManagement()
 {
+    bool add_task(true);
+    
+    for(auto elem : new_task)
+    {
+	// vedo se elem sta già in task_to_assign
+	for(auto newel : task_to_assign)
+	{
+	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+		add_task = false;
+	}
+	
+	if(add_task)
+	{  
+	    task_to_assign.push_back(elem);
+	}
+    }
+    
+    bool erase_task(false);
+    for(auto elem : executed_task)
+    {
+	// vedo se elem sta in task_to_assign
+	int count(0);
+	for(auto newel : task_to_assign)
+	{
+	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+	    {
+		erase_task = true;
+		break;
+	    }
+	    count++;
+	}
+	
+	if(erase_task)
+	{  
+	    task_to_assign.erase(task_to_assign.begin()+count);
+	}
+    }
+  
     dim_n = task_to_assign.size();
 }
 

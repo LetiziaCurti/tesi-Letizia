@@ -35,33 +35,34 @@ struct couple_task
 
 
 
-void publishVectTask(vector<struct couple_task> new_task_vect)
+void publishVectTask(vector<task_assign::task> new_task_vect)
 {
     task_assign::vect_task vect_msg;
+    vect_msg.task_vect = new_task_vect;
     
-    int count(0);
-    for(auto task : new_task_vect)
-    {	
-	vect_msg.task_vect[count].ar_time = task.ar_time;
-	
-	vect_msg.task_vect[count].name1 = task.name1;
-	vect_msg.task_vect[count].id1 = task.id1;
-	vect_msg.task_vect[count].status1 = task.status1;
-	vect_msg.task_vect[count].wait1 = task.wait1;
-	vect_msg.task_vect[count].x1 = task.x1;
-	vect_msg.task_vect[count].y1 = task.y1;
-	vect_msg.task_vect[count].theta1 = task.theta1;
-	
-	vect_msg.task_vect[count].name2 = task.name2;
-	vect_msg.task_vect[count].id2 = task.id2;
-	vect_msg.task_vect[count].status2 = task.status2;
-	vect_msg.task_vect[count].wait2 = task.wait2;
-	vect_msg.task_vect[count].x2 = task.x2;
-	vect_msg.task_vect[count].y2 = task.y2;
-	vect_msg.task_vect[count].theta2 = task.theta2;
-
-	count++;
-    }
+//     int count(0);
+//     for(auto task : new_task_vect)
+//     {	
+// 	vect_msg.task_vect[count].ar_time = task.ar_time;
+// 	
+// 	vect_msg.task_vect[count].name1 = task.name1;
+// 	vect_msg.task_vect[count].id1 = task.id1;
+// 	vect_msg.task_vect[count].status1 = task.status1;
+// 	vect_msg.task_vect[count].wait1 = task.wait1;
+// 	vect_msg.task_vect[count].x1 = task.x1;
+// 	vect_msg.task_vect[count].y1 = task.y1;
+// 	vect_msg.task_vect[count].theta1 = task.theta1;
+// 	
+// 	vect_msg.task_vect[count].name2 = task.name2;
+// 	vect_msg.task_vect[count].id2 = task.id2;
+// 	vect_msg.task_vect[count].status2 = task.status2;
+// 	vect_msg.task_vect[count].wait2 = task.wait2;
+// 	vect_msg.task_vect[count].x2 = task.x2;
+// 	vect_msg.task_vect[count].y2 = task.y2;
+// 	vect_msg.task_vect[count].theta2 = task.theta2;
+// 
+// 	count++;
+//     }
     
     // Wait for the publisher to connect to subscribers
     sleep(1.0);
@@ -71,7 +72,7 @@ void publishVectTask(vector<struct couple_task> new_task_vect)
 
 inline const char * const BoolToString(bool b)
 {
-  return b ? "true" : "false";
+    return b ? "true" : "false";
 }
 
 
@@ -90,13 +91,13 @@ int main(int argc, char **argv)
     
     
     // Leggi tutte le info da un file yaml e mettile al posto di at e new_task_vect
-    double at;
-    vector<struct couple_task> new_task_vect;
+//     double at;
+    vector<task_assign::task> new_task_vect;
     
     ros::Rate rate(10);
     while (ros::ok()) 
     {
-	sleep(at);
+// 	sleep(at);
 	publishVectTask(new_task_vect);
 	ros::spinOnce();
 	rate.sleep();

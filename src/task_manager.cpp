@@ -25,32 +25,12 @@ ros::Subscriber exec_task_sub;
 ros::Publisher task_ass_pub;
 
 
-struct couple_task
-{
-    double ar_time;
-    string name1;
-    int id1;
-    bool status1;
-    double wait1;
-    float x1;
-    float y1;
-    float theta1;
-    
-    string name2;
-    int id2;
-    bool status2;
-    double wait2;
-    float x2;
-    float y2;
-    float theta2;
-};
-
 // gli elementi dei vettori potrebbero essere già dei type task_Assign::task così quando il nodo deve pubblicare il vettore 
 // task_to_assign è già un vettore di elementi task, altrimenti le struct couple_task vanno copiate tutte nei type masg
 vector<task_assign::task> new_task;          		//vettore in cui vengono messi i nuovi task in arrivo da users_node
 vector<task_assign::task> executed_task;		//vettore in cui vengono messi i task eseguiti comunicati dal motion planner
 
-vector<task_assign::task> task_to_assign;    		//n(t): vettore dei task da assegnare che cambia nel tempo
+vector<task_assign::task> task_to_assign;    		//m(t): vettore dei task da assegnare che cambia nel tempo
 
 int dim_n(0);
 
@@ -59,7 +39,6 @@ int dim_n(0);
 void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 {
     bool add_task(true);
-//     struct couple_task task;
     
     for(auto elem : msg->task_vect)
     {
@@ -71,27 +50,7 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	
 	if(add_task)
-	{
-// 	   task.ar_time = elem.ar_time;
-// 	   task.id1 = elem.id1;
-// 	   task.name1 = elem.name1;
-// 	   task.status1 = elem.status1;
-// 	   task.wait1 = elem.wait1;
-// 	   task.x1 = elem.x1;
-// 	   task.y1 = elem.y1;
-// 	   task.theta1 = elem.theta1;
-// 	   
-// 	   task.id2 = elem.id2;
-// 	   task.name2 = elem.name2;
-// 	   task.status2 = elem.status2;
-// 	   task.wait2 = elem.wait2;
-// 	   task.x2 = elem.x2;
-// 	   task.y2 = elem.y2;
-// 	   task.theta2 = elem.theta2;
-	   
-	    
 	    new_task.push_back(elem);
-	}
     }
 }
 
@@ -100,7 +59,6 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 {   
     bool add_task(true);
-//     struct couple_task task;
     
     for(auto elem : msg->task_vect)
     {
@@ -112,26 +70,7 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	
 	if(add_task)
-	{
-// 	   task.ar_time = elem.ar_time;
-// 	   task.id1 = elem.id1;
-// 	   task.name1 = elem.name1;
-// 	   task.status1 = elem.status1;
-// 	   task.wait1 = elem.wait1;
-// 	   task.x1 = elem.x1;
-// 	   task.y1 = elem.y1;
-// 	   task.theta1 = elem.theta1;
-// 	   
-// 	   task.id2 = elem.id2;
-// 	   task.name2 = elem.name2;
-// 	   task.status2 = elem.status2;
-// 	   task.wait2 = elem.wait2;
-// 	   task.x2 = elem.x2;
-// 	   task.y2 = elem.y2;
-// 	   task.theta2 = elem.theta2;
-	   
 	   executed_task.push_back(elem);
-	}
     }
 }
 
@@ -192,10 +131,10 @@ void publishTaskToAssign()
     sleep(1.0);
     task_ass_pub.publish(assignment_msg);
     
-//     for(auto elem : task_to_assign)
-//     {
-// 	ROS_INFO_STREAM("Task Manager is publishing the assignment: "<< elem.task_id << " - " << elem.rob_id);
-//     }
+    for(auto elem : assignment_msg.task_vect)
+    {
+	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.name1 << " - " << elem.name2);
+    }
 }
 
 

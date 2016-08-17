@@ -56,6 +56,14 @@ find_package(catkin REQUIRED COMPONENTS
    OneAssign.msg
    task.msg
    vect_task.msg
+   robot.msg
+   vect_robot.msg
+   rt.msg
+   rt_vect.msg
+   info.msg
+   vect_info.msg
+   waypoint.msg
+   path.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -111,7 +119,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES task_assign
-  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime
+  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime yaml-cpp
 #  DEPENDS system_lib
 )
 
@@ -147,6 +155,8 @@ add_executable(motion_planner src/motion_planner.cpp)
 add_executable(obstacle_node src/obstacle_node.cpp)
 add_executable(master src/master.cpp)
 add_executable(robot src/robot.cpp)
+# add_executable(monsters_test src/monsters_test.cpp)
+# add_executable(task_test_config src/task_test_config.cpp)
 # add_executable(robot_node src/robot_node_2.cpp)
 # add_executable(task_node src/task_node_2.cpp)
 # add_executable(central_node src/central_node_2.cpp)
@@ -163,6 +173,8 @@ add_dependencies(motion_planner ${PROJECT_NAME}_gencpp)
 add_dependencies(obstacle_node ${PROJECT_NAME}_gencpp)
 add_dependencies(master ${PROJECT_NAME}_gencpp)
 add_dependencies(robot ${PROJECT_NAME}_gencpp)
+# add_dependencies(monsters_test ${PROJECT_NAME}_gencpp)
+# add_dependencies(task_test_config ${PROJECT_NAME}_gencpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(task_assign_node
@@ -175,8 +187,10 @@ target_link_libraries(users_node ${catkin_LIBRARIES})
 target_link_libraries(task_manager ${catkin_LIBRARIES})
 target_link_libraries(motion_planner ${catkin_LIBRARIES})
 target_link_libraries(obstacle_node ${catkin_LIBRARIES})
-target_link_libraries(master ${catkin_LIBRARIES})
+target_link_libraries(master glpk yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(robot ${catkin_LIBRARIES})
+# target_link_libraries(monsters_test yaml-cpp ${catkin_LIBRARIES})
+# target_link_libraries(task_test_config ${catkin_LIBRARIES})
 
 
 #############

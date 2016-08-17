@@ -15,6 +15,8 @@
 #include <iostream>
 #include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
+#include "task_assign/robot.h"
+
 
 #define DISTANCE_TOLERANCE 0.01
 
@@ -52,7 +54,6 @@ public:
 
     ros::Time t_arrive;
     struct pose task_pose;
-    turtlesim::Pose uscita;
 
     bool assignment = false;
     string task_name;
@@ -68,13 +69,9 @@ public:
 	turtlesim_pose.y = pos.y;
 	turtlesim_pose.theta = pos.theta;
 	
-	uscita.x = 10;
-	uscita.y = 1;
-	uscita.theta = 0;
-	
 
 	// Publish and subscribe to team status messages
-	status_pub = node.advertise<task_assign::IniStatus>("status_rob_topic", 10);	
+	status_pub = node.advertise<task_assign::robot>("status_rob_topic", 10);	
 // 	assignment_pub = node.advertise<task_assign::OneAssign>("free_assign_topic", 10);
 	
 	rt_ass_sub = node.subscribe("rt_topic", 20, &Robot::RTAssignCallback,this);

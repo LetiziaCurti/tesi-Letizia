@@ -45,7 +45,7 @@ ros::Subscriber task_ass_sub;
 vector<task_assign::task> task_to_assign;    	//T: vettore dei task da assegnare che cambia nel tempo (di dim m(k))
 vector<task_assign::robot> robot_to_assign;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
 vector<task_assign::info> tex_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-vector<task_assign::info> tex0_info_vect;
+vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
 vector<task_assign::robot> delete_rob;		//robot esclusi dall'assignment perché superano le soglie
 
 

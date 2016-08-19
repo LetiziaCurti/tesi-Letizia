@@ -142,6 +142,7 @@ public:
 // 	status_msg.t = ros::Time::now();
 	status_msg.name = robot_name;
 	status_msg.status = true;
+	status_msg.b_level0 = 10;
 	status_msg.b_level = 10;
 	
 	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)

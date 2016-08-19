@@ -30,7 +30,7 @@ ros::Publisher task_ass_pub;
 vector<task_assign::task> new_task;          		//vettore in cui vengono messi i nuovi task in arrivo da users_node
 vector<task_assign::task> executed_task;		//vettore in cui vengono messi i task eseguiti comunicati dal motion planner
 
-vector<task_assign::task> task_to_assign;    		//m(t): vettore dei task da assegnare che cambia nel tempo
+vector<task_assign::task> task_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dim m(k)
 
 int dim_n(0);
 

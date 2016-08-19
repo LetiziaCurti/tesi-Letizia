@@ -48,7 +48,6 @@ public:
     struct pose turtlesim_pose;
 
     ros::Subscriber rt_ass_sub;
-//     ros::Publisher assignment_pub;
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
 
@@ -72,7 +71,6 @@ public:
 
 	// Publish and subscribe to team status messages
 	status_pub = node.advertise<task_assign::robot>("status_rob_topic", 10);	
-// 	assignment_pub = node.advertise<task_assign::OneAssign>("free_assign_topic", 10);
 	
 	rt_ass_sub = node.subscribe("rt_topic", 20, &Robot::RTAssignCallback,this);
 	
@@ -138,14 +136,13 @@ public:
     // Il robot pubblica il suo stato su "robot_arrival_topic"
     void publishIniStatus() 
     {
-	task_assign::IniStatus status_msg; 
+	task_assign::robot status_msg; 
 
 	status_msg.header.stamp = ros::Time::now();
-	status_msg.t = ros::Time::now();
-	status_msg.robot_id = robot_name;
-	status_msg.is_ready = true;
-	status_msg.status = false; //I am available (not busy)
-	status_msg.type = "robot";
+// 	status_msg.t = ros::Time::now();
+	status_msg.name = robot_name;
+	status_msg.status = true;
+	status_msg.b_level = 10;
 	
 	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
 	{
@@ -380,4 +377,3 @@ int main(int argc, char **argv)
  
     return 0;
 }
-

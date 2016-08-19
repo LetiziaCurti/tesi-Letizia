@@ -105,15 +105,15 @@ void RobInfoCallback(const task_assign::vect_info::ConstPtr& msg)
 
 
 
-// Legge su "rob_ini_topic" le info relative ai robot al tempo 0 (tutti: già assegnati e da assegnare)
-void RobIniCallback(const task_assign::vect_info::ConstPtr& msg)
-{
-    // non è importante l'ordine
-    for(auto elem : msg->info_vect)
-    {
-	tex0_info_vect.push_back(elem);
-    }
-}
+// // Legge su "rob_ini_topic" le info relative ai robot al tempo 0 (tutti: già assegnati e da assegnare)
+// void RobIniCallback(const task_assign::vect_info::ConstPtr& msg)
+// {
+//     // non è importante l'ordine
+//     for(auto elem : msg->info_vect)
+//     {
+// 	tex0_info_vect.push_back(elem);
+//     }
+// }
 
 
 
@@ -438,7 +438,7 @@ int main(int argc, char **argv)
     
     rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
     rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
-    rob_ini_sub = node.subscribe("rob_ini_topic", 20, &RobIniCallback);
+//     rob_ini_sub = node.subscribe("rob_ini_topic", 20, &RobIniCallback);
     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
     
     assignment_pub = node.advertise<task_assign::rt_vect>("assignment_topic", 10);

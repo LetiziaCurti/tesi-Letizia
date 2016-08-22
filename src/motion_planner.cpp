@@ -10,7 +10,8 @@
 #include "task_assign/vect_robot.h"
 #include "task_assign/rt_vect.h"
 #include "task_assign/vect_info.h"
-#include "task_assign/path.h"
+#include "task_assign/task_path.h"
+#include "task_assign/assignment.h"
 
 
 inline const char * const BoolToString(bool b)
@@ -27,7 +28,7 @@ using namespace std;
 
 
 ros::Subscriber obs_sub;
-ros::Subscriber assignment_sub;
+ros::Subscriber rt_sub;
 ros::Subscriber status_rob_sub;
 ros::Subscriber arr_rob_sub;
 ros::Subscriber task_ass_sub;
@@ -36,10 +37,12 @@ ros::Publisher exec_task_pub;
 ros::Publisher rob_ass_pub;
 ros::Publisher rob_ini_pub;
 ros::Publisher rob_info_pub;
-ros::Publisher rt_pub;
+ros::Publisher assignment_pub;
 
 #define VELOCITY 10
 #define BATTERY_THR 10
+bool new_assign(false);
+bool add(false);
 
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
@@ -48,7 +51,10 @@ vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot che stann
 vector<task_assign::task> tasks_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dimensione m(k)
 vector<task_assign::task> tasks_in_execution;		//vettore dei task già in esecuzione
 vector<task_assign::rt> rt_vector;			//vettore degli assignments robot-task
-vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
+vector<task_assign::info> tex0_info_vect;		//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
+vector<task_assign::task> completed_tasks;		//vettore dei task completati che viene inviato al task_manager
+vector<task_assign::task_path> assignments_vect;			//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
+
 
 
 //simulo una mappa
@@ -59,7 +65,18 @@ struct mappa
     vector<pair<double,double>> wpoints;
 };
 
-vector<mappa> maps;   // la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path per andare da un robot ad un task
+vector<mappa> GlobMap;   // la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path per andare da un robot ad un task
+
+
+
+struct Assign
+{
+    task_assign::robot rob;
+    task_assign::task task;
+    task_assign::task_path path_tot;
+};
+
+vector<Assign> Catalogo_Ass;
 
 
 
@@ -152,7 +169,6 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 // Legge "status_rob_topic" 
 void StatusCallback(const task_assign::robot::ConstPtr& msg)
 {    
-    bool add_rob(true);
     bool in_charge(false);
     bool in_execution(false);
     bool available(false);
@@ -248,7 +264,7 @@ void publishRobotInfo()
 {
     task_assign::vect_info vect_msg;
     
-    vect_msg.info_vect = CalcTex(available_robots, tasks_to_assign, maps);
+    vect_msg.info_vect = CalcTex(available_robots, tasks_to_assign, GlobMap);
 //     CalcTex(not_available_robots, tasks_to_assign, maps);
     
     sleep(1);
@@ -278,18 +294,89 @@ void publishRobotToAssign()
 
 
 
+// Legge "assignment_topic" 
+void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
+{
+    new_assign = false;
+    add = true;
+    struct Assign ass;
+    
+    if(msg->rt_vect.size() > 0)
+    {
+// 	rt_vector = msg->rt_vect;
+	new_assign = true;
+	
+	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
+	// il robot in robots_in_execution e il task in tasks_in_execution
+	for(auto rt : msg->rt_vect)
+	{
+	    //vedo se è già nel catalogo
+	    for(auto elem : Catalogo_Ass)
+	    {
+		if(elem.rob.name==rt.robot.name && elem.task.name==rt.task.name)
+		{
+		    add = false;
+		    break;
+		}
+	    }
+	    
+	    if(add)
+	    {
+		robots_in_execution.push_back(rt.robot);
+		tasks_in_execution.push_back(rt.task);
+		
+		ass.rob = rt.robot;
+		ass.task = rt.task;
+		
+		Catalogo_Ass.push_back(ass);
+	    }
+	}
+    }
+//     bool add(true);
+//     
+//     for(auto rt : msg->rt_vect)
+//     {
+// 	for(auto rob : robots_in_execution)
+// 	{
+// 	    if(rob.name == rt.r_name)
+// 	    {
+// 		add = false;
+// 		break;
+// 	    }
+// 	}
+// 	if(add)
+// 	{}
+//     }
+}
+
+
+// if(new_assign) ....pubblica
+// Pubblica ai robot i task rispettivamente assegnati
+void publishAssign()
+{
+    task_assign::assignment msg;
+    
+    msg.assign_vect = assignments_vect;
+    
+    sleep(1);
+    assignment_pub.publish(msg);
+}
+
+
+
 // Pubblica al task manager i task completati su "task_exec_topic"
 void publishExecTask()
 {
-    task_assign::vect_task vect_msg;
+    task_assign::vect_task msg;
+    
+    msg.task_vect = completed_tasks;
+    
+    sleep(1);
+    exec_task_pub.publish(msg);
 }
 
 
-// Pubblica ai robot i task rispettivamente assegnati
-void publishRTAssign()
-{
-    task_assign::vect_task vect_msg;
-}
+
 
 
 
@@ -301,11 +388,11 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 
 
 
-// Legge "assignment_topic" 
-void AssignCallback(const task_assign::rt_vect::ConstPtr& msg)
-{
+void MapToCatal(vector<mappa> Map, Assign ass, task_assign::rt r_t)
+{}
 
-}
+
+
 
 
 
@@ -317,7 +404,7 @@ int main(int argc, char **argv)
     ros::NodeHandle node;
     
     obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
-    assignment_sub = node.subscribe("assignment_topic", 20, &AssignCallback);
+    rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
 //     arr_rob_sub = node.subscribe("status_rob_topic", 20, &ArrCallback);
     status_rob_sub = node.subscribe("status_rob_topic", 20, &StatusCallback);
     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
@@ -326,7 +413,7 @@ int main(int argc, char **argv)
     rob_ass_pub = node.advertise<task_assign::vect_robot>("rob_assign_topic", 10);
 //     rob_ini_pub = node.advertise<task_assign::vect_info>("rob_ini_topic", 10);
     rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
-    rt_pub = node.advertise<task_assign::vect_task>("rt_topic", 10);
+    assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
     
     sleep(1);
 

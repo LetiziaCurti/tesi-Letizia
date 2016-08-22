@@ -35,7 +35,7 @@ int Min(int a, int b)
 
 using namespace std;
 
-ros::Publisher assignment_pub;
+ros::Publisher rt_pub;
 ros::Subscriber rob_ass_sub;
 ros::Subscriber rob_info_sub;
 ros::Subscriber rob_ini_sub;
@@ -118,7 +118,7 @@ void RobInfoCallback(const task_assign::vect_info::ConstPtr& msg)
 
 
 // Pubblica al motion planner gli assignments task-robot
-void publishAssign(vector<vector<int>> S)
+void publishRT(vector<vector<int>> S)
 {
     task_assign::rt_vect vect_msg;
     task_assign::rt msg;
@@ -129,7 +129,7 @@ void publishAssign(vector<vector<int>> S)
 	{
 	    if(S[i][j]==1)
 	    {
-		msg.r_name = robot_to_assign[i].name;
+		msg.robot = robot_to_assign[i];
 		msg.task = task_to_assign[j];
 		vect_msg.rt_vect.push_back(msg);
 	    }
@@ -137,7 +137,7 @@ void publishAssign(vector<vector<int>> S)
     }
     
 //     sleep(1);
-    assignment_pub.publish(vect_msg);
+    rt_pub.publish(vect_msg);
 }
 
 
@@ -441,7 +441,7 @@ int main(int argc, char **argv)
 //     rob_ini_sub = node.subscribe("rob_ini_topic", 20, &RobIniCallback);
     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
     
-    assignment_pub = node.advertise<task_assign::rt_vect>("assignment_topic", 10);
+    rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
     
     sleep(1);
     
@@ -479,7 +479,7 @@ int main(int argc, char **argv)
 		S = TASolver(n, m, U);
 		printMatrix(S);
 		
-		publishAssign(S);
+		publishRT(S);
 	    }
 	    else if(n==0)
 		ROS_INFO_STREAM("There aren't any available robots \n");

@@ -63,7 +63,8 @@ find_package(catkin REQUIRED COMPONENTS
    info.msg
    vect_info.msg
    waypoint.msg
-   path.msg
+   task_path.msg
+   assignment.msg
  )
 
 ## Generate services in the 'srv' folder

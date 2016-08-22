@@ -16,6 +16,8 @@
 #include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
 #include "task_assign/robot.h"
+#include "task_assign/rt_vect.h"
+#include "task_assign/assignment.h"
 
 
 #define DISTANCE_TOLERANCE 0.01
@@ -47,7 +49,7 @@ public:
     int id_marker;
     struct pose turtlesim_pose;
 
-    ros::Subscriber rt_ass_sub;
+    ros::Subscriber assignment_sub;
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
 
@@ -72,7 +74,7 @@ public:
 	// Publish and subscribe to team status messages
 	status_pub = node.advertise<task_assign::robot>("status_rob_topic", 10);	
 	
-	rt_ass_sub = node.subscribe("rt_topic", 20, &Robot::RTAssignCallback,this);
+	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     }
@@ -297,34 +299,34 @@ public:
     // Pubblica il proprio stato di ready su "robots_arrival_topic" finché non riceve un assignment, 
     // dopodiché smette di pubblicare il suo stato e memorizza la posizione del task da raggiungere
     // in task_pose
-    void RTAssignCallback(const task_assign::AssignMsg::ConstPtr& status_msg)
+    void AssignCallback(const task_assign::assignment::ConstPtr& status_msg)
     {
 	if(assignment) return;
 	
 	for(auto elem : status_msg->assign_vect)
 	{
-	    //check: deve essere arrivato qualcosa
-	    if(elem.t_ready && elem.task_x!=0 && elem.task_y!=0 && elem.task_theta!=0)
-	    {
-// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
-	    
-		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
-		// smetto di pubblicare il mio stato
-		if(elem.rob_id==robot_name && elem.r_status==true)
-		{
-		    assignment = true;
-		    task_name = elem.task_id;
-		    task_id_marker = elem.t_id_marker;
-		    
-		    task_pose.x = elem.task_x;
-		    task_pose.y = elem.task_y;
-		    task_pose.theta = elem.task_theta;
-		    
-		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
-		}
-		else
-		    publishIniStatus();
-	    }   
+// 	    //check: deve essere arrivato qualcosa
+// 	    if(elem.t_ready && elem.task_x!=0 && elem.task_y!=0 && elem.task_theta!=0)
+// 	    {
+// // 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
+// 	    
+// 		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
+// 		// smetto di pubblicare il mio stato
+// 		if(elem.rob_id==robot_name && elem.r_status==true)
+// 		{
+// 		    assignment = true;
+// 		    task_name = elem.task_id;
+// 		    task_id_marker = elem.t_id_marker;
+// 		    
+// 		    task_pose.x = elem.task_x;
+// 		    task_pose.y = elem.task_y;
+// 		    task_pose.theta = elem.task_theta;
+// 		    
+// 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
+// 		}
+// 		else
+// 		    publishIniStatus();
+// 	    }   
 	}
     }
 

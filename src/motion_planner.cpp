@@ -60,8 +60,8 @@ vector<task_assign::task_path> assignments_vect;			//vettore delle info da invia
 //simulo una mappa
 struct mappa
 {
-    string t_name;
-    string r_name;
+    pair<double,double> start;
+    pair<double,double> end;
     vector<pair<double,double>> wpoints;
 };
 
@@ -118,6 +118,8 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 {
     vector<task_assign::info> tex;
     task_assign::info info;
+    double time_a(0);
+    double time_b(0);
     
     // idea 1
     for(auto rob : robots)
@@ -125,18 +127,28 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 	// vedo se elem sta già in task_to_assign
 	for(auto task : tasks)
 	{
+	      info.r_name = rob.name;
+	      info.t_name = task.name;
+	      
 	      for(auto elem : maps)
 	      {
-		  if(rob.name == elem.r_name && task.name == elem.t_name)
+		  if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
 		  {
-		      info.r_name = rob.name;
-		      info.t_name = task.name;
-		      info.t_ex = 1/VELOCITY*CalcPath(elem.wpoints);
-		      tex.push_back(info);
-		      
+		      time_a = 1/VELOCITY*CalcPath(elem.wpoints);
 		      break;
 		  }
 	      }
+	      for(auto elem : maps)
+	      {
+		  if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
+		  {
+		      time_b = 1/VELOCITY*CalcPath(elem.wpoints);
+		      break;
+		  }
+	      }
+	      
+	      info.t_ex = time_a + task.wait1 + time_b + task.wait1;
+	      tex.push_back(info);
 	}
     }
     
@@ -388,8 +400,65 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 
 
 
+// Function che copia una lista di w.p. dalla mappa globale in una lista di oggetti task_assign/waypoint
+vector<task_assign::waypoint> CopiaPath(vector<pair<double,double>> wpoints)
+{
+    task_assign::waypoint wp;
+    vector<task_assign::waypoint> path;
+    
+    for(auto pair : wpoints)
+    {
+	wp.x = pair.first;
+	wp.y = pair.second;
+	
+	path.push_back(wp);
+    }
+    
+    
+    return path;
+}
+
+
+
+// Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
+// e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
 void MapToCatal(vector<mappa> Map, Assign ass, task_assign::rt r_t)
-{}
+{
+    vector<task_assign::waypoint> path;
+    task_assign::waypoint wp;
+  
+  
+    ass.rob = r_t.robot;
+    ass.task = r_t.task;
+    
+    ass.path_tot.r_name = r_t.robot.name;
+    ass.path_tot.t_name = r_t.task.name;
+    
+    //ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di task_a di r_t
+    for(auto elem : Map)
+    {
+	if(r_t.robot.x == elem.start.first && r_t.robot.y == elem.start.second && r_t.task.x1 == elem.end.first && r_t.task.y1 == elem.end.second)
+	{
+	    ass.path_tot.path_a = CopiaPath(elem.wpoints);
+	    break;
+	}
+    }
+	
+    //ora scrivo path_b prendendo dalla mappa la lista di waypoint che vanno dalla posizione di task_a all posizione di task_b di r_t
+    for(auto elem : Map)
+    {
+	if(r_t.task.x1 == elem.start.first && r_t.task.y1 == elem.start.second && r_t.task.x2 == elem.end.first && r_t.task.y2 == elem.end.second)
+	{
+	    ass.path_tot.path_b = CopiaPath(elem.wpoints);	    
+	    break;
+	}
+    }
+}
+
+
+
+// Crea il Catalogo_Ass
+
 
 
 

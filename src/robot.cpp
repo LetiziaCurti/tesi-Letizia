@@ -15,7 +15,7 @@
 #include <iostream>
 #include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
-#include "task_assign/robot.h"
+#include "task_assign/vect_robot.h"
 #include "task_assign/rt_vect.h"
 #include "task_assign/assignment.h"
 
@@ -50,6 +50,7 @@ public:
     struct pose turtlesim_pose;
 
     ros::Subscriber assignment_sub;
+    ros::Subscriber recharge_sub;
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
 
@@ -75,6 +76,7 @@ public:
 	status_pub = node.advertise<task_assign::robot>("status_rob_topic", 10);	
 	
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
+	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     }
@@ -328,6 +330,13 @@ public:
 // 		    publishIniStatus();
 // 	    }   
 	}
+    }
+    
+    
+    
+    void RechargeCallback(const task_assign::vect_robot::ConstPtr& status_msg)
+    {
+	
     }
 
 

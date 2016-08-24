@@ -41,8 +41,6 @@ ros::Publisher assignment_pub;
 
 #define VELOCITY 10
 #define BATTERY_THR 10
-bool new_assign(false);
-bool add(false);
 
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
@@ -286,13 +284,6 @@ void publishRobotInfo()
 
 
 
-// // Legge la posizione e il livello di batteria dei robot da "status_rob_topic" 
-// void StatusCallback(const task_assign::robot::ConstPtr& msg)
-// {
-// 
-// }
-
-
 // Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
 void publishRobotToAssign()
 {
@@ -306,18 +297,75 @@ void publishRobotToAssign()
 
 
 
+// Function che copia una lista di w.p. dalla mappa globale in una lista di oggetti task_assign/waypoint
+vector<task_assign::waypoint> CopiaPath(vector<pair<double,double>> wpoints)
+{
+    task_assign::waypoint wp;
+    vector<task_assign::waypoint> path;
+    
+    for(auto pair : wpoints)
+    {
+	wp.x = pair.first;
+	wp.y = pair.second;
+	
+	path.push_back(wp);
+    }
+    
+    
+    return path;
+}
+
+
+
+// Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
+// e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
+Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t)
+{
+    vector<task_assign::waypoint> path;
+    task_assign::waypoint wp;
+    Assign ass;
+  
+  
+    ass.rob = r_t.robot;
+    ass.task = r_t.task;
+    
+    ass.path_tot.r_name = r_t.robot.name;
+    ass.path_tot.t_name = r_t.task.name;
+    
+    //ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di task_a di r_t
+    for(auto elem : Map)
+    {
+	if(r_t.robot.x == elem.start.first && r_t.robot.y == elem.start.second && r_t.task.x1 == elem.end.first && r_t.task.y1 == elem.end.second)
+	{
+	    ass.path_tot.path_a = CopiaPath(elem.wpoints);
+	    break;
+	}
+    }
+	
+    //ora scrivo path_b prendendo dalla mappa la lista di waypoint che vanno dalla posizione di task_a all posizione di task_b di r_t
+    for(auto elem : Map)
+    {
+	if(r_t.task.x1 == elem.start.first && r_t.task.y1 == elem.start.second && r_t.task.x2 == elem.end.first && r_t.task.y2 == elem.end.second)
+	{
+	    ass.path_tot.path_b = CopiaPath(elem.wpoints);	    
+	    break;
+	}
+    }
+    
+    
+    return ass;
+}
+
+
+
 // Legge "assignment_topic" 
 void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 {
-    new_assign = false;
-    add = true;
+    bool add(true);
     struct Assign ass;
     
     if(msg->rt_vect.size() > 0)
-    {
-// 	rt_vector = msg->rt_vect;
-	new_assign = true;
-	
+    {	
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -337,9 +385,9 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		robots_in_execution.push_back(rt.robot);
 		tasks_in_execution.push_back(rt.task);
 		
-		ass.rob = rt.robot;
-		ass.task = rt.task;
+		ass = MapToCatal(GlobMap, rt);
 		
+		// Crea il Catalogo_Ass
 		Catalogo_Ass.push_back(ass);
 	    }
 	}
@@ -400,74 +448,13 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 
 
 
-// Function che copia una lista di w.p. dalla mappa globale in una lista di oggetti task_assign/waypoint
-vector<task_assign::waypoint> CopiaPath(vector<pair<double,double>> wpoints)
-{
-    task_assign::waypoint wp;
-    vector<task_assign::waypoint> path;
-    
-    for(auto pair : wpoints)
-    {
-	wp.x = pair.first;
-	wp.y = pair.second;
-	
-	path.push_back(wp);
-    }
-    
-    
-    return path;
-}
-
-
-
-// Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
-// e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
-void MapToCatal(vector<mappa> Map, Assign ass, task_assign::rt r_t)
-{
-    vector<task_assign::waypoint> path;
-    task_assign::waypoint wp;
-  
-  
-    ass.rob = r_t.robot;
-    ass.task = r_t.task;
-    
-    ass.path_tot.r_name = r_t.robot.name;
-    ass.path_tot.t_name = r_t.task.name;
-    
-    //ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di task_a di r_t
-    for(auto elem : Map)
-    {
-	if(r_t.robot.x == elem.start.first && r_t.robot.y == elem.start.second && r_t.task.x1 == elem.end.first && r_t.task.y1 == elem.end.second)
-	{
-	    ass.path_tot.path_a = CopiaPath(elem.wpoints);
-	    break;
-	}
-    }
-	
-    //ora scrivo path_b prendendo dalla mappa la lista di waypoint che vanno dalla posizione di task_a all posizione di task_b di r_t
-    for(auto elem : Map)
-    {
-	if(r_t.task.x1 == elem.start.first && r_t.task.y1 == elem.start.second && r_t.task.x2 == elem.end.first && r_t.task.y2 == elem.end.second)
-	{
-	    ass.path_tot.path_b = CopiaPath(elem.wpoints);	    
-	    break;
-	}
-    }
-}
-
-
-
-// Crea il Catalogo_Ass
-
-
 
 
 
 
 
 int main(int argc, char **argv)
-{
-  
+{ 
     // Initialize the node
     ros::init(argc, argv, "motion_planner");
     ros::NodeHandle node;

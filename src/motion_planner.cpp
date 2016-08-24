@@ -184,6 +184,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
     bool in_charge(false);
     bool in_execution(false);
     bool available(false);
+    bool completed(false);
     
     if(msg->status)
     {	
@@ -236,22 +237,45 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    if(msg->b_level <= BATTERY_THR)
 	    {
 		    robots_in_recharge.push_back(*msg);
-		    available_robots = deleteElem(msg->name,available_robots);
+		    available_robots = deleteElem(msg->name, available_robots);
 	    }
 	}
 	
 	else if(in_execution)
 	{
-	    if(msg->b_level <= BATTERY_THR)
+	    // vedo se il robot è arrivato al task
+	    for(auto ass : Catalogo_Ass)
 	    {
+		if(msg->x == ass.task.x2 && msg->y == ass.task.y2)
+		{
+		    completed_tasks.push_back(ass.task);
+		    tasks_in_execution = deleteElem(ass.task.name, tasks_in_execution);
+		    robots_in_execution = deleteElem(msg->name, robots_in_execution);
+		    
+		    if(msg->b_level > BATTERY_THR)
+			available_robots.push_back(*msg);
+		    else
+			robots_in_recharge.push_back(*msg);
+		    
+		    completed = true;
+		    break;
+		}
+	    }
+	    
+	    // il robot sta eseguendo il task e non ha ancora finito
+	    if(!completed)
+	    {
+		if(msg->b_level <= BATTERY_THR)
+		{
 		    // comunicalo al master in qualche modo
+		}
 	    }
 	}
 	
 	else if(in_charge)
 	{
 	    if(msg->b_level == msg->b_level0)
-		robots_in_recharge = deleteElem(msg->name,robots_in_recharge);
+		robots_in_recharge = deleteElem(msg->name, robots_in_recharge);
 	}
 	
 

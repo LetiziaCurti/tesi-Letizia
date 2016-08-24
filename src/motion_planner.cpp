@@ -38,6 +38,7 @@ ros::Publisher rob_ass_pub;
 ros::Publisher rob_ini_pub;
 ros::Publisher rob_info_pub;
 ros::Publisher assignment_pub;
+ros::Publisher recharge_pub;
 
 #define VELOCITY 10
 #define BATTERY_THR 10
@@ -82,7 +83,7 @@ vector<Assign> Catalogo_Ass;
 
 
 // Function che elimina il robot con il nome passato in argomento dal vettore di robot passato in argomento
-vector<task_assign::robot> deleteElem(string name, vector<task_assign::robot> vect)
+vector<task_assign::robot> deleteRob(string name, vector<task_assign::robot> vect)
 {
     int i(0);
     for(auto elem : vect)
@@ -94,8 +95,24 @@ vector<task_assign::robot> deleteElem(string name, vector<task_assign::robot> ve
 	}
 	i++;
     }
-    
-  
+    return vect;
+}
+
+
+
+// Function che elimina il robot con il nome passato in argomento dal vettore di robot passato in argomento
+vector<task_assign::task> deleteTask(string name, vector<task_assign::task> vect)
+{
+    int i(0);
+    for(auto elem : vect)
+    {
+	if(elem.name == name)
+	{
+	    vect.erase(vect.begin()+i);
+	    break;
+	}
+	i++;
+    }
     return vect;
 }
 
@@ -238,7 +255,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    if(msg->b_level <= BATTERY_THR)
 	    {
 		    robots_in_recharge.push_back(*msg);
-		    available_robots = deleteElem(msg->name, available_robots);
+		    available_robots = deleteRob(msg->name, available_robots);
 	    }
 	}
 	
@@ -253,8 +270,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    if(msg->x == ass.task.x2 && msg->y == ass.task.y2)
 		    {
 			completed_tasks.push_back(ass.task);
-			tasks_in_execution = deleteElem(ass.task.name, tasks_in_execution);
-			robots_in_execution = deleteElem(msg->name, robots_in_execution);
+			tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+			robots_in_execution = deleteRob(msg->name, robots_in_execution);
 			
 			if(msg->b_level > BATTERY_THR)
 			    available_robots.push_back(*msg);
@@ -276,7 +293,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    if(getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
 			      {
 				  robots_in_recharge.push_back(*msg);
-				  tasks_in_execution = deleteElem(ass.task.name, tasks_in_execution);
+				  tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 				  tasks_to_assign.push_back(ass.task);
 			      }    
 			}
@@ -289,50 +306,12 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	else if(in_charge)
 	{
 	    if(msg->b_level == msg->b_level0)
-		robots_in_recharge = deleteElem(msg->name, robots_in_recharge);
+		robots_in_recharge = deleteRob(msg->name, robots_in_recharge);
 	}
 	
 
 
     }
-}
-
-
-
-// // Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare)
-// void publishRobotIni()
-// {
-//     task_assign::vect_info vect_msg;
-// 
-// }
-
-
-
-
-// Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare), pubblica tex0_info_vect
-void publishRobotInfo()
-{
-    task_assign::vect_info vect_msg;
-    
-    vect_msg.info_vect = CalcTex(available_robots, tasks_to_assign, GlobMap);
-//     CalcTex(not_available_robots, tasks_to_assign, maps);
-    
-    sleep(1);
-    rob_info_pub.publish(vect_msg);
-   
-}
-
-
-
-// Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
-void publishRobotToAssign()
-{
-    task_assign::vect_robot vect_msg;
-    
-    vect_msg.robot_vect = available_robots;
-    
-    sleep(1);
-    rob_ass_pub.publish(vect_msg);
 }
 
 
@@ -441,6 +420,45 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 }
 
 
+
+
+// // Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare)
+// void publishRobotIni()
+// {
+//     task_assign::vect_info vect_msg;
+// 
+// }
+
+
+
+// Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare), pubblica tex0_info_vect
+void publishRobotInfo()
+{
+    task_assign::vect_info vect_msg;
+    
+    vect_msg.info_vect = CalcTex(available_robots, tasks_to_assign, GlobMap);
+//     CalcTex(not_available_robots, tasks_to_assign, maps);
+    
+    sleep(1);
+    rob_info_pub.publish(vect_msg);
+   
+}
+
+
+
+// Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
+void publishRobotToAssign()
+{
+    task_assign::vect_robot vect_msg;
+    
+    vect_msg.robot_vect = available_robots;
+    
+    sleep(1);
+    rob_ass_pub.publish(vect_msg);
+}
+
+
+
 // if(new_assign) ....pubblica
 // Pubblica ai robot i task rispettivamente assegnati
 void publishAssign()
@@ -501,6 +519,7 @@ int main(int argc, char **argv)
 //     rob_ini_pub = node.advertise<task_assign::vect_info>("rob_ini_topic", 10);
     rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
+    recharge_pub = node.advertise<task_assign::vect_robot>("recharge_topic", 10);
     
     sleep(1);
 
@@ -516,15 +535,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-
-
-
-    // deve monitorare il b_lev, se scende al di sotto della soglia il robot deve essere tolto dal vettore
-    
-//     if(t_ex > t_ex_0)
-// 		b_lev += (t_ex - t_ex_0)*1;
-// 	    else
-// 		b_lev++;
-// 	    
-// 	    robot.b_level = b_lev;

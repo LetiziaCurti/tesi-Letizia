@@ -42,6 +42,8 @@ ros::Publisher assignment_pub;
 #define VELOCITY 10
 #define BATTERY_THR 10
 
+bool new_assign(false);
+
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
 vector<task_assign::robot> robots_in_execution;    	//vettore dei robot che stanno eseguendo dei task o che stanno andando a ricaricarsi
@@ -362,6 +364,7 @@ Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t)
 void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 {
     bool add(true);
+    new_assign = false;
     struct Assign ass;
     
     if(msg->rt_vect.size() > 0)
@@ -382,31 +385,21 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    
 	    if(add)
 	    {
+		new_assign = true;
+		
 		robots_in_execution.push_back(rt.robot);
 		tasks_in_execution.push_back(rt.task);
 		
 		ass = MapToCatal(GlobMap, rt);
+		assignments_vect.push_back(ass.path_tot);
 		
 		// Crea il Catalogo_Ass
 		Catalogo_Ass.push_back(ass);
 	    }
+	    
+	    add = true;
 	}
     }
-//     bool add(true);
-//     
-//     for(auto rt : msg->rt_vect)
-//     {
-// 	for(auto rob : robots_in_execution)
-// 	{
-// 	    if(rob.name == rt.r_name)
-// 	    {
-// 		add = false;
-// 		break;
-// 	    }
-// 	}
-// 	if(add)
-// 	{}
-//     }
 }
 
 

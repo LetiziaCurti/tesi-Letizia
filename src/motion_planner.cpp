@@ -41,6 +41,7 @@ ros::Publisher assignment_pub;
 
 #define VELOCITY 10
 #define BATTERY_THR 10
+#define SEC_DIST 1
 
 bool new_assign(false);
 
@@ -243,32 +244,45 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	
 	else if(in_execution)
 	{
-	    // vedo se il robot è arrivato al task
+	    // cerco il task corrispondente al robot
 	    for(auto ass : Catalogo_Ass)
 	    {
-		if(msg->x == ass.task.x2 && msg->y == ass.task.y2)
+		if(msg->name == ass.rob.name)
 		{
-		    completed_tasks.push_back(ass.task);
-		    tasks_in_execution = deleteElem(ass.task.name, tasks_in_execution);
-		    robots_in_execution = deleteElem(msg->name, robots_in_execution);
-		    
-		    if(msg->b_level > BATTERY_THR)
-			available_robots.push_back(*msg);
-		    else
-			robots_in_recharge.push_back(*msg);
-		    
-		    completed = true;
-		    break;
+		    // vedo se il robot è arrivato al task
+		    if(msg->x == ass.task.x2 && msg->y == ass.task.y2)
+		    {
+			completed_tasks.push_back(ass.task);
+			tasks_in_execution = deleteElem(ass.task.name, tasks_in_execution);
+			robots_in_execution = deleteElem(msg->name, robots_in_execution);
+			
+			if(msg->b_level > BATTERY_THR)
+			    available_robots.push_back(*msg);
+			else
+			    robots_in_recharge.push_back(*msg);
+			
+			completed = true;
+			break;
+		    }
+
+		
+		    // il robot sta eseguendo il task e non ha ancora finito
+		    if(!completed)
+		    {
+			if(msg->b_level <= BATTERY_THR)
+			{
+			    // se manca "poco" al task (distanza inferiore ad una certa soglia), ce lo faccio arrivare e poi lo manderò in carica
+			    // altrimenti mando subito il robot in carica e rimetto il task tra i task da assegnare  
+			    if(getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
+			      {
+				  robots_in_recharge.push_back(*msg);
+				  tasks_in_execution = deleteElem(ass.task.name, tasks_in_execution);
+				  tasks_to_assign.push_back(ass.task);
+			      }    
+			}
+		    }
 		}
-	    }
-	    
-	    // il robot sta eseguendo il task e non ha ancora finito
-	    if(!completed)
-	    {
-		if(msg->b_level <= BATTERY_THR)
-		{
-		    // comunicalo al master in qualche modo
-		}
+		break;
 	    }
 	}
 	

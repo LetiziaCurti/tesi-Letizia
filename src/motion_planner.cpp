@@ -57,7 +57,7 @@ vector<task_assign::task> tasks_in_execution;		//vettore dei task già in esecuz
 vector<task_assign::rt> rt_vector;			//vettore degli assignments robot-task
 vector<task_assign::info> tex0_info_vect;		//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
 vector<task_assign::task> completed_tasks;		//vettore dei task completati che viene inviato al task_manager
-vector<task_assign::task_path> assignments_vect;			//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
+vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
 
 
 
@@ -82,7 +82,10 @@ struct Assign
     task_assign::task_path path_tot;
 };
 
-vector<Assign> Catalogo_Ass;
+vector<Assign> Catalogo_Ass;					//struttura che tiene in memoria tutti gli assignment
+
+
+
 
 
 
@@ -104,13 +107,31 @@ vector<task_assign::robot> deleteRob(string name, vector<task_assign::robot> vec
 
 
 
-// Function che elimina il robot con il nome passato in argomento dal vettore di robot passato in argomento
+// Function che elimina il task con il nome passato in argomento dal vettore di task passato in argomento
 vector<task_assign::task> deleteTask(string name, vector<task_assign::task> vect)
 {
     int i(0);
     for(auto elem : vect)
     {
 	if(elem.name == name)
+	{
+	    vect.erase(vect.begin()+i);
+	    break;
+	}
+	i++;
+    }
+    return vect;
+}
+
+
+
+// Function che elimina dal catalogo l'assignment del robot con il nome passato in argomento
+vector<Assign> deleteAss(string name, vector<Assign> vect)
+{
+    int i(0);
+    for(auto elem : vect)
+    {
+	if(elem.rob.name == name)
 	{
 	    vect.erase(vect.begin()+i);
 	    break;
@@ -276,6 +297,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			completed_tasks.push_back(ass.task);
 			tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 			robots_in_execution = deleteRob(msg->name, robots_in_execution);
+			Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
 			
 			if(msg->b_level > BATTERY_THR)
 			    available_robots.push_back(*msg);
@@ -296,9 +318,11 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    // altrimenti mando subito il robot in carica e rimetto il task tra i task da assegnare  
 			    if(getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
 			      {
+				  robots_in_execution = deleteRob(msg->name, robots_in_execution);
 				  robots_in_recharge.push_back(*msg);
 				  tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 				  tasks_to_assign.push_back(ass.task);
+				  Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
 			      }    
 			}
 		    }

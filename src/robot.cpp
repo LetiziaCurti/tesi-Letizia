@@ -18,6 +18,7 @@
 #include "task_assign/vect_robot.h"
 #include "task_assign/rt_vect.h"
 #include "task_assign/assignment.h"
+#include "task_assign/rech_vect.h"
 
 
 #define DISTANCE_TOLERANCE 0.01
@@ -334,7 +335,7 @@ public:
     
     
     
-    void RechargeCallback(const task_assign::vect_robot::ConstPtr& status_msg)
+    void RechargeCallback(const task_assign::rech_vect::ConstPtr& status_msg)
     {
 	
     }

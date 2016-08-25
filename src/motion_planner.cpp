@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <map>
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "task_assign/vect_task.h"
@@ -12,6 +13,7 @@
 #include "task_assign/vect_info.h"
 #include "task_assign/task_path.h"
 #include "task_assign/assignment.h"
+#include "task_assign/rech_vect.h"
 
 
 inline const char * const BoolToString(bool b)
@@ -67,7 +69,9 @@ struct mappa
     vector<pair<double,double>> wpoints;
 };
 
-vector<mappa> GlobMap;   // la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path per andare da un robot ad un task
+vector<mappa> GlobMap;   					// la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path per andare da un robot ad un task
+vector<task_assign::recharge> Recharge;   			// è la lista di tutti i punti di ricarica presenti nello scenario
+map<task_assign::robot, task_assign::recharge> Min_Recharge;	// è la mappa che associa i robot ai punti di ricarica a distanza minima	
 
 
 
@@ -145,28 +149,28 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 	// vedo se elem sta già in task_to_assign
 	for(auto task : tasks)
 	{
-	      info.r_name = rob.name;
-	      info.t_name = task.name;
-	      
-	      for(auto elem : maps)
-	      {
-		  if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
-		  {
-		      time_a = 1/VELOCITY*CalcPath(elem.wpoints);
-		      break;
-		  }
-	      }
-	      for(auto elem : maps)
-	      {
-		  if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
-		  {
-		      time_b = 1/VELOCITY*CalcPath(elem.wpoints);
-		      break;
-		  }
-	      }
-	      
-	      info.t_ex = time_a + task.wait1 + time_b + task.wait1;
-	      tex.push_back(info);
+	    info.r_name = rob.name;
+	    info.t_name = task.name;
+	    
+	    for(auto elem : maps)
+	    {
+		if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
+		{
+		    time_a = 1/VELOCITY*CalcPath(elem.wpoints);
+		    break;
+		}
+	    }
+	    for(auto elem : maps)
+	    {
+		if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
+		{
+		    time_b = 1/VELOCITY*CalcPath(elem.wpoints);
+		    break;
+		}
+	    }
+	    
+	    info.t_ex = time_a + task.wait1 + time_b + task.wait1;
+	    tex.push_back(info);
 	}
     }
     
@@ -486,6 +490,47 @@ void publishExecTask()
 
 
 
+// Pubblica al task manager i task completati su "task_exec_topic"
+void publishRecharge()
+{
+    task_assign::rech_vect msg;
+    
+    double dist(0);
+    double min_dist(1000);
+    task_assign::recharge min_re;
+    
+    for(auto rob : robots_in_recharge)
+    {
+	for(auto re : Recharge)
+	{
+	    for(auto elem : GlobMap)
+	    {
+		if(rob.x == elem.start.first && rob.y == elem.start.second && re.x == elem.end.first && re.y == elem.end.second)
+		{
+		    dist = CalcPath(elem.wpoints);
+		    break;
+		}
+	    }
+	    
+	    // vedo qual'è la distanza minima
+	    if(dist < min_dist)
+	    {
+		min_dist = dist;
+		re.r_name = rob.name;
+		min_re = re;
+	    }
+	}
+	
+	// associo al robot il punto di carica a distanza minima
+	msg.vector.push_back(min_re);
+    }
+    
+    
+    sleep(1);
+    recharge_pub.publish(msg);
+}
+
+
 
 
 
@@ -501,6 +546,9 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 
 
 
+
+
+// SearchRecharge(robots_in_recharge, Recharge, GlobMap);
 
 int main(int argc, char **argv)
 { 
@@ -519,7 +567,7 @@ int main(int argc, char **argv)
 //     rob_ini_pub = node.advertise<task_assign::vect_info>("rob_ini_topic", 10);
     rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
-    recharge_pub = node.advertise<task_assign::vect_robot>("recharge_topic", 10);
+    recharge_pub = node.advertise<task_assign::rech_vect>("recharge_topic", 10);
     
     sleep(1);
 

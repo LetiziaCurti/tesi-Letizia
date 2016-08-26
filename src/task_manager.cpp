@@ -22,7 +22,7 @@ inline const char * const BoolToString(bool b)
 using namespace std;
 ros::Subscriber new_task_sub;
 ros::Subscriber exec_task_sub;
-ros::Publisher task_ass_pub;
+ros::Publisher new_task_pub;
 
 
 // gli elementi dei vettori potrebbero essere già dei type task_Assign::task così quando il nodo deve pubblicare il vettore 
@@ -129,7 +129,7 @@ void publishTaskToAssign()
 
     // Wait for the publisher to connect to subscribers
     sleep(1.0);
-    task_ass_pub.publish(assignment_msg);
+    new_task_pub.publish(assignment_msg);
     
     for(auto elem : assignment_msg.task_vect)
     {
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     new_task_sub = node.subscribe("task_arrival_topic", 20, &NewCallback);
     exec_task_sub = node.subscribe("task_exec_topic", 20, &ExecCallback);
     
-    task_ass_pub = node.advertise<task_assign::vect_task>("task_assign_topic", 10);
+    new_task_pub = node.advertise<task_assign::vect_task>("new_task_topic", 10);
     sleep(1);
 
     
@@ -166,7 +166,6 @@ int main(int argc, char **argv)
 	ros::spinOnce();
 	rate.sleep();
     }
-
 
 
     return 0;

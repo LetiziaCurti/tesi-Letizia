@@ -32,11 +32,12 @@ using namespace std;
 ros::Subscriber obs_sub;
 ros::Subscriber rt_sub;
 ros::Subscriber status_rob_sub;
-ros::Subscriber arr_rob_sub;
-ros::Subscriber task_ass_sub;
+// ros::Subscriber arr_rob_sub;
+ros::Subscriber new_task_sub;
 
 ros::Publisher exec_task_pub;
 ros::Publisher rob_ass_pub;
+ros::Publisher task_ass_pub;
 ros::Publisher rob_ini_pub;
 ros::Publisher rob_info_pub;
 ros::Publisher assignment_pub;
@@ -584,10 +585,11 @@ int main(int argc, char **argv)
     rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
 //     arr_rob_sub = node.subscribe("status_rob_topic", 20, &ArrCallback);
     status_rob_sub = node.subscribe("status_rob_topic", 20, &StatusCallback);
-    task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
+    new_task_sub = node.subscribe("new_task_topic", 20, &TaskToAssCallback);
     
     exec_task_pub = node.advertise<task_assign::vect_task>("task_exec_topic", 10);   
     rob_ass_pub = node.advertise<task_assign::vect_robot>("rob_assign_topic", 10);
+    task_ass_pub = node.advertise<task_assign::vect_task>("task_assign_topic", 10);
 //     rob_ini_pub = node.advertise<task_assign::vect_info>("rob_ini_topic", 10);
     rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);

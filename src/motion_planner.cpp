@@ -48,6 +48,7 @@ ros::Publisher recharge_pub;
 #define SEC_DIST 1
 
 bool new_assign(false);
+bool new_task(false);
 
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
@@ -214,7 +215,12 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	
 	if(add_task)
+	{
 	    tasks_to_assign.push_back(elem);
+	    new_task = true;
+	}
+	
+	add_task = true;
     }
 }
 
@@ -595,7 +601,6 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 
 
 
-// SearchRecharge(robots_in_recharge, Recharge, GlobMap);
 
 int main(int argc, char **argv)
 { 
@@ -623,8 +628,37 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
+	while(!new_assign && ros::ok())
+	{
+	    if(available_robots.size() > 0 && tasks_to_assign.size() > 0)
+	    {
+		publishTaskToAssign();
+		publishRobotToAssign();
+		publishRobotInfo();
+		//LE INFO DEL ROBOT SONO CHE IL ROBOT NON SI MUOVE, NE' MAI SI MUOVERA'
+	    }
+	    
+	    if(completed_tasks.size() > 0)
+		publishExecTask();
+// 	    //MA TU PENSI DAVVERO CHE QUESTO TASK TE LO ESEGUA?!?!?!?
+	    
+	    if(robots_in_recharge.size() > 0)
+		publishRecharge();
+	  
+	}
+      
+	while(new_assign && ros::ok())
+	{
+	    publishAssign();
+	}
+	
+	
+	
+	
+	
 	ros::spinOnce();
 	rate.sleep();
+	//BRAVA, VA A LETTO.
     }
 
 

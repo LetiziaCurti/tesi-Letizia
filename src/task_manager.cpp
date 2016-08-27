@@ -120,7 +120,7 @@ void taskManagement()
 }
 
 
-// Pubblica al master il vettore dei task da eseguire task_to_assign
+// Pubblica al motion_planner il vettore dei nuovi task da eseguire task_to_assign
 void publishTaskToAssign()
 {
     task_assign::vect_task assignment_msg; 

@@ -56,7 +56,6 @@ vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot che stann
 vector<task_assign::task> tasks_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dimensione m(k)
 vector<task_assign::task> tasks_in_execution;		//vettore dei task già in esecuzione
 vector<task_assign::rt> rt_vector;			//vettore degli assignments robot-task
-vector<task_assign::info> tex0_info_vect;		//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
 vector<task_assign::task> completed_tasks;		//vettore dei task completati che viene inviato al task_manager
 vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
 
@@ -72,7 +71,6 @@ struct mappa
 
 vector<mappa> GlobMap;   					// la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path per andare da un robot ad un task
 vector<task_assign::recharge> Recharge;   			// è la lista di tutti i punti di ricarica presenti nello scenario
-map<task_assign::robot, task_assign::recharge> Min_Recharge;	// è la mappa che associa i robot ai punti di ricarica a distanza minima	
 
 
 
@@ -488,6 +486,7 @@ void publishRobotInfo()
 {
     task_assign::vect_info vect_msg;
     
+    //vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
     vect_msg.info_vect = CalcTex(available_robots, tasks_to_assign, GlobMap);
 //     CalcTex(not_available_robots, tasks_to_assign, maps);
     

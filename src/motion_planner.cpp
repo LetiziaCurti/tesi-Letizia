@@ -201,7 +201,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 
 
 
-// Legge su "task_assign_topic" il vettore dei task da eseguire T
+// Legge su "new_task_topic" il vettore dei task da eseguire T
 void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 {
     bool add_task(true);
@@ -434,7 +434,11 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		new_assign = true;
 		
 		robots_in_execution.push_back(rt.robot);
+		available_robots = deleteRob(rt.robot.name, available_robots);
+		
 		tasks_in_execution.push_back(rt.task);
+		tasks_to_assign = deleteTask(rt.task.name, tasks_to_assign);
+		
 		
 		ass = MapToCatal(GlobMap, rt);
 		assignments_vect.push_back(ass.path_tot);
@@ -457,6 +461,25 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 //     task_assign::vect_info vect_msg;
 // 
 // }
+
+
+
+// Pubblica al master il vettore dei task da eseguire task_to_assign
+void publishTaskToAssign()
+{
+    task_assign::vect_task vect_msg; 
+    
+    vect_msg.task_vect = tasks_to_assign;
+
+    // Wait for the publisher to connect to subscribers
+    sleep(1.0);
+    task_ass_pub.publish(vect_msg);
+    
+//     for(auto elem : vect_msg.task_vect)
+//     {
+// 	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.name1 << " - " << elem.name2);
+//     }
+}
 
 
 

@@ -59,6 +59,7 @@ public:
     struct pose task_pose;
 
     bool assignment = false;
+    bool in_recharge = false;
     string task_name;
     int task_id_marker;
     
@@ -139,7 +140,7 @@ public:
  
  
     // Il robot pubblica il suo stato su "robot_arrival_topic"
-    void publishIniStatus() 
+    void publishStatus() 
     {
 	task_assign::robot status_msg; 
 
@@ -237,7 +238,42 @@ public:
 
     // Function for bringing the robot in the position of the task to accomplish and then in the position of
     // the exit
-    void moveGoal(struct pose goal_pose, string goal_name, double distance_tolerance)
+    void moveToTask(struct pose goal_pose, string goal_name, double distance_tolerance)
+    {
+	float pos_x = 0.0;
+	float pos_y = 0.0;
+	float theta = 0.0;
+	
+	double vel_x;
+	double vel_z;
+	double time = 0.1;
+	
+	
+	ros::Rate rate(10);
+	do{
+	      publishMarker(turtlesim_pose);
+	      broadcastPose(turtlesim_pose,robot_name);
+	      
+	      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y);
+	      vel_z = 4*sin((atan2(task_pose.y - turtlesim_pose.y, task_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
+	      
+	      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
+	      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
+	      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
+
+	      ros::spinOnce();
+	      rate.sleep(); 
+	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y)>distance_tolerance);
+	
+	deleteMarker(task_pose, task_id_marker);
+
+    }
+    
+    
+    
+        // Function for bringing the robot in the position of the task to accomplish and then in the position of
+    // the exit
+    void moveToCharge(double distance_tolerance)
     {
 	float pos_x = 0.0;
 	float pos_y = 0.0;
@@ -270,38 +306,10 @@ public:
 
 
 
-//     // Il robot pubblica su "assignment_topic" un messaggio contenente lo stato del task che ha eseguito
-//     // e il suo stato (nel campo msg.robot_assign), rimettendo a false gli status suo e del task eseguito
-//     void publishFreeStatus() 
-//     {
-// 	task_assign::OneAssign status_msg; 
-// 
-// 	status_msg.task_id = task_name;
-// 	status_msg.t_ready = true;
-// 	status_msg.t_status = true; //tengo lo stato del task a true (anche se dovrebbe essere comunicato false al task per fargli capire che è stato terminato)
-// 	status_msg.task_x = task_pose.x;
-// 	status_msg.task_y = task_pose.y;
-// 	status_msg.task_theta = task_pose.theta;
-// 	
-// 	//pubblico robot_assign
-// 	status_msg.rob_id = robot_name;
-// 	status_msg.r_status = false;  //rimetto il mio stato su false
-// 
-// 
-// 	// Wait for the publisher to connect to subscribers
-// // 	sleep(1.0);
-// 	assignment_pub.publish(status_msg);
-// 	
-// 	ROS_INFO_STREAM(robot_name <<" has finished the assignment. So "<< task_name << " is executed.");
-//     }
-
-
-
 
     // Il robot legge "assignment_topic" aspettando di ricevere un assignment
-    // Pubblica il proprio stato di ready su "robots_arrival_topic" finché non riceve un assignment, 
-    // dopodiché smette di pubblicare il suo stato e memorizza la posizione del task da raggiungere
-    // in task_pose
+    // Pubblica il proprio stato su "robots_arrival_topic" finché non riceve un assignment, 
+    // dopodiché parte per raggiungere il task seguendo i wp passati dal motion_planner
     void AssignCallback(const task_assign::assignment::ConstPtr& status_msg)
     {
 	if(assignment) return;
@@ -335,9 +343,35 @@ public:
     
     
     
-    void RechargeCallback(const task_assign::rech_vect::ConstPtr& status_msg)
+    void RechargeCallback(const task_assign::rech_vect::ConstPtr& msg)
     {
+	if(in_recharge) return;
 	
+	for(auto elem : msg->vector)
+	{
+	    //check: deve essere arrivato qualcosa
+	    if(elem.name != "")
+	    {
+// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
+	    
+		// se il robot che deve essere caricato ha r_name uguale al mio, vado in carica, cioè raggiungo la postazione
+	      // del punto di ricarica che mi è stato assegnato
+		if(elem.r_name == robot_name)
+		{
+		    in_recharge = true;
+		    task_name = elem.name;
+		    task_id_marker = elem.id;
+		    
+		    task_pose.x = elem.x;
+		    task_pose.y = elem.y;
+		    task_pose.theta = elem.theta;
+		    
+		    ROS_INFO("the recharge point for the robot %s is %s in position: x: %.2f, y: %.2f, theta: %.2f", robot_name.c_str(), task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
+		}
+// 		else
+// 		    publishStatus();
+	    }   
+	}
     }
 
 
@@ -366,24 +400,33 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
-	while(!robot.assignment && ros::ok())
+	while(!robot.assignment && !robot.in_recharge && ros::ok())
 	{
 	    robot.broadcastPose(robot.turtlesim_pose, name);
-	    robot.publishIniStatus();  
+	    robot.publishStatus();  
 	    ros::spinOnce();
 	    rate.sleep();
 	}
-	while(robot.assignment && ros::ok())
+	
+	if(robot.assignment && ros::ok())
 	{  
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
-	    robot.moveGoal(robot.task_pose, robot.task_name, DISTANCE_TOLERANCE);
+	    robot.moveToTask(robot.task_pose, robot.task_name, DISTANCE_TOLERANCE);
+	    
+	    robot.assignment=false;
+	}
+	
+	else if(robot.in_recharge && ros::ok())
+	{  
+	    // il robot va a ricaricarsi
+	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS GOING TO RECHARGE IN  " << robot.task_name);
+	    robot.moveToCharge(DISTANCE_TOLERANCE);
 	    
 	    robot.assignment=false;
 	}
 	
 	robot.broadcastPose(robot.turtlesim_pose, name);
-// 	robot.publishFreeStatus();
 	ros::spinOnce(); 
 	rate.sleep();
     }

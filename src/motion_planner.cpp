@@ -635,31 +635,46 @@ int main(int argc, char **argv)
 		publishTaskToAssign();
 		publishRobotToAssign();
 		publishRobotInfo();
-		//LE INFO DEL ROBOT SONO CHE IL ROBOT NON SI MUOVE, NE' MAI SI MUOVERA'
 	    }
 	    
 	    if(completed_tasks.size() > 0)
 		publishExecTask();
-// 	    //MA TU PENSI DAVVERO CHE QUESTO TASK TE LO ESEGUA?!?!?!?
+	    
+	    if(robots_in_recharge.size() > 0)
+		publishRecharge();	  
+	}
+      
+	if(new_assign && ros::ok())
+	{
+	    publishAssign();
+	    
+	    if(completed_tasks.size() > 0)
+		publishExecTask();
 	    
 	    if(robots_in_recharge.size() > 0)
 		publishRecharge();
-	  
+	    
+	    new_assign = false;
 	}
-      
-	while(new_assign && ros::ok())
+	
+	
+	if(available_robots.size() > 0 && tasks_to_assign.size() > 0)
 	{
-	    publishAssign();
+	    publishTaskToAssign();
+	    publishRobotToAssign();
+	    publishRobotInfo();
 	}
 	
+	if(completed_tasks.size() > 0)
+	    publishExecTask();
 	
-	
-	
-	
+	if(robots_in_recharge.size() > 0)
+	    publishRecharge();
+	    
+
 	ros::spinOnce();
 	rate.sleep();
-	//BRAVA, VA A LETTO.
-    }
+    }		
 
 
 

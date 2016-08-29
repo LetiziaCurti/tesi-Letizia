@@ -199,6 +199,66 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 
 
 
+// Function che calcola la Utility Function per i robot che devono andare in ricarica
+vector<double> calcUFunRech(vector<task_assign::task> t_ass, vector<task_assign::robot> r_ass, vector<task_assign::info> ex_t, vector<task_assign::info> ex_t_0)
+{
+    vector<double> UF;
+    double P(0);
+    double C(0);
+    double U(0);
+    double b_lev(0);
+    double ar_t(0);
+    double t_ex_0(0);
+    double t_ex(0);
+    int position(1);
+    
+    
+    for(auto robot : r_ass)
+    {
+	b_lev = robot.b_level;
+	 
+	for(auto task : t_ass)
+	{
+	    C = b_lev;
+	
+	    ar_t = task.ar_time;
+	    P = 1/position;
+	  
+	    for(auto ex0 : ex_t_0)
+	    {
+		if(task.name == ex0.t_name && robot.name == ex0.r_name)
+		{
+		    t_ex_0 = ex0.t_ex;
+		    P += 1/t_ex_0;
+		    C -= t_ex_0;
+		}
+		break;
+	    }
+	    for(auto ex : ex_t)
+	    {
+		if(task.name == ex.t_name && robot.name == ex.r_name)
+		{
+		    t_ex = ex.t_ex;
+		    C += t_ex;
+		}
+		break;
+	    }
+	    
+	    U = P-C;
+	    if(U<=0)
+		U=0;
+	    
+	    UF.push_back(U);
+	}
+	
+	position++;
+    }
+    
+    return UF;
+}
+
+
+
 // Function che genera una matrice identità di dimensione m
 vector<vector<int>> makeId(int m)
 {

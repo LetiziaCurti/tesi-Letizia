@@ -36,17 +36,24 @@ int Min(int a, int b)
 using namespace std;
 
 ros::Publisher rt_pub;
+ros::Publisher rech_pub;
 ros::Subscriber rob_ass_sub;
+ros::Subscriber rob_rech_sub;
 ros::Subscriber rob_info_sub;
-ros::Subscriber rob_ini_sub;
+ros::Subscriber rech_info_sub;
 ros::Subscriber task_ass_sub;
 
 
 vector<task_assign::task> task_to_assign;    	//T: vettore dei task da assegnare che cambia nel tempo (di dim m(k))
 vector<task_assign::robot> robot_to_assign;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
 vector<task_assign::info> tex_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
+vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
 vector<task_assign::robot> delete_rob;		//robot esclusi dall'assignment perché superano le soglie
+vector<task_assign::robot> robots_in_recharge;  //R: vettore dei robot che devono essere caricati
+vector<task_assign::info> rech_info_vect;	
+
+vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
+
 
 
 
@@ -93,6 +100,27 @@ void RobToAssCallback(const task_assign::vect_robot::ConstPtr& msg)
 
 
 
+// Legge su "rob_assign_topic" il vettore dei robot da assegnare n(k)
+void RobInRechCallback(const task_assign::vect_robot::ConstPtr& msg)
+{
+    bool add_rob(true);
+    
+    for(auto elem : msg->robot_vect)
+    {
+	// vedo se elem sta già in robot_to_assign
+	for(auto newel : robots_in_recharge)
+	{
+	    if(newel.name == elem.name)
+		add_rob = false;
+	}
+	
+	if(add_rob)
+	    robots_in_recharge.push_back(elem);
+    }
+}
+
+
+
 // Legge su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare)
 void RobInfoCallback(const task_assign::vect_info::ConstPtr& msg)
 {
@@ -105,15 +133,15 @@ void RobInfoCallback(const task_assign::vect_info::ConstPtr& msg)
 
 
 
-// // Legge su "rob_ini_topic" le info relative ai robot al tempo 0 (tutti: già assegnati e da assegnare)
-// void RobIniCallback(const task_assign::vect_info::ConstPtr& msg)
-// {
-//     // non è importante l'ordine
-//     for(auto elem : msg->info_vect)
-//     {
-// 	tex0_info_vect.push_back(elem);
-//     }
-// }
+// Legge su "rob_ini_topic" le info relative ai robot al tempo 0 (tutti: già assegnati e da assegnare)
+void RechInfoCallback(const task_assign::vect_info::ConstPtr& msg)
+{
+    // non è importante l'ordine
+    for(auto elem : msg->info_vect)
+    {
+	rech_info_vect.push_back(elem);
+    }
+}
 
 
 
@@ -142,65 +170,33 @@ void publishRT(vector<vector<int>> S)
 
 
 
-// Function che calcola la Utility Function
-vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::robot> r_ass, vector<task_assign::info> ex_t, vector<task_assign::info> ex_t_0)
+// Pubblica al motion planner gli assignments task-robot
+void publishRech(vector<vector<int>> S)
 {
-    vector<double> UF;
-    double P(0);
-    double C(0);
-    double U(0);
-    double b_lev(0);
-    double ar_t(0);
-    double t_ex_0(0);
-    double t_ex(0);
+    task_assign::rt_vect vect_msg;
+    task_assign::rt msg;
     
-    
-    for(auto robot : r_ass)
+    for(int i=0; i<robots_in_recharge.size(); i++)
     {
-	b_lev = robot.b_level;
-	 
-	for(auto task : t_ass)
+	for(int j=0; j<recharge_points.size(); j++)
 	{
-	    C = 1/b_lev;
-	
-	    ar_t = task.ar_time;
-	    P = 1/ar_t;
-	  
-	    for(auto ex0 : ex_t_0)
+	    if(S[i][j]==1)
 	    {
-		if(task.name == ex0.t_name && robot.name == ex0.r_name)
-		{
-		    t_ex_0 = ex0.t_ex;
-		    P += 1/t_ex_0;
-		    C -= t_ex_0;
-		}
-		break;
+		msg.robot = robots_in_recharge[i];
+		msg.task = recharge_points[j];
+		vect_msg.rt_vect.push_back(msg);
 	    }
-	    for(auto ex : ex_t)
-	    {
-		if(task.name == ex.t_name && robot.name == ex.r_name)
-		{
-		    t_ex = ex.t_ex;
-		    C += t_ex;
-		}
-		break;
-	    }
-	    
-	    U = P-C;
-	    if(U<=0)
-		U=0;
-	    
-	    UF.push_back(U);
 	}
     }
     
-    return UF;
+//     sleep(1);
+    rech_pub.publish(vect_msg);
 }
 
 
 
-// Function che calcola la Utility Function per i robot che devono andare in ricarica
-vector<double> calcUFunRech(vector<task_assign::task> t_ass, vector<task_assign::robot> r_ass, vector<task_assign::info> ex_t, vector<task_assign::info> ex_t_0)
+// Function che calcola la Utility Function
+vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::robot> r_ass, vector<task_assign::info> ex_t, vector<task_assign::info> ex_t_0, string s)
 {
     vector<double> UF;
     double P(0);
@@ -219,11 +215,19 @@ vector<double> calcUFunRech(vector<task_assign::task> t_ass, vector<task_assign:
 	 
 	for(auto task : t_ass)
 	{
-	    C = b_lev;
+	    if(s=="assignment")
+	    {
+		C = 1/b_lev;
+		ar_t = task.ar_time;
+		P = 1/ar_t;
+	    }
+	    else if(s=="recharge")
+	    {
+		C = b_lev;
+		P = 1/position;
+	    }
 	
-	    ar_t = task.ar_time;
-	    P = 1/position;
-	  
+
 	    for(auto ex0 : ex_t_0)
 	    {
 		if(task.name == ex0.t_name && robot.name == ex0.r_name)
@@ -497,28 +501,23 @@ int main(int argc, char **argv)
     ros::NodeHandle node;
     
     rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
+    rob_rech_sub = node.subscribe("rob_recharge_topic", 20, &RobInRechCallback);
     rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
-//     rob_ini_sub = node.subscribe("rob_ini_topic", 20, &RobIniCallback);
+    rech_info_sub = node.subscribe("rech_info_topic", 20, &RechInfoCallback);
     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
     
     rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
+    rech_pub = node.advertise<task_assign::rt_vect>("rech_topic", 10);
     
     sleep(1);
     
     
-//     // Test delle functions
-//     int n,m;
-//     n=3;
-//     m=3;
-//     vector<double> U;
-//     U = calcUFunProva(n,m);   
-//     vector<vector<int>> S(n+m+1, vector<int> (n*m,0));   
-//     S = TASolver(n,m,U);
-//     printMatrix(S);
     
     vector<double> U;
     int n(0);
     int m(0);
+    int r(0);
+    int s(0);
 
     ros::Rate rate(10);
     while (ros::ok()) 
@@ -535,7 +534,7 @@ int main(int argc, char **argv)
 	    {
 		vector<vector<int>> S(n+m+1, vector<int> (n*m,0)); 
 		
-		U = calcUFun(task_to_assign, robot_to_assign, tex_info_vect, tex0_info_vect);
+		U = calcUFun(task_to_assign, robot_to_assign, tex_info_vect, tex0_info_vect, "assignment");
 		S = TASolver(n, m, U);
 		printMatrix(S);
 		
@@ -552,6 +551,39 @@ int main(int argc, char **argv)
 	    sleep(1);
 	    ROS_INFO_STREAM("There aren't neither tasks to execute nor available robots  \n");
 	}
+	
+	
+	if(robots_in_recharge.size() != r || recharge_points.size() != s)
+	{
+	    ROS_INFO_STREAM("Robot vect size " << robot_to_assign.size() << "\n");
+	    ROS_INFO_STREAM("Task vect size " << task_to_assign.size() << "\n");
+	    
+	    r = robots_in_recharge.size();
+	    s = recharge_points.size();
+		
+	    if(r>0 && s>0)
+	    {
+		vector<vector<int>> S(r+s+1, vector<int> (r*s,0)); 
+		
+		U = calcUFun(recharge_points, robots_in_recharge, tex_info_vect, tex0_info_vect, "recharge");
+		S = TASolver(r, s, U);
+		printMatrix(S);
+		
+		publishRech(S);
+	    }
+	    else if(r==0)
+		ROS_INFO_STREAM("There aren't any robots in recharge \n");
+	    else if(s==0)
+		ROS_INFO_STREAM("There aren't any recharge points \n");
+		
+	}
+	else
+	{
+	    sleep(1);
+	    ROS_INFO_STREAM("There aren't robots in recharge  \n");
+	}
+	
+	
 	
 	ros::spinOnce();
 	rate.sleep();

@@ -534,22 +534,6 @@ void publishTaskToAssign()
 
 
 
-// Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare), pubblica tex0_info_vect
-void publishRobotInfo()
-{
-    task_assign::vect_info vect_msg;
-    
-    //vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
-    vect_msg.info_vect = CalcTex(available_robots, tasks_to_assign, GlobMap);
-//     CalcTex(not_available_robots, tasks_to_assign, maps);
-    
-    sleep(1);
-    rob_info_pub.publish(vect_msg);
-   
-}
-
-
-
 // Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
 void publishRobotToAssign()
 {
@@ -572,6 +556,36 @@ void publishRobInRecharge()
     
     sleep(1);
     rob_ass_pub.publish(vect_msg);
+}
+
+
+
+// Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare), pubblica tex0_info_vect
+void publishRobotInfo()
+{
+    task_assign::vect_info vect_msg;
+    
+    //vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task(al tempo 0)
+    vect_msg.info_vect = CalcTex(available_robots, tasks_to_assign, GlobMap);
+//     CalcTex(not_available_robots, tasks_to_assign, maps);
+    
+    sleep(1);
+    rob_info_pub.publish(vect_msg);
+   
+}
+
+
+
+// Pubblica al master i tempi richiesti da ogni ogni robot per raggiungere ciascun punto di ricarica
+void publishInfoRecharge()
+{
+    task_assign::vect_info vect_msg;
+    
+    // vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i punti ri ricarica
+    vect_msg.info_vect = CalcTex(robots_in_recharge, tasks_to_assign, GlobMap);    
+    
+    sleep(1);
+    rech_info_pub.publish(vect_msg);
 }
 
 
@@ -599,20 +613,6 @@ void publishExecTask()
     
     sleep(1);
     exec_task_pub.publish(msg);
-}
-
-
-
-// Pubblica al master i tempi richiesti da ogni ogni robot per raggiungere ciascun punto di ricarica
-void publishInfoRecharge()
-{
-    task_assign::vect_info vect_msg;
-    
-    // vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i punti ri ricarica
-    vect_msg.info_vect = CalcTex(robots_in_recharge, tasks_to_assign, GlobMap);    
-    
-    sleep(1);
-    rech_info_pub.publish(vect_msg);
 }
 
 

@@ -343,34 +343,34 @@ public:
     
     
     
-    void RechargeCallback(const task_assign::rech_vect::ConstPtr& msg)
+    void RechargeCallback(const task_assign::assignment::ConstPtr& msg)
     {
 	if(in_recharge) return;
 	
-	for(auto elem : msg->vector)
+	for(auto elem : msg->assign_vect)
 	{
-	    //check: deve essere arrivato qualcosa
-	    if(elem.name != "")
-	    {
-// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
-	    
-		// se il robot che deve essere caricato ha r_name uguale al mio, vado in carica, cioè raggiungo la postazione
-	      // del punto di ricarica che mi è stato assegnato
-		if(elem.r_name == robot_name)
-		{
-		    in_recharge = true;
-		    task_name = elem.name;
-		    task_id_marker = elem.id;
-		    
-		    task_pose.x = elem.x;
-		    task_pose.y = elem.y;
-		    task_pose.theta = elem.theta;
-		    
-		    ROS_INFO("the recharge point for the robot %s is %s in position: x: %.2f, y: %.2f, theta: %.2f", robot_name.c_str(), task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
-		}
-// 		else
-// 		    publishStatus();
-	    }   
+// 	    //check: deve essere arrivato qualcosa
+// 	    if(elem.name != "")
+// 	    {
+// // 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
+// 	    
+// 		// se il robot che deve essere caricato ha r_name uguale al mio, vado in carica, cioè raggiungo la postazione
+// 	      // del punto di ricarica che mi è stato assegnato
+// 		if(elem.r_name == robot_name)
+// 		{
+// 		    in_recharge = true;
+// 		    task_name = elem.name;
+// 		    task_id_marker = elem.id;
+// 		    
+// 		    task_pose.x = elem.x;
+// 		    task_pose.y = elem.y;
+// 		    task_pose.theta = elem.theta;
+// 		    
+// 		    ROS_INFO("the recharge point for the robot %s is %s in position: x: %.2f, y: %.2f, theta: %.2f", robot_name.c_str(), task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
+// 		}
+// // 		else
+// // 		    publishStatus();
+// 	    }   
 	}
     }
 

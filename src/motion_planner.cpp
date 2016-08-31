@@ -31,15 +31,18 @@ using namespace std;
 
 ros::Subscriber obs_sub;
 ros::Subscriber rt_sub;
+ros::Subscriber rech_sub;
 ros::Subscriber status_rob_sub;
 // ros::Subscriber arr_rob_sub;
 ros::Subscriber new_task_sub;
 
 ros::Publisher exec_task_pub;
 ros::Publisher rob_ass_pub;
+ros::Publisher rob_rech_pub;
 ros::Publisher task_ass_pub;
 ros::Publisher rob_ini_pub;
 ros::Publisher rob_info_pub;
+ros::Publisher rech_info_pub;
 ros::Publisher assignment_pub;
 ros::Publisher recharge_pub;
 
@@ -48,6 +51,7 @@ ros::Publisher recharge_pub;
 #define SEC_DIST 1
 
 bool new_assign(false);
+bool new_in_rech(false);
 bool new_task(false);
 
 
@@ -56,10 +60,9 @@ vector<task_assign::robot> robots_in_execution;    	//vettore dei robot che stan
 vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot che stanno eseguendo dei task o che stanno andando a ricaricarsi
 vector<task_assign::task> tasks_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dimensione m(k)
 vector<task_assign::task> tasks_in_execution;		//vettore dei task già in esecuzione
-vector<task_assign::rt> rt_vector;			//vettore degli assignments robot-task
 vector<task_assign::task> completed_tasks;		//vettore dei task completati che viene inviato al task_manager
 vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
-
+vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
 
 
 //simulo una mappa
@@ -70,8 +73,9 @@ struct mappa
     vector<pair<double,double>> wpoints;
 };
 
-vector<mappa> GlobMap;   					// la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path per andare da un robot ad un task
-vector<task_assign::recharge> Recharge;   			// è la lista di tutti i punti di ricarica presenti nello scenario
+vector<mappa> GlobMap;   				// la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path 
+							// per andare da un robot ad un task, va passata dall'esterno
+vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
 
 
 
@@ -82,7 +86,8 @@ struct Assign
     task_assign::task_path path_tot;
 };
 
-vector<Assign> Catalogo_Ass;					//struttura che tiene in memoria tutti gli assignment
+vector<Assign> Catalogo_Ass;				//struttura che tiene in memoria tutti gli assignment task - robot
+vector<Assign> Catalogo_Rech;				//struttura che tiene in memoria tutti gli assignment robot - p.to di ric.
 
 
 
@@ -339,11 +344,12 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	else if(in_charge)
 	{
 	    if(msg->b_level == msg->b_level0)
+	    {
 		robots_in_recharge = deleteRob(msg->name, robots_in_recharge);
+		Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
+		available_robots.push_back(*msg);
+	    }
 	}
-	
-
-
     }
 }
 
@@ -458,6 +464,47 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 
 
 
+// Legge "assignment_topic" 
+void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
+{
+    bool add(true);
+    new_in_rech = false;
+    struct Assign ass;
+    
+    if(msg->rt_vect.size() > 0)
+    {	
+	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
+	// il robot in robots_in_execution e il task in tasks_in_execution
+	for(auto rt : msg->rt_vect)
+	{
+	    //vedo se è già nel catalogo
+	    for(auto elem : Catalogo_Rech)
+	    {
+		if(elem.rob.name==rt.robot.name && elem.task.name==rt.task.name)
+		{
+		    add = false;
+		    break;
+		}
+	    }
+	    
+	    if(add)
+	    {
+		new_in_rech = true;
+		
+		ass = MapToCatal(GlobMap, rt);
+		robRech_vect.push_back(ass.path_tot);
+		
+		// Crea il Catalogo_Ass
+		Catalogo_Rech.push_back(ass);
+	    }
+	    
+	    add = true;
+	}
+    }
+}
+
+
+
 
 // // Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare)
 // void publishRobotIni()
@@ -516,6 +563,19 @@ void publishRobotToAssign()
 
 
 
+// Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
+void publishRobInRecharge()
+{
+    task_assign::vect_robot vect_msg;
+    
+    vect_msg.robot_vect = robots_in_recharge;
+    
+    sleep(1);
+    rob_ass_pub.publish(vect_msg);
+}
+
+
+
 // if(new_assign) ....pubblica
 // Pubblica ai robot i task rispettivamente assegnati
 void publishAssign()
@@ -543,45 +603,33 @@ void publishExecTask()
 
 
 
-// Pubblica al task manager i task completati su "task_exec_topic"
+// Pubblica al master i tempi richiesti da ogni ogni robot per raggiungere ciascun punto di ricarica
+void publishInfoRecharge()
+{
+    task_assign::vect_info vect_msg;
+    
+    // vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i punti ri ricarica
+    vect_msg.info_vect = CalcTex(robots_in_recharge, tasks_to_assign, GlobMap);    
+    
+    sleep(1);
+    rech_info_pub.publish(vect_msg);
+}
+
+
+
+// Pubblica ai robot che devono andare in carica il loro punto di ricarica
 void publishRecharge()
 {
-    task_assign::rech_vect msg;
+    task_assign::assignment msg;
     
-    double dist(0);
-    double min_dist(1000);
-    task_assign::recharge min_re;
-    
-    for(auto rob : robots_in_recharge)
-    {
-	for(auto re : Recharge)
-	{
-	    for(auto elem : GlobMap)
-	    {
-		if(rob.x == elem.start.first && rob.y == elem.start.second && re.x == elem.end.first && re.y == elem.end.second)
-		{
-		    dist = CalcPath(elem.wpoints);
-		    break;
-		}
-	    }
-	    
-	    // vedo qual'è la distanza minima
-	    if(dist < min_dist)
-	    {
-		min_dist = dist;
-		re.r_name = rob.name;
-		min_re = re;
-	    }
-	}
-	
-	// associo al robot il punto di carica a distanza minima
-	msg.vector.push_back(min_re);
-    }
-    
+    msg.assign_vect = robRech_vect;
     
     sleep(1);
     recharge_pub.publish(msg);
 }
+
+
+
 
 
 
@@ -610,17 +658,20 @@ int main(int argc, char **argv)
     
     obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
     rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
+    rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
 //     arr_rob_sub = node.subscribe("status_rob_topic", 20, &ArrCallback);
     status_rob_sub = node.subscribe("status_rob_topic", 20, &StatusCallback);
     new_task_sub = node.subscribe("new_task_topic", 20, &TaskToAssCallback);
     
     exec_task_pub = node.advertise<task_assign::vect_task>("task_exec_topic", 10);   
     rob_ass_pub = node.advertise<task_assign::vect_robot>("rob_assign_topic", 10);
+    rob_rech_pub = node.advertise<task_assign::vect_robot>("rob_recharge_topic", 10);
     task_ass_pub = node.advertise<task_assign::vect_task>("task_assign_topic", 10);
 //     rob_ini_pub = node.advertise<task_assign::vect_info>("rob_ini_topic", 10);
     rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
+    rech_info_pub = node.advertise<task_assign::vect_task>("rech_info_topic", 10);
     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
-    recharge_pub = node.advertise<task_assign::rech_vect>("recharge_topic", 10);
+    recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
     
     sleep(1);
 

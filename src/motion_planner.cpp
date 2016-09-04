@@ -168,17 +168,20 @@ double CalcPath(vector<pair<double,double>> wpoints)
 
 // Aggiungi una function che calcoli il path per le posizioni dei robot che non sono tra i wp della mappa
 // idea: cerca il wp più vicino sulla mappa e somma la distanza fino al wp con il resto del path
-void CalcDistMap(vector<task_assign::robot> robots, vector<mappa> maps)
+void CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
 {
-  for(auto elem : maps)
-	  {
-	      if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
-	      {
-		  time_a = 1/VELOCITY*CalcPath(elem.wpoints);
-		  in_map = true;
-		  break;
-	      }
-	  }
+    double min_dist();
+    double min_rx;
+    double min_ry;
+    
+    for(auto elem : maps)
+    {
+	if(getDistance(rx, ry, elem.start.first, elem.start.second) <= SEC_DIST && tx == elem.end.first && ty == elem.end.second)
+	{
+	    
+	    break;
+	}
+    }
 }
 
 
@@ -191,7 +194,6 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
     task_assign::info info;
     double time_a(0);
     double time_b(0);
-    bool in_map(false);
     
     // idea 1
     for(auto rob : robots)
@@ -207,15 +209,9 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 		if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
 		{
 		    time_a = 1/VELOCITY*CalcPath(elem.wpoints);
-		    in_map = true;
 		    break;
 		}
 	    }
-	    // se la posizione del robot non è nella mappa
-	    if(!in_map)
-	    {}
-	    in_map = false;
-	    
 	    for(auto elem : maps)
 	    {
 		if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)

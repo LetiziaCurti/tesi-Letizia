@@ -189,6 +189,7 @@ double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> map
 	}
     }
     
+    dist = CalcPath();
     return dist;
 }
 

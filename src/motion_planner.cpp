@@ -166,17 +166,16 @@ double CalcPath(vector<pair<double,double>> wpoints)
 
 
 
-// Aggiungi una function che calcoli il path per le posizioni dei robot che non sono tra i wp della mappa
-// idea: cerca il wp più vicino sulla mappa e somma la distanza fino al wp con il resto del path
+// Function che calcola il path partendo dalla posizione di un robot che non sta tra i wp della mappa
+// idea: cerca il wp più vicino sulla mappa e somma la distanza fino al wp con il resto del path (dal wp al task)
 double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
 {
     double min_dist(1000);
-    pair<double,double> coord;
-    coord.first = rx;
-    coord.second = ry;
-    //vector<pair<double,double>> min_wp;
-    mappa min_elem;
     double dist(0.0);
+    pair<double,double> coord;
+    coord = make_pair(rx, ry);
+    mappa min_elem;
+
     
     for(auto elem : maps)
     {
@@ -186,27 +185,17 @@ double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> map
 	    if(dist < min_dist)
 	    {
 	    	min_dist = dist;
-	    	//min_coord.first = elem.start.first;
-	    	//min_coord.second = elem.start.second;
-	    	//min_wp = elem.wpoints;
 	    	min_elem.start = elem.start;
 	    	min_elem.end = elem.end;
-	    	//min_elem.wpoints = elem.wpoints;
+	    	min_elem.wpoints = elem.wpoints;
 	    }
 	}
     }
     
-    //esiste un unico percorso per andare da un punto ad un altro
-    for(auto elem : maps)
-    {
-    	if(elem.start == min_elem.start && elem.end == min_elem.end)
-	{
-	    elem.wpoints.insert(elem.wpoints.begin, coord);
-	    elem.start = coord;
-	    dist = CalcPath(elem.wpoints);
-	    break;
-	}
-    }
+    min_elem.wpoints.insert(min_elem.wpoints.begin(), coord);
+    min_elem.start = coord;
+    dist = CalcPath(min_elem.wpoints);
+    GlobMap.push_back(min_elem);
     
     return dist;
 }
@@ -221,6 +210,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
     task_assign::info info;
     double time_a(0);
     double time_b(0);
+    bool in_map(false);
     
     // idea 1
     for(auto rob : robots)
@@ -235,9 +225,14 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 	    {
 		if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
 		{
+		    in_map = true;
 		    time_a = 1/VELOCITY*CalcPath(elem.wpoints);
 		    break;
 		}
+	    }
+	    if(!in_map)
+	    {
+		time_a = 1/VELOCITY*CalcDistMap(rob.x, rob.y, task.x1, task.y1, GlobMap);
 	    }
 	    for(auto elem : maps)
 	    {
@@ -257,6 +252,8 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
 	    
 	    tex.push_back(info);
+	    
+	    in_map = false;
 	}
     }
     

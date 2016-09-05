@@ -171,8 +171,11 @@ double CalcPath(vector<pair<double,double>> wpoints)
 double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
 {
     double min_dist(1000);
-    double min_rx(0.0);
-    double min_ry(0.0);
+    pair<double,double> coord;
+    coord.first = rx;
+    coord.second = ry;
+    //vector<pair<double,double>> min_wp;
+    mappa min_elem;
     double dist(0.0);
     
     for(auto elem : maps)
@@ -183,13 +186,28 @@ double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> map
 	    if(dist < min_dist)
 	    {
 	    	min_dist = dist;
-	    	min_rx = rx;
-	    	min_ry = ry;
+	    	//min_coord.first = elem.start.first;
+	    	//min_coord.second = elem.start.second;
+	    	//min_wp = elem.wpoints;
+	    	min_elem.start = elem.start;
+	    	min_elem.end = elem.end;
+	    	//min_elem.wpoints = elem.wpoints;
 	    }
 	}
     }
     
-    dist = CalcPath();
+    //esiste un unico percorso per andare da un punto ad un altro
+    for(auto elem : maps)
+    {
+    	if(elem.start == min_elem.start && elem.end == min_elem.end)
+	{
+	    elem.wpoints.insert(elem.wpoints.begin, coord);
+	    elem.start = coord;
+	    dist = CalcPath(elem.wpoints);
+	    break;
+	}
+    }
+    
     return dist;
 }
 

@@ -168,20 +168,28 @@ double CalcPath(vector<pair<double,double>> wpoints)
 
 // Aggiungi una function che calcoli il path per le posizioni dei robot che non sono tra i wp della mappa
 // idea: cerca il wp più vicino sulla mappa e somma la distanza fino al wp con il resto del path
-void CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
+double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
 {
-    double min_dist();
-    double min_rx;
-    double min_ry;
+    double min_dist(1000);
+    double min_rx(0.0);
+    double min_ry(0.0);
+    double dist(0.0);
     
     for(auto elem : maps)
     {
-	if(getDistance(rx, ry, elem.start.first, elem.start.second) <= SEC_DIST && tx == elem.end.first && ty == elem.end.second)
+    	dist = getDistance(rx, ry, elem.start.first, elem.start.second);
+	if(dist <= SEC_DIST && tx == elem.end.first && ty == elem.end.second)
 	{
-	    
-	    break;
+	    if(dist < min_dist)
+	    {
+	    	min_dist = dist;
+	    	min_rx = rx;
+	    	min_ry = ry;
+	    }
 	}
     }
+    
+    return dist;
 }
 
 

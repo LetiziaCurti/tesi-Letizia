@@ -48,7 +48,7 @@ public:
   
     std::string robot_name;
     int id_marker;
-    struct pose turtlesim_pose;
+    task_assign::waypoint turtlesim_pose;
 
     ros::Subscriber assignment_sub;
     ros::Subscriber recharge_sub;
@@ -57,8 +57,8 @@ public:
 
     ros::Time t_arrive;
     struct pose task_pose;  // da togliere
-    struct pose taska_pose;
-    struct pose taskb_pose;
+    task_assign::waypoint taska_pose;
+    task_assign::waypoint taskb_pose;
 
     bool assignment = false;
     bool in_recharge = false;
@@ -183,12 +183,8 @@ public:
     
     // Function for bringing the robot in the position of the task to accomplish and then in the position of
     // the exit
-    void moveToTask(struct pose goal_pose, string goal_name, double distance_tolerance)
+    void moveToTask(task_assign::waypoint goal_pose, double distance_tolerance)
     {
-	float pos_x = 0.0;
-	float pos_y = 0.0;
-	float theta = 0.0;
-	
 	double vel_x;
 	double vel_z;
 	double time = 0.1;
@@ -199,8 +195,8 @@ public:
 	      publishMarker(turtlesim_pose);
 	      broadcastPose(turtlesim_pose,robot_name);
 	      
-	      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y);
-	      vel_z = 4*sin((atan2(task_pose.y - turtlesim_pose.y, task_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
+	      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+	      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
 	      
 	      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
 	      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
@@ -208,44 +204,9 @@ public:
 
 	      ros::spinOnce();
 	      rate.sleep(); 
-	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y)>distance_tolerance);
+	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance);
 	
-	deleteMarker(task_pose, task_id_marker);
-
-    }
-    
-    
-    
-    // Function for bringing the robot in the position of the task to accomplish and then in the position of
-    // the exit
-    void moveToCharge(double distance_tolerance)
-    {
-	float pos_x = 0.0;
-	float pos_y = 0.0;
-	float theta = 0.0;
-	
-	double vel_x;
-	double vel_z;
-	double time = 0.1;
-	
-	
-	ros::Rate rate(10);
-	do{
-	      publishMarker(turtlesim_pose);
-	      broadcastPose(turtlesim_pose,robot_name);
-	      
-	      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y);
-	      vel_z = 4*sin((atan2(task_pose.y - turtlesim_pose.y, task_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
-	      
-	      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
-	      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
-	      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
-
-	      ros::spinOnce();
-	      rate.sleep(); 
-	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,task_pose.x,task_pose.y)>distance_tolerance);
-	
-	deleteMarker(task_pose, task_id_marker);
+	deleteMarker(goal_pose, task_id_marker);
 
     }
     
@@ -279,7 +240,7 @@ public:
 
     
     
-    void publishMarker(struct pose p)
+    void publishMarker(task_assign::waypoint p)
     {
 	visualization_msgs::Marker marker;
 	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
@@ -334,7 +295,7 @@ public:
  
  
 
-    void deleteMarker(struct pose task_pose, int t_id)
+    void deleteMarker(task_assign::waypoint task_pose, int t_id)
     {
 	visualization_msgs::Marker marker;
 	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
@@ -390,7 +351,7 @@ public:
     
         
     // Function con cui viene data al robot la posizione passata in argomento, che viene poi inviata a tf
-    void broadcastPose(struct pose posa, std::string name)
+    void broadcastPose(task_assign::waypoint posa, std::string name)
     {
 	static tf::TransformBroadcaster br;
 	tf::Transform transform;
@@ -444,8 +405,16 @@ int main(int argc, char **argv)
 	{  
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
-	    robot.moveToTask(robot.task_pose, robot.task_name, DISTANCE_TOLERANCE);
 	    
+	    for(auto wp : robot.path_a)
+	    {
+		robot.moveToTask(wp, DISTANCE_TOLERANCE);
+	    }
+	    for(auto wp : robot.path_b)
+	    {
+		robot.moveToTask(wp, DISTANCE_TOLERANCE);
+	    }
+ 
 	    robot.assignment=false;
 	}
 	
@@ -453,9 +422,13 @@ int main(int argc, char **argv)
 	{  
 	    // il robot va a ricaricarsi
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS GOING TO RECHARGE IN  " << robot.task_name);
-	    robot.moveToCharge(DISTANCE_TOLERANCE);
 	    
-	    robot.assignment=false;
+	    for(auto wp : robot.path_a)
+	    {
+		robot.moveToTask(wp, DISTANCE_TOLERANCE);
+	    }
+	    
+	    robot.in_recharge=false;
 	}
 	
 	robot.broadcastPose(robot.turtlesim_pose, name);

@@ -168,7 +168,7 @@ double CalcPath(vector<pair<double,double>> wpoints)
 
 // Function che calcola il path partendo dalla posizione di un robot che non sta tra i wp della mappa
 // idea: cerca il wp più vicino sulla mappa e somma la distanza fino al wp con il resto del path (dal wp al task)
-double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
+vector<pair<double,double>> CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
 {
     double min_dist(1000);
     double dist(0.0);
@@ -194,10 +194,9 @@ double CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> map
     
     min_elem.wpoints.insert(min_elem.wpoints.begin(), coord);
     min_elem.start = coord;
-    dist = CalcPath(min_elem.wpoints);
     GlobMap.push_back(min_elem);
     
-    return dist;
+    return min_elem.wpoints;
 }
 
 
@@ -232,8 +231,10 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 	    }
 	    if(!in_map)
 	    {
-		time_a = 1/VELOCITY*CalcDistMap(rob.x, rob.y, task.x1, task.y1, GlobMap);
+		time_a = 1/VELOCITY*CalcPath(CalcDistMap(rob.x, rob.y, task.x1, task.y1, GlobMap));
 	    }
+	    in_map = false;
+	    
 	    for(auto elem : maps)
 	    {
 		if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
@@ -252,8 +253,6 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
 	    
 	    tex.push_back(info);
-	    
-	    in_map = false;
 	}
     }
     
@@ -441,11 +440,12 @@ vector<task_assign::waypoint> CopiaPath(vector<pair<double,double>> wpoints)
 
 // Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
 // e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
-Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t)
+Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t, int i)
 {
     vector<task_assign::waypoint> path;
     task_assign::waypoint wp;
     Assign ass;
+    bool in_map(false);
   
   
     ass.rob = r_t.robot;
@@ -459,18 +459,27 @@ Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t)
     {
 	if(r_t.robot.x == elem.start.first && r_t.robot.y == elem.start.second && r_t.task.x1 == elem.end.first && r_t.task.y1 == elem.end.second)
 	{
+	    in_map = true;
 	    ass.path_tot.path_a = CopiaPath(elem.wpoints);
 	    break;
 	}
     }
-	
-    //ora scrivo path_b prendendo dalla mappa la lista di waypoint che vanno dalla posizione di task_a all posizione di task_b di r_t
-    for(auto elem : Map)
+    if(!in_map)
     {
-	if(r_t.task.x1 == elem.start.first && r_t.task.y1 == elem.start.second && r_t.task.x2 == elem.end.first && r_t.task.y2 == elem.end.second)
+	ass.path_tot.path_a = CopiaPath(CalcDistMap(r_t.robot.x, r_t.robot.y, r_t.task.x1, r_t.task.y1, GlobMap));
+    }
+
+    //se i=1 sto usando la function per gli assignment, altrimenti per i recharge e quindi non serbe task b
+    if(i)
+    {
+	//ora scrivo path_b prendendo dalla mappa la lista di waypoint che vanno dalla posizione di task_a all posizione di task_b di r_t
+	for(auto elem : Map)
 	{
-	    ass.path_tot.path_b = CopiaPath(elem.wpoints);	    
-	    break;
+	    if(r_t.task.x1 == elem.start.first && r_t.task.y1 == elem.start.second && r_t.task.x2 == elem.end.first && r_t.task.y2 == elem.end.second)
+	    {
+		ass.path_tot.path_b = CopiaPath(elem.wpoints);	    
+		break;
+	    }
 	}
     }
     
@@ -514,7 +523,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		tasks_to_assign = deleteTask(rt.task.name, tasks_to_assign);
 		
 		
-		ass = MapToCatal(GlobMap, rt);
+		ass = MapToCatal(GlobMap, rt, 1);
 		assignments_vect.push_back(ass.path_tot);
 		
 		// Crea il Catalogo_Ass
@@ -528,7 +537,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 
 
 
-// Legge "assignment_topic" 
+// Legge "recharge_topic" 
 void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 {
     bool add(true);
@@ -555,7 +564,7 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    {
 		new_in_rech = true;
 		
-		ass = MapToCatal(GlobMap, rt);
+		ass = MapToCatal(GlobMap, rt, 0);
 		robRech_vect.push_back(ass.path_tot);
 		
 		// Crea il Catalogo_Ass

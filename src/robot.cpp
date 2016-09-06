@@ -56,16 +56,20 @@ public:
     ros::Publisher marker_pub;
 
     ros::Time t_arrive;
-    struct pose task_pose;
+    struct pose task_pose;  // da togliere
     struct pose taska_pose;
     struct pose taskb_pose;
 
     bool assignment = false;
     bool in_recharge = false;
     string task_name;
-    int task_id_marker;
+    int task_id_marker; // da togliere
     int taska_id_marker;
     int taskb_id_marker;
+    double wait_a;
+    double wait_b;
+    vector<task_assign::waypoint> path_a;
+    vector<task_assign::waypoint> path_b;
     
 
     Robot(ros::NodeHandle& node, string name, int id, struct pose pos) 
@@ -94,6 +98,8 @@ public:
     // dopodiché parte per raggiungere il task seguendo i wp passati dal motion_planner
     void AssignCallback(const task_assign::assignment::ConstPtr& msg)
     {
+	task_assign::waypoint wp;
+
 	if(assignment) return;
 	
 	for(auto elem : msg->assign_vect)
@@ -111,11 +117,24 @@ public:
 		    task_name = elem.t_name;
 		    taska_id_marker = elem.id_a;
 		    taskb_id_marker = elem.id_b;
-// 		    
-// 		    task_pose.x = elem.task_x;
-// 		    task_pose.y = elem.task_y;
-// 		    task_pose.theta = elem.task_theta;
-// 		    
+		    
+		    // è l'ultimo wp di path_a
+		    path_a = elem.path_a;
+		    wp = path_a.back();
+		    taska_pose.x = wp.x;
+		    taska_pose.y = wp.y;
+		    taska_pose.theta = wp.theta;
+		    wait_a = wp.wait;
+		    
+		    // è l'ultimo wp di path_b
+		    path_b = elem.path_b;
+		    wp = path_b.back();
+		    taskb_pose.x = wp.x;
+		    taskb_pose.y = wp.y;
+		    taskb_pose.theta = wp.wait;
+		    wait_b = wp.wait;
+		    
+		    
 // 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
 		}
 	    }   
@@ -126,6 +145,8 @@ public:
     
     void RechargeCallback(const task_assign::assignment::ConstPtr& msg)
     {
+	task_assign::waypoint wp;
+	
 	if(in_recharge) return;
 	
 	for(auto elem : msg->assign_vect)
@@ -141,12 +162,17 @@ public:
 		{
 		    in_recharge = true;
 		    task_name = elem.t_name;
-// 		    task_id_marker = elem.t_id_marker;
-// 		    
-// 		    task_pose.x = elem.task_x;
-// 		    task_pose.y = elem.task_y;
-// 		    task_pose.theta = elem.task_theta;
-// 		    
+		    taska_id_marker = elem.id_a;
+		    
+		    // è l'ultimo wp di path_a
+		    path_a = elem.path_a;
+		    wp = path_a.back();
+		    taska_pose.x = wp.x;
+		    taska_pose.y = wp.y;
+		    taska_pose.theta = wp.theta;
+		    wait_a = wp.wait;
+		    
+		    
 // 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
 		}
 	    }   

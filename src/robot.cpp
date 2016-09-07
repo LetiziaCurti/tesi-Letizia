@@ -35,12 +35,6 @@ double getDistance(double x1, double y1, double x2, double y2)
   return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
 }
 
-struct pose{
-    float x;
-    float y;
-    float theta;  
-};
-
 
 class Robot
 {
@@ -49,14 +43,14 @@ public:
     std::string robot_name;
     int id_marker;
     task_assign::waypoint turtlesim_pose;
+    double b_level0;
+    double b_level;
 
     ros::Subscriber assignment_sub;
     ros::Subscriber recharge_sub;
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
-
-    ros::Time t_arrive;
-    struct pose task_pose;  // da togliere
+    
     task_assign::waypoint taska_pose;
     task_assign::waypoint taskb_pose;
 
@@ -72,10 +66,13 @@ public:
     vector<task_assign::waypoint> path_b;
     
 
-    Robot(ros::NodeHandle& node, string name, int id, struct pose pos) 
+    Robot(ros::NodeHandle& node, string name, int id, task_assign::waypoint pos, double b_l0) 
     {
 	robot_name = name;
 	id_marker = id;
+	
+	b_level0 = b_l0;
+	b_level = b_l0;
 	
 	turtlesim_pose.x = pos.x;
 	turtlesim_pose.y = pos.y;
@@ -183,7 +180,7 @@ public:
     
     // Function for bringing the robot in the position of the task to accomplish and then in the position of
     // the exit
-    void moveToTask(task_assign::waypoint goal_pose, double distance_tolerance)
+    void moveToWP(task_assign::waypoint goal_pose, double distance_tolerance)
     {
 	double vel_x;
 	double vel_z;
@@ -201,6 +198,8 @@ public:
 	      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
 	      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
 	      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
+	      
+	      b_level-=0.3;
 
 	      ros::spinOnce();
 	      rate.sleep(); 
@@ -212,17 +211,16 @@ public:
     
     
     
-    // Il robot pubblica il suo stato su "robot_arrival_topic"
+    // Il robot pubblica il suo stato su "status_rob_topic"
     void publishStatus() 
     {
 	task_assign::robot status_msg; 
 
 	status_msg.header.stamp = ros::Time::now();
-// 	status_msg.t = ros::Time::now();
 	status_msg.name = robot_name;
 	status_msg.status = true;
-	status_msg.b_level0 = 10;
-	status_msg.b_level = 10;
+	status_msg.b_level0 = b_level0;
+	status_msg.b_level = b_level;
 	
 	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
 	{
@@ -380,11 +378,12 @@ int main(int argc, char **argv)
     string name = std::string(argv[1]);
     int id = atoi(argv[2]);
     
-    struct pose pose;
+    task_assign::waypoint pose;
     pose.x = atof(argv[3]);
     pose.y = atof(argv[4]);
     pose.theta = atof(argv[5]);
-    Robot robot(node, name, id, pose);
+    double b_level0 = atof(argv[6]);
+    Robot robot(node, name, id, pose, b_level0);
 
     sleep(1); 
 
@@ -408,11 +407,13 @@ int main(int argc, char **argv)
 	    
 	    for(auto wp : robot.path_a)
 	    {
-		robot.moveToTask(wp, DISTANCE_TOLERANCE);
+		robot.moveToWP(wp, DISTANCE_TOLERANCE);
+		robot.publishStatus(); 
 	    }
 	    for(auto wp : robot.path_b)
 	    {
-		robot.moveToTask(wp, DISTANCE_TOLERANCE);
+		robot.moveToWP(wp, DISTANCE_TOLERANCE);
+		robot.publishStatus(); 
 	    }
  
 	    robot.assignment=false;
@@ -425,8 +426,11 @@ int main(int argc, char **argv)
 	    
 	    for(auto wp : robot.path_a)
 	    {
-		robot.moveToTask(wp, DISTANCE_TOLERANCE);
+		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
+	    
+	    sleep(10);
+	    robot.b_level = b_level0;
 	    
 	    robot.in_recharge=false;
 	}

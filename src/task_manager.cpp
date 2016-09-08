@@ -38,114 +38,6 @@ vector<task_assign::task> task_to_assign;    		//T: vettore dei task da assegnar
 int dim_n(0);
 
 
-// Legge "task_arrival_topic" e mette i nuovi task nel vettore new_task
-void NewCallback(const task_assign::vect_task::ConstPtr& msg)
-{
-    bool add_task(true);
-    
-    for(auto elem : msg->task_vect)
-    {
-	// vedo se elem sta già in new_task
-	for(auto newel : new_task)
-	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
-		add_task = false;
-	}
-	
-	if(add_task)
-	    new_task.push_back(elem);
-	
-	add_task = true;
-    }
-}
-
-
-// Legge "task_exec_topic" e mette i nuovi task nel vettore exec_task
-void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
-{   
-    bool add_task(true);
-    
-    for(auto elem : msg->task_vect)
-    {
-	// vedo se elem sta già in executed_task
-	for(auto newel : executed_task)
-	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
-		add_task = false;
-	}
-	
-	if(add_task)
-	   executed_task.push_back(elem);
-	
-	add_task = true;
-    }
-}
-
-
-// mette insieme executed_task(k), new_task(k) e task_to_assign(k-1) ed elabora un nuovo task_to_assign(k)
-void taskManagement()
-{
-    bool add_task(true);
-    
-    for(auto elem : new_task)
-    {
-	// vedo se elem sta già in task_to_assign
-	for(auto newel : task_to_assign)
-	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
-		add_task = false;
-	}
-	
-	if(add_task)
-	    task_to_assign.push_back(elem);
-	
-	add_task = true;
-    }
-    
-    bool erase_task(false);
-    for(auto elem : executed_task)
-    {
-	// vedo se elem sta in task_to_assign
-	int count(0);
-	for(auto newel : task_to_assign)
-	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
-	    {
-		erase_task = true;
-		break;
-	    }
-	    count++;
-	}
-	
-	if(erase_task)
-	{  
-	    task_to_assign.erase(task_to_assign.begin()+count);
-	}
-	
-	erase_task = false;
-    }
-  
-    dim_n = task_to_assign.size();
-}
-
-
-// Pubblica al motion_planner il vettore dei nuovi task da eseguire task_to_assign
-void publishTaskToAssign()
-{
-    task_assign::vect_task assignment_msg; 
-    
-    assignment_msg.task_vect = task_to_assign;
-
-    // Wait for the publisher to connect to subscribers
-    sleep(1.0);
-    new_task_pub.publish(assignment_msg);
-    
-    for(auto elem : assignment_msg.task_vect)
-    {
-	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.name1 << " - " << elem.name2);
-    }
-}
-
 
 
 void publishMarker(task_assign::waypoint p, int id_marker)
@@ -203,7 +95,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
 
 
 
-void deleteMarker(task_assign::waypoint task_pose, int t_id)
+void deleteMarker(task_assign::waypoint task_pose, int id_marker)
 {
     visualization_msgs::Marker marker;
     // Set the frame ID and timestamp.  See the TF tutorials for information on these.
@@ -213,7 +105,7 @@ void deleteMarker(task_assign::waypoint task_pose, int t_id)
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
     marker.ns = "task_node";
-    marker.id = t_id;
+    marker.id = id_marker;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
     marker.type = visualization_msgs::Marker::CUBE;
@@ -257,6 +149,7 @@ void deleteMarker(task_assign::waypoint task_pose, int t_id)
     marker_pub.publish(marker);
 }
 
+
     
 // Function con cui viene data al robot la posizione passata in argomento, che viene poi inviata a tf
 void broadcastPose(task_assign::waypoint posa, std::string name, int id_marker)
@@ -271,6 +164,149 @@ void broadcastPose(task_assign::waypoint posa, std::string name, int id_marker)
     
     publishMarker(posa, id_marker);
 }
+
+
+
+// Legge "task_arrival_topic" e mette i nuovi task nel vettore new_task
+void NewCallback(const task_assign::vect_task::ConstPtr& msg)
+{
+    bool add_task(true);
+    task_assign::waypoint pos;
+    
+    for(auto elem : msg->task_vect)
+    {
+	// vedo se elem sta già in new_task
+	for(auto newel : new_task)
+	{
+	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+		add_task = false;
+	}
+	
+	if(add_task)
+	{
+	    new_task.push_back(elem);
+	    
+	    pos.x = elem.x1;
+	    pos.y = elem.y1;
+	    pos.theta = elem.theta1;
+	    publishMarker(pos, elem.id1);
+	    
+	    pos.x = elem.x2;
+	    pos.y = elem.y2;
+	    pos.theta = elem.theta2;
+	    publishMarker(pos, elem.id2);
+	}
+	
+	add_task = true;
+    }
+}
+
+
+
+// Legge "task_exec_topic" e mette i nuovi task nel vettore exec_task
+void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
+{   
+    bool add_task(true);
+    task_assign::waypoint pos;
+    
+    for(auto elem : msg->task_vect)
+    {
+	// vedo se elem sta già in executed_task
+	for(auto newel : executed_task)
+	{
+	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+		add_task = false;
+	}
+	
+	if(add_task)
+	{
+	   executed_task.push_back(elem);
+	   
+	   pos.x = elem.x1;
+	   pos.y = elem.y1;
+	   pos.theta = elem.theta1;
+	   deleteMarker(pos, elem.id1);
+	   
+	   pos.x = elem.x2;
+	   pos.y = elem.y2;
+	   pos.theta = elem.theta2;
+	   deleteMarker(pos, elem.id2);
+	}
+	
+	add_task = true;
+    }
+}
+
+
+
+// mette insieme executed_task(k), new_task(k) e task_to_assign(k-1) ed elabora un nuovo task_to_assign(k)
+void taskManagement()
+{
+    bool add_task(true);
+    
+    for(auto elem : new_task)
+    {
+	// vedo se elem sta già in task_to_assign
+	for(auto newel : task_to_assign)
+	{
+	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+		add_task = false;
+	}
+	
+	if(add_task)
+	    task_to_assign.push_back(elem);
+	
+	add_task = true;
+    }
+    
+    bool erase_task(false);
+    for(auto elem : executed_task)
+    {
+	// vedo se elem sta in task_to_assign
+	int count(0);
+	for(auto newel : task_to_assign)
+	{
+	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+	    {
+		erase_task = true;
+		break;
+	    }
+	    count++;
+	}
+	
+	if(erase_task)
+	{  
+	    task_to_assign.erase(task_to_assign.begin()+count);
+	}
+	
+	erase_task = false;
+    }
+  
+    dim_n = task_to_assign.size();
+}
+
+
+
+// Pubblica al motion_planner il vettore dei nuovi task da eseguire task_to_assign
+void publishTaskToAssign()
+{
+    task_assign::vect_task assignment_msg; 
+    
+    assignment_msg.task_vect = task_to_assign;
+
+    // Wait for the publisher to connect to subscribers
+    sleep(1.0);
+    new_task_pub.publish(assignment_msg);
+    
+    for(auto elem : assignment_msg.task_vect)
+    {
+	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.name1 << " - " << elem.name2);
+    }
+}
+
+
+
+
 
 
 

@@ -222,10 +222,10 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 	{
 	   executed_task.push_back(elem);
 	   
-	   pos.x = elem.x1;
-	   pos.y = elem.y1;
-	   pos.theta = elem.theta1;
-	   deleteMarker(pos, elem.id1);
+// 	   pos.x = elem.x1;
+// 	   pos.y = elem.y1;
+// 	   pos.theta = elem.theta1;
+// 	   deleteMarker(pos, elem.id1);
 	   
 	   pos.x = elem.x2;
 	   pos.y = elem.y2;

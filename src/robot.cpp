@@ -22,6 +22,7 @@
 
 
 #define DISTANCE_TOLERANCE 0.01
+#define RECHARGE_DURATION 10
 
 using namespace std;
 
@@ -436,7 +437,7 @@ int main(int argc, char **argv)
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
 	    
-	    sleep(10);
+	    sleep(RECHARGE_DURATION);
 	    robot.b_level = b_level0;
 	    robot.publishStatus(); 
 	    

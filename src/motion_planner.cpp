@@ -453,6 +453,8 @@ Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t, int i)
     
     ass.path_tot.r_name = r_t.robot.name;
     ass.path_tot.t_name = r_t.task.name;
+    ass.path_tot.id_a = r_t.task.id1;
+    ass.path_tot.id_b = r_t.task.id2;
     
     //ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di task_a di r_t
     for(auto elem : Map)

@@ -205,7 +205,7 @@ public:
 	      rate.sleep(); 
 	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance);
 	
-	deleteMarker(goal_pose, task_id_marker);
+	//deleteMarker(goal_pose, task_id_marker);
 
     }
     
@@ -410,11 +410,13 @@ int main(int argc, char **argv)
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 		robot.publishStatus(); 
 	    }
+	    deleteMarker(taska_pose, taska_id_marker);
 	    for(auto wp : robot.path_b)
 	    {
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 		robot.publishStatus(); 
 	    }
+	    deleteMarker(taskb_pose, taskb_id_marker);
  
 	    robot.assignment=false;
 	}
@@ -428,6 +430,7 @@ int main(int argc, char **argv)
 	    {
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
+	    deleteMarker(taska_pose, taska_id_marker);
 	    
 	    sleep(10);
 	    robot.b_level = b_level0;

@@ -54,8 +54,8 @@ public:
     task_assign::waypoint taska_pose;
     task_assign::waypoint taskb_pose;
 
-    bool assignment(false);
-    bool in_recharge(false);
+    bool assignment = false;
+    bool in_recharge = false;
     string task_name;
     int taska_id_marker;
     int taskb_id_marker;
@@ -410,7 +410,7 @@ int main(int argc, char **argv)
 		robot.publishStatus(); 
 	    }
 	    robot.deleteMarker(robot.taska_pose, robot.taska_id_marker);
-	    
+
 	    for(auto wp : robot.path_b)
 	    {
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);

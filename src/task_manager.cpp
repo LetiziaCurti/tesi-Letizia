@@ -51,6 +51,8 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 	
 	if(add_task)
 	    new_task.push_back(elem);
+	
+	add_task = true;
     }
 }
 
@@ -71,6 +73,8 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 	
 	if(add_task)
 	   executed_task.push_back(elem);
+	
+	add_task = true;
     }
 }
 
@@ -90,9 +94,9 @@ void taskManagement()
 	}
 	
 	if(add_task)
-	{  
 	    task_to_assign.push_back(elem);
-	}
+	
+	add_task = true;
     }
     
     bool erase_task(false);
@@ -114,6 +118,8 @@ void taskManagement()
 	{  
 	    task_to_assign.erase(task_to_assign.begin()+count);
 	}
+	
+	erase_task = false;
     }
   
     dim_n = task_to_assign.size();

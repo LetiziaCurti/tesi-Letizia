@@ -406,16 +406,20 @@ int main(int argc, char **argv)
 	    
 	    for(auto wp : robot.path_a)
 	    {
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 		robot.publishStatus(); 
+		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
+	    sleep(robot.wait_a);
+	    robot.publishStatus(); 
 	    robot.deleteMarker(robot.taska_pose, robot.taska_id_marker);
 
 	    for(auto wp : robot.path_b)
 	    {
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 		robot.publishStatus(); 
+		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
+	    sleep(robot.wait_b);
+	    robot.publishStatus(); 
 // 	    robot.deleteMarker(robot.taskb_pose, robot.taskb_id_marker);
  
 	    robot.assignment=false;
@@ -428,11 +432,13 @@ int main(int argc, char **argv)
 	    
 	    for(auto wp : robot.path_a)
 	    {
+		robot.publishStatus(); 
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
 	    
 	    sleep(10);
 	    robot.b_level = b_level0;
+	    robot.publishStatus(); 
 	    
 	    robot.in_recharge=false;
 	}

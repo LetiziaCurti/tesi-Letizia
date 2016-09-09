@@ -1,455 +1,807 @@
-// Nodo che modella l'agente robot
-// il robot comunica il suo stato (nome, status=false(not busy), posizione) al central 
-// node (che lo impila nella coda in base al suo tempo di arrivo) scrivendo su "robot_arrival_topic", 
-// finché non riceve un assignment dal central node (legge "assignment_topic")
-// Dopodiché si muove per raggiungere con moveGoal il task.
-// Infine pubblica su "assignment_topic" che è tornato libero
+// Nodo che modella il motion planner
 
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <map>
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
-#include "turtlesim/Pose.h"  
-#include "task_assign/IniStatus.h" 
-#include "task_assign/OneAssign.h"
-#include "task_assign/AssignMsg.h"
-#include <sys/stat.h>
-#include <iostream>
-#include <tf/transform_broadcaster.h>
-#include <visualization_msgs/Marker.h>
+#include "task_assign/vect_task.h"
 #include "task_assign/vect_robot.h"
 #include "task_assign/rt_vect.h"
+#include "task_assign/vect_info.h"
+#include "task_assign/task_path.h"
 #include "task_assign/assignment.h"
 #include "task_assign/rech_vect.h"
 
 
-#define DISTANCE_TOLERANCE 0.01
-#define RECHARGE_DURATION 10
-
-using namespace std;
-
 inline const char * const BoolToString(bool b)
 {
-  return b ? "true" : "false";
+    return b ? "true" : "false";
 }
 
 double getDistance(double x1, double y1, double x2, double y2)
 {
-  return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
+    return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
+}
+
+using namespace std;
+
+
+ros::Subscriber obs_sub;
+ros::Subscriber rt_sub;
+ros::Subscriber rech_sub;
+ros::Subscriber status_rob_sub;
+// ros::Subscriber arr_rob_sub;
+ros::Subscriber new_task_sub;
+
+ros::Publisher exec_task_pub;
+ros::Publisher rob_ass_pub;
+ros::Publisher rob_rech_pub;
+ros::Publisher task_ass_pub;
+ros::Publisher rob_ini_pub;
+ros::Publisher rob_info_pub;
+ros::Publisher rech_info_pub;
+ros::Publisher assignment_pub;
+ros::Publisher recharge_pub;
+
+#define VELOCITY 10
+#define BATTERY_THR 10
+#define SEC_DIST 1
+
+bool new_assign(false);
+bool new_in_rech(false);
+bool new_task(false);
+
+
+vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
+vector<task_assign::robot> robots_in_execution;    	//vettore dei robot che stanno eseguendo dei task o che stanno andando a ricaricarsi
+vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot che stanno eseguendo dei task o che stanno andando a ricaricarsi
+vector<task_assign::task> tasks_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dimensione m(k)
+vector<task_assign::task> tasks_in_execution;		//vettore dei task già in esecuzione
+vector<task_assign::task> completed_tasks;		//vettore dei task completati che viene inviato al task_manager
+vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
+vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
+vector<task_assign::info> rob_info_vect;
+vector<task_assign::info> rob_info0_vect;
+vector<task_assign::info> rech_info_vect;
+
+
+
+//simulo una mappa
+struct mappa
+{
+    pair<double,double> start;
+    pair<double,double> end;
+    vector<pair<double,double>> wpoints;
+};
+
+vector<mappa> GlobMap;   				// la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path 
+							// per andare da un robot ad un task, va passata dall'esterno
+vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
+
+
+
+struct Assign
+{
+    task_assign::robot rob;
+    task_assign::task task;
+    task_assign::task_path path_tot;
+};
+
+vector<Assign> Catalogo_Ass;				//struttura che tiene in memoria tutti gli assignment task - robot
+vector<Assign> Catalogo_Rech;				//struttura che tiene in memoria tutti gli assignment robot - p.to di ric.
+
+
+
+
+
+
+// Function che elimina il robot con il nome passato in argomento dal vettore di robot passato in argomento
+vector<task_assign::robot> deleteRob(string name, vector<task_assign::robot> vect)
+{
+    int i(0);
+    for(auto elem : vect)
+    {
+	if(elem.name == name)
+	{
+	    vect.erase(vect.begin()+i);
+	    break;
+	}
+	i++;
+    }
+    return vect;
 }
 
 
-class Robot
+
+// Function che elimina il task con il nome passato in argomento dal vettore di task passato in argomento
+vector<task_assign::task> deleteTask(string name, vector<task_assign::task> vect)
 {
-public:
+    int i(0);
+    for(auto elem : vect)
+    {
+	if(elem.name == name)
+	{
+	    vect.erase(vect.begin()+i);
+	    break;
+	}
+	i++;
+    }
+    return vect;
+}
+
+
+
+// Function che elimina dal catalogo l'assignment del robot con il nome passato in argomento
+vector<Assign> deleteAss(string name, vector<Assign> vect)
+{
+    int i(0);
+    for(auto elem : vect)
+    {
+	if(elem.rob.name == name)
+	{
+	    vect.erase(vect.begin()+i);
+	    break;
+	}
+	i++;
+    }
+    return vect;
+}
+
+
+
+double CalcPath(vector<pair<double,double>> wpoints)
+{
+    double dist(0);
+    
+    for(int i=0; i<wpoints.size()-1; i++)
+    {
+	dist += getDistance(wpoints[i].first,wpoints[i].second,wpoints[i+1].first,wpoints[i+1].second);
+    }
+    
+    return dist;
+}
+
+
+
+// Function che calcola il path partendo dalla posizione di un robot che non sta tra i wp della mappa
+// idea: cerca il wp più vicino sulla mappa e somma la distanza fino al wp con il resto del path (dal wp al task)
+vector<pair<double,double>> CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
+{
+    double min_dist(1000);
+    double dist(0.0);
+    pair<double,double> coord;
+    coord = make_pair(rx, ry);
+    mappa min_elem;
+
+    
+    for(auto elem : maps)
+    {
+    	dist = getDistance(rx, ry, elem.start.first, elem.start.second);
+	if(dist <= SEC_DIST && tx == elem.end.first && ty == elem.end.second)
+	{
+	    if(dist < min_dist)
+	    {
+	    	min_dist = dist;
+	    	min_elem.start = elem.start;
+	    	min_elem.end = elem.end;
+	    	min_elem.wpoints = elem.wpoints;
+	    }
+	}
+    }
+    
+    min_elem.wpoints.insert(min_elem.wpoints.begin(), coord);
+    min_elem.start = coord;
+    GlobMap.push_back(min_elem);
+    
+    return min_elem.wpoints;
+}
+
+
+
+// Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
+// se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
+vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task_assign::task> tasks, vector<mappa> maps, int i)
+{
+    vector<task_assign::info> tex;
+    task_assign::info info;
+    double time_a(0);
+    double time_b(0);
+    bool in_map(false);
+    
+    // idea 1
+    for(auto rob : robots)
+    {
+	// vedo se elem sta già in task_to_assign
+	for(auto task : tasks)
+	{
+	    info.r_name = rob.name;
+	    info.t_name = task.name;
+	    
+	    for(auto elem : maps)
+	    {
+		if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
+		{
+		    in_map = true;
+		    time_a = 1/VELOCITY*CalcPath(elem.wpoints);
+		    break;
+		}
+	    }
+	    if(!in_map)
+	    {
+		time_a = 1/VELOCITY*CalcPath(CalcDistMap(rob.x, rob.y, task.x1, task.y1, GlobMap));
+	    }
+	    in_map = false;
+	    
+	    for(auto elem : maps)
+	    {
+		if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
+		{
+		    time_b = 1/VELOCITY*CalcPath(elem.wpoints);
+		    break;
+		}
+	    }
+	    
+	    if(!i)
+	    {
+		info.t_ex0 = time_a + task.wait1 + time_b + task.wait1;
+		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
+	    }
+	    else
+		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
+	    
+	    tex.push_back(info);
+	}
+    }
+    
+    return tex;
+}
+
+
+
+// Legge su "new_task_topic" il vettore dei task da eseguire T
+void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
+{
+    bool add_task(true);
+    
+    for(auto elem : msg->task_vect)
+    {
+	// vedo se elem sta già in task_to_assign
+	for(auto newel : tasks_to_assign)
+	{
+	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+		add_task = false;
+	}
+	
+	if(add_task)
+	{
+	    tasks_to_assign.push_back(elem);
+	    new_task = true;
+	}
+	
+	add_task = true;
+    }
+}
+
+
+
+// Legge "status_rob_topic" 
+void StatusCallback(const task_assign::robot::ConstPtr& msg)
+{    
+    bool in_charge(false);
+    bool in_execution(false);
+    bool available(false);
+    bool completed(false);
+    
+    if(msg->status)
+    {	
+	for(auto elem : available_robots)
+	{
+	    if(elem.name == msg->name)
+	    {
+		available = true;
+		break;
+	    }
+	}
+	
+	if(!available)
+	{
+	    for(auto elem : robots_in_execution)
+	    {
+		if(elem.name == msg->name)
+		{
+		    in_execution = true;
+		    break;
+		}
+	    }
+	}
+	
+	if(!available && !in_execution)
+	{
+	    for(auto elem : robots_in_recharge)
+	    {
+		if(elem.name == msg->name)
+		{
+		    in_charge = true;
+		    break;
+		}
+	    }
+	}
+	
+   
+	if(!available && !in_execution && !in_charge && msg->b_level > BATTERY_THR)
+	{
+	    available_robots.push_back(*msg);
+	}
+	
+	else if(!available && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
+	{
+	    robots_in_recharge.push_back(*msg);
+	}
+	
+	else if(available)
+	{
+	    if(msg->b_level <= BATTERY_THR)
+	    {
+		    robots_in_recharge.push_back(*msg);
+		    available_robots = deleteRob(msg->name, available_robots);
+	    }
+	}
+	
+	else if(in_execution)
+	{
+	    // cerco il task corrispondente al robot
+	    for(auto ass : Catalogo_Ass)
+	    {
+		if(msg->name == ass.rob.name)
+		{
+		    // vedo se il robot è arrivato al task
+		    if(msg->x == ass.task.x2 && msg->y == ass.task.y2)
+		    {
+			completed_tasks.push_back(ass.task);
+			tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+			robots_in_execution = deleteRob(msg->name, robots_in_execution);
+			Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
+			
+			if(msg->b_level > BATTERY_THR)
+			    available_robots.push_back(*msg);
+			else
+			    robots_in_recharge.push_back(*msg);
+			
+			completed = true;
+			break;
+		    }
+
+		
+		    // il robot sta eseguendo il task e non ha ancora finito
+		    if(!completed)
+		    {
+			if(msg->b_level <= BATTERY_THR)
+			{
+			    // se manca "poco" al task (distanza inferiore ad una certa soglia), ce lo faccio arrivare e poi lo manderò in carica
+			    // altrimenti mando subito il robot in carica e rimetto il task tra i task da assegnare  
+			    if(getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
+			      {
+				  robots_in_execution = deleteRob(msg->name, robots_in_execution);
+				  robots_in_recharge.push_back(*msg);
+				  tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+				  tasks_to_assign.push_back(ass.task);
+				  Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
+			      }    
+			}
+		    }
+		}
+		break;
+	    }
+	}
+	
+	else if(in_charge)
+	{
+	    if(msg->b_level == msg->b_level0)
+	    {
+		robots_in_recharge = deleteRob(msg->name, robots_in_recharge);
+		Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
+		available_robots.push_back(*msg);
+	    }
+	}
+    }
+    
+    //vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
+    rob_info0_vect = CalcTex(available_robots, tasks_to_assign, GlobMap, 0);
+    rob_info_vect = CalcTex(robots_in_execution, tasks_to_assign, GlobMap, 1);
+    
+    // vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i punti ri ricarica
+    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, GlobMap, 1); 
+}
+
+
+
+// Function che copia una lista di w.p. dalla mappa globale in una lista di oggetti task_assign/waypoint
+vector<task_assign::waypoint> CopiaPath(vector<pair<double,double>> wpoints)
+{
+    task_assign::waypoint wp;
+    vector<task_assign::waypoint> path;
+    
+    for(auto pair : wpoints)
+    {
+	wp.x = pair.first;
+	wp.y = pair.second;
+	
+	path.push_back(wp);
+    }
+    
+    
+    return path;
+}
+
+
+
+// Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
+// e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
+Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t, int i)
+{
+    vector<task_assign::waypoint> path;
+    task_assign::waypoint wp;
+    Assign ass;
+    bool in_map(false);
   
-    std::string robot_name;
-    int id_marker;
-    task_assign::waypoint turtlesim_pose;
-    double b_level0;
-    double b_level;
-
-    ros::Subscriber assignment_sub;
-    ros::Subscriber recharge_sub;
-    ros::Publisher status_pub;
-    ros::Publisher marker_pub;
+  
+    ass.rob = r_t.robot;
+    ass.task = r_t.task;
     
-    task_assign::waypoint taska_pose;
-    task_assign::waypoint taskb_pose;
-
-    bool assignment = false;
-    bool in_recharge = false;
-    string task_name;
-    int taska_id_marker;
-    int taskb_id_marker;
-    double wait_a;
-    double wait_b;
-    vector<task_assign::waypoint> path_a;
-    vector<task_assign::waypoint> path_b;
+    ass.path_tot.r_name = r_t.robot.name;
+    ass.path_tot.t_name = r_t.task.name;
+    ass.path_tot.id_a = r_t.task.id1;
+    ass.path_tot.id_b = r_t.task.id2;
     
-
-    Robot(ros::NodeHandle& node, string name, int id, task_assign::waypoint pos, double b_l0) 
+    //ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di task_a di r_t
+    for(auto elem : Map)
     {
-	robot_name = name;
-	id_marker = id;
-	
-	b_level0 = b_l0;
-	b_level = b_l0;
-	
-	turtlesim_pose.x = pos.x;
-	turtlesim_pose.y = pos.y;
-	turtlesim_pose.theta = pos.theta;
-	
-
-	// Publish and subscribe to team status messages
-	status_pub = node.advertise<task_assign::robot>("status_rob_topic", 10);	
-	
-	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
-	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
-	
-	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
-    }
-    
-    
-    
-    // Il robot legge "assignment_topic" aspettando di ricevere un assignment
-    // Pubblica il proprio stato su "robots_arrival_topic" finché non riceve un assignment, 
-    // dopodiché parte per raggiungere il task seguendo i wp passati dal motion_planner
-    void AssignCallback(const task_assign::assignment::ConstPtr& msg)
-    {
-	task_assign::waypoint wp;
-
-	if(assignment) return;
-	
-	for(auto elem : msg->assign_vect)
+	if(r_t.robot.x == elem.start.first && r_t.robot.y == elem.start.second && r_t.task.x1 == elem.end.first && r_t.task.y1 == elem.end.second)
 	{
-	    //check: deve essere arrivato qualcosa
-	    if(elem.t_name!="" && elem.r_name!="")
-	    {
-// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
-	    
-		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
-		// smetto di pubblicare il mio stato
-		if(elem.r_name==robot_name)
-		{
-		    assignment = true;
-		    task_name = elem.t_name;
-		    taska_id_marker = elem.id_a;
-		    taskb_id_marker = elem.id_b;
-		    
-		    // è l'ultimo wp di path_a
-		    path_a = elem.path_a;
-		    wp = path_a.back();
-		    taska_pose.x = wp.x;
-		    taska_pose.y = wp.y;
-		    taska_pose.theta = wp.theta;
-		    wait_a = wp.wait;
-		    
-		    // è l'ultimo wp di path_b
-		    path_b = elem.path_b;
-		    wp = path_b.back();
-		    taskb_pose.x = wp.x;
-		    taskb_pose.y = wp.y;
-		    taskb_pose.theta = wp.wait;
-		    wait_b = wp.wait;
-		    
-		    
-// 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
-		}
-		break;
-	    }   
-	}
-    }
-    
-    
-    
-    void RechargeCallback(const task_assign::assignment::ConstPtr& msg)
-    {
-	task_assign::waypoint wp;
-	
-	if(in_recharge) return;
-	
-	for(auto elem : msg->assign_vect)
-	{
-	    //check: deve essere arrivato qualcosa
-	    if(elem.t_name!="" && elem.r_name!="")
-	    {
-// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
-	    
-		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
-		// smetto di pubblicare il mio stato
-		if(elem.r_name==robot_name)
-		{
-		    in_recharge = true;
-		    task_name = elem.t_name;
-		    taska_id_marker = elem.id_a;
-		    
-		    // è l'ultimo wp di path_a
-		    path_a = elem.path_a;
-		    wp = path_a.back();
-		    taska_pose.x = wp.x;
-		    taska_pose.y = wp.y;
-		    taska_pose.theta = wp.theta;
-		    wait_a = wp.wait;
-		    
-		    
-// 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
-		}
-		break;
-	    }   
-	}
-    }
-    
-    
-    
-    // Function for bringing the robot in the position of the task to accomplish and then in the position of
-    // the exit
-    void moveToWP(task_assign::waypoint goal_pose, double distance_tolerance)
-    {
-	double vel_x;
-	double vel_z;
-	double time = 0.1;
-	
-	
-	ros::Rate rate(10);
-	do{
-	      publishMarker(turtlesim_pose);
-	      broadcastPose(turtlesim_pose,robot_name);
-	      
-	      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
-	      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
-	      
-	      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
-	      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
-	      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
-	      
-	      b_level-=0.3;
-
-	      ros::spinOnce();
-	      rate.sleep(); 
-	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance);
-	
-// 	deleteMarker(goal_pose, task_id_marker);
-
-    }
-    
-    
-    
-    // Il robot pubblica il suo stato su "status_rob_topic"
-    void publishStatus() 
-    {
-	task_assign::robot status_msg; 
-
-	status_msg.header.stamp = ros::Time::now();
-	status_msg.name = robot_name;
-	status_msg.status = true;
-	status_msg.b_level0 = b_level0;
-	status_msg.b_level = b_level;
-	
-	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
-	{
-	    status_msg.x = turtlesim_pose.x;
-	    status_msg.y = turtlesim_pose.y;
-	    status_msg.theta = turtlesim_pose.theta;
-	}
-
-	// Wait for the publisher to connect to subscribers
-	sleep(1);
-	status_pub.publish(status_msg);
-	
-	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
-    }
-
-    
-    
-    void publishMarker(task_assign::waypoint p)
-    {
-	visualization_msgs::Marker marker;
-	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
-	marker.header.frame_id = "world";
-	marker.header.stamp = ros::Time::now();
-
-	// Set the namespace and id for this marker.  This serves to create a unique ID
-	// Any marker sent with the same namespace and id will overwrite the old one
-	marker.ns = "robot_node";
-	marker.id = id_marker;
-
-	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-	marker.type = visualization_msgs::Marker::SPHERE;
-
-	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-	marker.action = visualization_msgs::Marker::ADD;
-
-	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-	marker.pose.position.x = p.x;
-	marker.pose.position.y = p.y;
-	marker.pose.position.z = 0;
-	marker.pose.orientation.x = 0.0;
-	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = p.theta;
-	marker.pose.orientation.w = 1.0;
-
-	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 1.5;
-	marker.scale.y = 1.5;
-	marker.scale.z = 1.5;
-
-	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = 1.0f;
-	marker.color.g = 0.0f;
-	marker.color.b = 0.0f;
-	marker.color.a = 0.7;
-
-	marker.lifetime = ros::Duration();
-
-	// Publish the marker
-	while (marker_pub.getNumSubscribers() < 1)
-	{
-	  if (!ros::ok())
-	  {
+	    in_map = true;
+	    ass.path_tot.path_a = CopiaPath(elem.wpoints);
 	    break;
-	  }
-	  ROS_WARN_ONCE("Please create a subscriber to the marker");
-	  sleep(1);
 	}
-	marker_pub.publish(marker);
     }
- 
- 
-
-    void deleteMarker(task_assign::waypoint task_pose, int t_id)
+    if(!in_map)
     {
-	visualization_msgs::Marker marker;
-	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
-	marker.header.frame_id = "world";
-	marker.header.stamp = ros::Time::now();
+	ass.path_tot.path_a = CopiaPath(CalcDistMap(r_t.robot.x, r_t.robot.y, r_t.task.x1, r_t.task.y1, GlobMap));
+    }
 
-	// Set the namespace and id for this marker.  This serves to create a unique ID
-	// Any marker sent with the same namespace and id will overwrite the old one
-	marker.ns = "task_node";
-	marker.id = t_id;
-
-	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-	marker.type = visualization_msgs::Marker::CUBE;
-
-	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-	marker.action = visualization_msgs::Marker::DELETE;
-
-	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-	marker.pose.position.x = task_pose.x;
-	marker.pose.position.y = task_pose.y;
-	marker.pose.position.z = 0;
-	marker.pose.orientation.x = 0.0;
-	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = task_pose.theta;
-	marker.pose.orientation.w = 1.0;
-
-	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 1.0;
-	marker.scale.y = 1.0;
-	marker.scale.z = 1.0;
-
-	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = 1.0f;
-	marker.color.g = 1.0f;
-	marker.color.b = 0.0f;
-	marker.color.a = 0.7;
-
-	marker.lifetime = ros::Duration();
-
-	// Publish the marker
-	while (marker_pub.getNumSubscribers() < 1)
+    //se i=1 sto usando la function per gli assignment, altrimenti per i recharge e quindi non serbe task b
+    if(i)
+    {
+	//ora scrivo path_b prendendo dalla mappa la lista di waypoint che vanno dalla posizione di task_a all posizione di task_b di r_t
+	for(auto elem : Map)
 	{
-	  if (!ros::ok())
-	  {
-// 	    return 0;
-	    break;
-	  }
-	  ROS_WARN_ONCE("Please create a subscriber to the marker");
-	  sleep(1);
+	    if(r_t.task.x1 == elem.start.first && r_t.task.y1 == elem.start.second && r_t.task.x2 == elem.end.first && r_t.task.y2 == elem.end.second)
+	    {
+		ass.path_tot.path_b = CopiaPath(elem.wpoints);	    
+		break;
+	    }
 	}
-	marker_pub.publish(marker);
     }
     
-        
-    // Function con cui viene data al robot la posizione passata in argomento, che viene poi inviata a tf
-    void broadcastPose(task_assign::waypoint posa, std::string name)
-    {
-	static tf::TransformBroadcaster br;
-	tf::Transform transform;
-	transform.setOrigin( tf::Vector3(posa.x, posa.y, 0.0) );
-	tf::Quaternion q;
-	q.setRPY(0, 0, posa.theta);
-	transform.setRotation(q);
-	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", name));
-	
-	publishMarker(posa);
+    
+    return ass;
+}
+
+
+
+// Legge "assignment_topic" 
+void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
+{
+    bool add(true);
+    new_assign = false;
+    struct Assign ass;
+    
+    if(msg->rt_vect.size() > 0)
+    {	
+	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
+	// il robot in robots_in_execution e il task in tasks_in_execution
+	for(auto rt : msg->rt_vect)
+	{
+	    //vedo se è già nel catalogo
+	    for(auto elem : Catalogo_Ass)
+	    {
+		if(elem.rob.name==rt.robot.name && elem.task.name==rt.task.name)
+		{
+		    add = false;
+		    break;
+		}
+	    }
+	    
+	    if(add)
+	    {
+		new_assign = true;
+		
+		robots_in_execution.push_back(rt.robot);
+		available_robots = deleteRob(rt.robot.name, available_robots);
+		
+		tasks_in_execution.push_back(rt.task);
+		tasks_to_assign = deleteTask(rt.task.name, tasks_to_assign);
+		
+		
+		ass = MapToCatal(GlobMap, rt, 1);
+		assignments_vect.push_back(ass.path_tot);
+		
+		// Crea il Catalogo_Ass
+		Catalogo_Ass.push_back(ass);
+	    }
+	    
+	    add = true;
+	}
     }
+}
 
 
+
+// Legge "recharge_topic" 
+void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
+{
+    bool add(true);
+    new_in_rech = false;
+    struct Assign ass;
     
-    
+    if(msg->rt_vect.size() > 0)
+    {	
+	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
+	// il robot in robots_in_execution e il task in tasks_in_execution
+	for(auto rt : msg->rt_vect)
+	{
+	    //vedo se è già nel catalogo
+	    for(auto elem : Catalogo_Rech)
+	    {
+		if(elem.rob.name==rt.robot.name && elem.task.name==rt.task.name)
+		{
+		    add = false;
+		    break;
+		}
+	    }
+	    
+	    if(add)
+	    {
+		new_in_rech = true;
+		
+		ass = MapToCatal(GlobMap, rt, 0);
+		robRech_vect.push_back(ass.path_tot);
+		
+		// Crea il Catalogo_Ass
+		Catalogo_Rech.push_back(ass);
+	    }
+	    
+	    add = true;
+	}
+    }
+}
 
-};
+
+
+
+// // Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare)
+// void publishRobotIni()
+// {
+//     task_assign::vect_info vect_msg;
+// 
+// }
+
+
+
+// Pubblica al master il vettore dei task da eseguire task_to_assign
+void publishTaskToAssign()
+{
+    task_assign::vect_task vect_msg; 
+    
+    vect_msg.task_vect = tasks_to_assign;
+
+    // Wait for the publisher to connect to subscribers
+    sleep(1.0);
+    task_ass_pub.publish(vect_msg);
+    
+//     for(auto elem : vect_msg.task_vect)
+//     {
+// 	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.name1 << " - " << elem.name2);
+//     }
+}
+
+
+
+// Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
+void publishRobotToAssign()
+{
+    task_assign::vect_robot vect_msg;
+    
+    vect_msg.robot_vect = available_robots;
+    
+    sleep(1);
+    rob_ass_pub.publish(vect_msg);
+}
+
+
+
+// Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
+void publishRobInRecharge()
+{
+    task_assign::vect_robot vect_msg;
+    
+    vect_msg.robot_vect = robots_in_recharge;
+    
+    sleep(1);
+    rob_ass_pub.publish(vect_msg);
+}
+
+
+
+// Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare), pubblica tex0_info_vect
+void publishRobotInfo()
+{
+    task_assign::vect_info vect_msg;
+    
+    vect_msg.info_vect = rob_info_vect;
+    vect_msg.info0_vect = rob_info0_vect;
+    
+    sleep(1);
+    rob_info_pub.publish(vect_msg);
+   
+}
+
+
+
+// Pubblica al master i tempi richiesti da ogni ogni robot per raggiungere ciascun punto di ricarica
+void publishInfoRecharge()
+{
+    task_assign::vect_info vect_msg;
+    
+    vect_msg.info_vect = rech_info_vect;
+//     vect_msg.info0_vect = rech_info0_vect;
+    
+    sleep(1);
+    rech_info_pub.publish(vect_msg);
+}
+
+
+
+// if(new_assign) ....pubblica
+// Pubblica ai robot i task rispettivamente assegnati
+void publishAssign()
+{
+    task_assign::assignment msg;
+    
+    msg.assign_vect = assignments_vect;
+    
+    sleep(1);
+    assignment_pub.publish(msg);
+}
+
+
+
+// Pubblica al task manager i task completati su "task_exec_topic"
+void publishExecTask()
+{
+    task_assign::vect_task msg;
+    
+    msg.task_vect = completed_tasks;
+    
+    sleep(1);
+    exec_task_pub.publish(msg);
+}
+
+
+
+// Pubblica ai robot che devono andare in carica il loro punto di ricarica
+void publishRecharge()
+{
+    task_assign::assignment msg;
+    
+    msg.assign_vect = robRech_vect;
+    
+    sleep(1);
+    recharge_pub.publish(msg);
+}
+
+
+
+
+
+
+
+
+// Legge "obstacles_topic" 
+void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
+{
+
+}
+
+
+
+
+
+
+
+
 
 
 int main(int argc, char **argv)
-{
+{ 
     // Initialize the node
-    ros::init(argc, argv, "robot_node");
-    
+    ros::init(argc, argv, "motion_planner");
     ros::NodeHandle node;
-    string name = std::string(argv[1]);
-    int id = atoi(argv[2]);
     
-    task_assign::waypoint pose;
-    pose.x = atof(argv[3]);
-    pose.y = atof(argv[4]);
-    pose.theta = atof(argv[5]);
-    double b_level0 = atof(argv[6]);
-    Robot robot(node, name, id, pose, b_level0);
+    obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
+    rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
+    rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
+//     arr_rob_sub = node.subscribe("status_rob_topic", 20, &ArrCallback);
+    status_rob_sub = node.subscribe("status_rob_topic", 20, &StatusCallback);
+    new_task_sub = node.subscribe("new_task_topic", 20, &TaskToAssCallback);
+    
+    exec_task_pub = node.advertise<task_assign::vect_task>("task_exec_topic", 10);   
+    rob_ass_pub = node.advertise<task_assign::vect_robot>("rob_assign_topic", 10);
+    rob_rech_pub = node.advertise<task_assign::vect_robot>("rob_recharge_topic", 10);
+    task_ass_pub = node.advertise<task_assign::vect_task>("task_assign_topic", 10);
+//     rob_ini_pub = node.advertise<task_assign::vect_info>("rob_ini_topic", 10);
+    rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
+    rech_info_pub = node.advertise<task_assign::vect_info>("rech_info_topic", 10);
+    assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
+    recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
+    
+    sleep(1);
 
-    sleep(1); 
-
-
-
+    
     ros::Rate rate(10);
     while (ros::ok()) 
     {
-	while(!robot.assignment && !robot.in_recharge && ros::ok())
+	while(!new_assign && ros::ok())
 	{
-	    robot.broadcastPose(robot.turtlesim_pose, name);
-	    robot.publishStatus();  
-	    ros::spinOnce();
-	    rate.sleep();
+	    if(available_robots.size() > 0 && tasks_to_assign.size() > 0)
+	    {
+		publishTaskToAssign();
+		publishRobotToAssign();
+		publishRobotInfo();
+	    }
+	    
+	    if(completed_tasks.size() > 0)
+		publishExecTask();
+	    
+	    if(robots_in_recharge.size() > 0)
+		publishRecharge();	  
+	}
+      
+	if(new_assign && ros::ok())
+	{
+	    publishAssign();
+	    
+	    if(completed_tasks.size() > 0)
+		publishExecTask();
+	    
+	    if(robots_in_recharge.size() > 0)
+		publishRecharge();
+	    
+	    new_assign = false;
 	}
 	
-	if(robot.assignment && ros::ok())
-	{  
-	    // il robot si muove verso il task
-	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
+	
+	if(available_robots.size() > 0 && tasks_to_assign.size() > 0)
+	{
+	    publishTaskToAssign();
+	    publishRobotToAssign();
+	    publishRobotInfo();
+	}
+	
+	if(completed_tasks.size() > 0)
+	    publishExecTask();
+	
+	if(robots_in_recharge.size() > 0)
+	    publishRecharge();
 	    
-	    for(auto wp : robot.path_a)
-	    {
-		robot.publishStatus(); 
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
-	    }
-	    sleep(robot.wait_a);
-	    robot.publishStatus(); 
-	    robot.deleteMarker(robot.taska_pose, robot.taska_id_marker);
 
-	    for(auto wp : robot.path_b)
-	    {
-		robot.publishStatus(); 
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
-	    }
-	    sleep(robot.wait_b);
-	    robot.publishStatus(); 
-// 	    robot.deleteMarker(robot.taskb_pose, robot.taskb_id_marker);
- 
-	    robot.assignment = false;
-	}
-	
-	else if(robot.in_recharge && ros::ok())
-	{  
-	    // il robot va a ricaricarsi
-	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS GOING TO RECHARGE IN  " << robot.task_name);
-	    
-	    for(auto wp : robot.path_a)
-	    {
-		robot.publishStatus(); 
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
-	    }
-	    
-	    sleep(RECHARGE_DURATION);
-	    robot.b_level = b_level0;
-	    robot.publishStatus(); 
-	    
-	    robot.in_recharge = false;
-	}
-	
-	robot.broadcastPose(robot.turtlesim_pose, name);
-	ros::spinOnce(); 
+	ros::spinOnce();
 	rate.sleep();
-    }
- 
+    }		
+
+
+
     return 0;
 }

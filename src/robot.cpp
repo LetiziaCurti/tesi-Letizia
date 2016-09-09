@@ -413,6 +413,7 @@ int main(int argc, char **argv)
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
 	    sleep(robot.wait_a);
+	    robot.b_level -= robot.wait_a*0.1;
 	    robot.publishStatus(); 
 	    robot.deleteMarker(robot.taska_pose, robot.taska_id_marker);
 
@@ -422,6 +423,7 @@ int main(int argc, char **argv)
 		robot.moveToWP(wp, DISTANCE_TOLERANCE);
 	    }
 	    sleep(robot.wait_b);
+	    robot.b_level -= robot.wait_b*0.1;
 	    robot.publishStatus(); 
 // 	    robot.deleteMarker(robot.taskb_pose, robot.taskb_id_marker);
  

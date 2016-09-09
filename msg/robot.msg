@@ -1,6 +1,5 @@
 Header header
 string name
-int32 id
 bool status
 
 float64 b_level0

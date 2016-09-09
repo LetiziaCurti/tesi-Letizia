@@ -106,8 +106,8 @@ public:
 	    {
 // 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
 	    
-		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
-		// smetto di pubblicare il mio stato
+		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
+		// altri messaggi finché non ho finito il task
 		if(elem.r_name==robot_name)
 		{
 		    assignment = true;
@@ -154,14 +154,15 @@ public:
 	    {
 // 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
 	    
-		// se il task che è arrivato ha come robot assegnato me, metto assignment a true così
-		// smetto di pubblicare il mio stato
+		// se devo andare in ricarica metto in_recharge a true così smetto di ascoltare
+		// altri messaggi finché non ho finito di ricaricarmi
 		if(elem.r_name==robot_name)
 		{
 		    in_recharge = true;
 		    task_name = elem.t_name;
 		    taska_id_marker = elem.id_a;
 		    
+		    // i punti di ricarica sono task che hanno solo la prima parte (taska)
 		    // è l'ultimo wp di path_a
 		    path_a = elem.path_a;
 		    wp = path_a.back();

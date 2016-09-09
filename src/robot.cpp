@@ -134,6 +134,7 @@ public:
 		    
 // 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
 		}
+		break;
 	    }   
 	}
     }
@@ -172,6 +173,7 @@ public:
 		    
 // 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
 		}
+		break;
 	    }   
 	}
     }
@@ -233,7 +235,7 @@ public:
 	sleep(1);
 	status_pub.publish(status_msg);
 	
-	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its initial status "<< BoolToString(status_msg.status));
+	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
     }
 
     
@@ -423,7 +425,7 @@ int main(int argc, char **argv)
 	    robot.publishStatus(); 
 // 	    robot.deleteMarker(robot.taskb_pose, robot.taskb_id_marker);
  
-	    robot.assignment=false;
+	    robot.assignment = false;
 	}
 	
 	else if(robot.in_recharge && ros::ok())
@@ -441,7 +443,7 @@ int main(int argc, char **argv)
 	    robot.b_level = b_level0;
 	    robot.publishStatus(); 
 	    
-	    robot.in_recharge=false;
+	    robot.in_recharge = false;
 	}
 	
 	robot.broadcastPose(robot.turtlesim_pose, name);

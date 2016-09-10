@@ -34,9 +34,9 @@ void CreateNewTask()
     newTask.name2 = "taskb";
     newTask.id2 = 3;
     newTask.status2 = true;
-    newTask.wait2 = 3;
-    newTask.x2 = 3;
-    newTask.y2 = 8.5;
+    newTask.wait2 = 5;
+    newTask.x2 = 16;
+    newTask.y2 = 15;
     newTask.theta2 = -1.5; 
     new_task_vect.push_back(newTask);
     
@@ -53,9 +53,9 @@ void CreateNewTask()
     newTask.name2 = "taskd";
     newTask.id2 = 2;
     newTask.status2 = true;
-    newTask.wait2 = 3;
+    newTask.wait2 = 10;
     newTask.x2 = 2;
-    newTask.y2 = 5;
+    newTask.y2 = 19;
     newTask.theta2 = -1.5; 
     new_task_vect.push_back(newTask);
     
@@ -66,15 +66,34 @@ void CreateNewTask()
     newTask.id1 = 5;
     newTask.status1 = true;
     newTask.wait1 = 3;
-    newTask.x1 = 8;
-    newTask.y1 = 4;
+    newTask.x1 = 18;
+    newTask.y1 = 10;
     newTask.theta1 = -1.5;
     newTask.name2 = "taskf";
     newTask.id2 = 6;
     newTask.status2 = true;
-    newTask.wait2 = 3;
+    newTask.wait2 = 15;
     newTask.x2 = 1;
     newTask.y2 = 1;
+    newTask.theta2 = -1.5; 
+    new_task_vect.push_back(newTask);
+    
+        // aggiungo il task4
+    newTask.ar_time = 10;
+    newTask.name = "task4";
+    newTask.name1 = "taskg";
+    newTask.id1 = 7;
+    newTask.status1 = true;
+    newTask.wait1 = 20;
+    newTask.x1 = 18;
+    newTask.y1 = 3;
+    newTask.theta1 = -1.5;
+    newTask.name2 = "taskh";
+    newTask.id2 = 8;
+    newTask.status2 = true;
+    newTask.wait2 = 5;
+    newTask.x2 = 11;
+    newTask.y2 = 17;
     newTask.theta2 = -1.5; 
     new_task_vect.push_back(newTask);
 }

@@ -33,7 +33,6 @@ ros::Subscriber obs_sub;
 ros::Subscriber rt_sub;
 ros::Subscriber rech_sub;
 ros::Subscriber status_rob_sub;
-// ros::Subscriber arr_rob_sub;
 ros::Subscriber new_task_sub;
 
 ros::Publisher exec_task_pub;

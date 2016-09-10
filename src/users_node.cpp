@@ -15,9 +15,10 @@ ros::Publisher new_task_pub;
 vector<task_assign::task> new_task_vect;
 
 
-vector<task_assign::task> CreateNewTask()
+
+// Function con cui caricare "manualmente" i nuovi tasks, li metto in new_task_vect
+void CreateNewTask()
 {
-    vector<task_assign::task> newTaskVect;
     task_assign::task newTask;
     
     // aggiungo il task1
@@ -37,7 +38,7 @@ vector<task_assign::task> CreateNewTask()
     newTask.x2 = 3;
     newTask.y2 = 8.5;
     newTask.theta2 = -1.5; 
-    newTaskVect.push_back(newTask);
+    new_task_vect.push_back(newTask);
     
     // aggiungo il task2
     newTask.ar_time = 10;
@@ -56,7 +57,7 @@ vector<task_assign::task> CreateNewTask()
     newTask.x2 = 2;
     newTask.y2 = 5;
     newTask.theta2 = -1.5; 
-    newTaskVect.push_back(newTask);
+    new_task_vect.push_back(newTask);
     
     // aggiungo il task3
     newTask.ar_time = 15;
@@ -75,10 +76,7 @@ vector<task_assign::task> CreateNewTask()
     newTask.x2 = 1;
     newTask.y2 = 1;
     newTask.theta2 = -1.5; 
-    newTaskVect.push_back(newTask);
-    
-
-    return newTaskVect;
+    new_task_vect.push_back(newTask);
 }
 
 // struct couple_task
@@ -155,7 +153,7 @@ vector<task_assign::task> CreateNewTask()
 
 
 
-void publishVectTask(vector<task_assign::task> new_task_vect)
+void publishVectTask()
 {
     task_assign::vect_task vect_msg;
     vect_msg.task_vect = new_task_vect;
@@ -189,7 +187,7 @@ int main(int argc, char **argv)
     new_task_pub = node.advertise<task_assign::vect_task>("task_arrival_topic", 10);
     sleep(1);
     
-    new_task_vect = CreateNewTask();
+    CreateNewTask();
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
 //     YAML::Node node_conf = YAML::LoadFile("config.yaml");
@@ -198,8 +196,7 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
-// 	sleep(at);
-	publishVectTask(new_task_vect);
+	publishVectTask();
 	ros::spinOnce();
 	rate.sleep();
     }

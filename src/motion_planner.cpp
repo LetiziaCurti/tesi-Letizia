@@ -47,7 +47,7 @@ ros::Publisher recharge_pub;
 
 #define VELOCITY 10
 #define BATTERY_THR 10
-#define SEC_DIST 1
+#define SEC_DIST 1.5
 
 bool new_assign(false);
 bool new_in_rech(false);

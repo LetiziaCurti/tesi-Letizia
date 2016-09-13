@@ -7,7 +7,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "task_assign/vect_task.h"
-// // #include "yaml-cpp/yaml.h"
+#include "yaml-cpp/yaml.h"
 
 
 using namespace std;
@@ -209,7 +209,46 @@ int main(int argc, char **argv)
     CreateNewTask();
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
-//     YAML::Node node_conf = YAML::LoadFile("config.yaml");
+    YAML::Node node_conf = YAML::LoadFile("/home/letiziacurti/catkin_ws/src/task_assign/config/tasks_config.yaml");
+    const YAML::Node& node_test1 = node_conf["TASK"];
+
+    for (std::size_t i = 0; i < node_test1.size(); i++) 
+    {
+	const YAML::Node& node_test2 = node_test1[i];
+	std::cout << "Name: " << node_test2["name"].as<std::string>() << std::endl;
+	std::cout << "Arrival time: " << node_test2["arrt"].as<double>() << std::endl;
+	
+	const YAML::Node& node_test3 = node_test2["tasks"];
+	for (std::size_t i = 0; i < node_test3.size(); i++) 
+	{
+	    const YAML::Node& node_test4 = node_test3[i];
+	    cout << "parte " << i << " del task" << endl;
+	    std::cout << "Id: " << node_test4["id"].as<double>() << std::endl;
+	    std::cout << "Wait: " << node_test4["wait"].as<double>() << std::endl;
+	    
+	    const YAML::Node& node_pos = node_test4["position"];
+	    for (std::size_t i = 0; i < node_pos.size(); i++) 
+	    {
+		if(i==0)
+		    std::cout << "x: " << node_pos[i].as<double>() << std::endl;
+		else  if(i==1)
+		    std::cout << "y: " << node_pos[i].as<double>() << std::endl;
+		else  if(i==2)
+		      std::cout << "theta: " << node_pos[i].as<double>() << std::endl;
+	    }
+	    
+// 	    const YAML::Node& node_test5 = node_test4["position"];
+// 	    std::cout << "Position: " << endl;
+// 	    for (std::size_t i = 0; i < node_test5.size(); i++) 
+// 	    {
+// 		cout << "x: " << node_test5["x"].as<double>() << endl;
+// 		std::cout << "y: " << node_test5["y"].as<double>() << std::endl;
+// 		std::cout << "theta: " << node_test5["theta"].as<double>() << std::endl;
+// 	    }
+// 	    cout << " x: " << node_test5["x"].as<double>() << " y: " << node_test5["y"].as<double>() << " theta: " << node_test5["theta"].as<double>() << endl;	  
+
+	}
+    }
     
     
     ros::Rate rate(10);

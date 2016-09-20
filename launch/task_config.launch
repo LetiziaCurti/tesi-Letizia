@@ -1,0 +1,8 @@
+<launch> 
+  
+  <node name="yaml_task_test" pkg="task_assign" type="users_node" output="screen"> 
+    <rosparam file="$(find task_assign)/config/tasks_config.yaml" command="load" />  
+  </node>
+  
+  
+</launch>

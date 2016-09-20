@@ -13,6 +13,14 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
+
+find_package(PkgConfig)
+pkg_check_modules(NEW_YAMLCPP yaml-cpp>=0.5)
+if(NEW_YAMLCPP_FOUND)
+
+add_definitions(-DHAVE_NEW_YAMLCPP)
+endif(NEW_YAMLCPP_FOUND)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -159,7 +167,7 @@ add_executable(obstacle_node src/obstacle_node.cpp)
 add_executable(master src/master.cpp)
 add_executable(robot src/robot.cpp)
 add_executable(map src/map.cpp)
-# add_executable(monsters_test src/monsters_test.cpp)
+add_executable(monsters_test src/monsters_test.cpp)
 # add_executable(task_test_config src/task_test_config.cpp)
 # add_executable(robot_node src/robot_node_2.cpp)
 # add_executable(task_node src/task_node_2.cpp)
@@ -178,7 +186,7 @@ add_dependencies(obstacle_node ${PROJECT_NAME}_gencpp)
 add_dependencies(master ${PROJECT_NAME}_gencpp)
 add_dependencies(robot ${PROJECT_NAME}_gencpp)
 add_dependencies(map ${PROJECT_NAME}_gencpp)
-# add_dependencies(monsters_test ${PROJECT_NAME}_gencpp)
+add_dependencies(monsters_test ${PROJECT_NAME}_gencpp)
 # add_dependencies(task_test_config ${PROJECT_NAME}_gencpp)
 
 ## Specify libraries to link a library or executable target against
@@ -188,14 +196,14 @@ add_dependencies(map ${PROJECT_NAME}_gencpp)
 target_link_libraries(robot_node ${catkin_LIBRARIES})
 target_link_libraries(task_node ${catkin_LIBRARIES})
 target_link_libraries(central_node ${catkin_LIBRARIES})
-target_link_libraries(users_node ${catkin_LIBRARIES})
+target_link_libraries(users_node yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(task_manager ${catkin_LIBRARIES})
 target_link_libraries(motion_planner ${catkin_LIBRARIES})
 target_link_libraries(obstacle_node ${catkin_LIBRARIES})
 target_link_libraries(master glpk yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(robot ${catkin_LIBRARIES})
 target_link_libraries(map ${catkin_LIBRARIES})
-# target_link_libraries(monsters_test yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(monsters_test yaml-cpp ${catkin_LIBRARIES})
 # target_link_libraries(task_test_config ${catkin_LIBRARIES})
 
 

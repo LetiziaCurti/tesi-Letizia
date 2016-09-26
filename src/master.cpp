@@ -68,7 +68,7 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	// vedo se elem sta già in task_to_assign
 	for(auto newel : task_to_assign)
 	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 		add_task = false;
 	}
 	

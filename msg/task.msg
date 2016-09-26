@@ -1,9 +1,7 @@
 Header header
 string name
 float64 ar_time
-bool status
 
-string name1
 int32 id1
 bool status1
 float64 wait1
@@ -11,7 +9,6 @@ float32 x1
 float32 y1
 float32 theta1
 
-string name2
 int32 id2
 bool status2
 float64 wait2

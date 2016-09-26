@@ -178,7 +178,7 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 	// vedo se elem sta già in new_task
 	for(auto newel : new_task)
 	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 		add_task = false;
 	}
 	
@@ -214,7 +214,7 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 	// vedo se elem sta già in executed_task
 	for(auto newel : executed_task)
 	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 		add_task = false;
 	}
 	
@@ -249,7 +249,7 @@ void taskManagement()
 	// vedo se elem sta già in task_to_assign
 	for(auto newel : task_to_assign)
 	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 		add_task = false;
 	}
 	
@@ -266,7 +266,7 @@ void taskManagement()
 	int count(0);
 	for(auto newel : task_to_assign)
 	{
-	    if(newel.name1 == elem.name1 && newel.name2 == elem.name2)
+	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 	    {
 		erase_task = true;
 		break;
@@ -300,7 +300,7 @@ void publishTaskToAssign()
     
     for(auto elem : assignment_msg.task_vect)
     {
-	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.name1 << " - " << elem.name2);
+	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.id1 << " - " << elem.id2);
     }
 }
 

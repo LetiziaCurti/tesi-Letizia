@@ -522,6 +522,7 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
+      //TODO verifica che funzionano bene le condizioni
 	if(robot_to_assign.size() != n || task_to_assign.size() != m)
 	{
 	    ROS_INFO_STREAM("Robot vect size " << robot_to_assign.size() << "\n");

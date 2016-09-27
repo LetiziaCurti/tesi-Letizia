@@ -743,16 +743,21 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    {
 			if(msg->b_level <= BATTERY_THR)
 			{
-			    // se manca "poco" al task (distanza inferiore ad una certa soglia), ce lo faccio arrivare e poi lo manderò in carica
+			    // se manca "poco" al task (distanza inferiore ad una certa soglia), ce lo faccio arrivare e poi 
+			    // lo manderò in carica
+			    // (quindi non faccio nulla)
+			  
 			    // altrimenti mando subito il robot in carica e rimetto il task tra i task da assegnare  
+			    //TODO se il robot sta arrivando alla seconda parte del task e è scarico, 
+			    // intervieni con il modulo di salvataggio
 			    if(getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
-			      {
-				  robots_in_execution = deleteRob(msg->name, robots_in_execution);
-				  robots_in_recharge.push_back(*msg);
-				  tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
-				  tasks_to_assign.push_back(ass.task);
-				  Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
-			      }    
+			    {
+				robots_in_execution = deleteRob(msg->name, robots_in_execution);
+				robots_in_recharge.push_back(*msg);
+				tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+				tasks_to_assign.push_back(ass.task);
+				Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
+			    }    
 			}
 		    }
 		}
@@ -770,7 +775,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    }
 	}
     }
-    // se status è false il robot è rotto --> attiva modulo di salvataggio
+    // TODO se status è false il robot è rotto --> attiva modulo di salvataggio
 //     else
 //     {}
     

@@ -3,6 +3,8 @@ Repository con i files della tesi di Letizia Curti
 
 branch: nuovo sistema
 
+NEW: la mappa dell'ambiente è in LEMON
+
 
 *nuovi nodi:
 -m nodi robot
@@ -16,14 +18,6 @@ branch: nuovo sistema
 -task_manager: tiene traccia dei nuovi task (pubblicati dal nodo_utenti) e di quelli che vengono completati (pubblicati dal motion_planner), pubblica al central_node il vettore degli n(t) task da assegnare
 
 -users_node: manda i nuovi task richiesti (coppie di task) al task_manager (da aggiungere: legge da file yaml i nuovi task)
-
-
-*nuovi msgs:
-
--task.msg: contiene le info relative ad una coppia di task
-
--vect_task.msg: è un vettore di coppie di task
-
 
 
 *pubblicazione dei ref frame in tf

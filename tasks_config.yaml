@@ -5,30 +5,18 @@ TASK:
     tasks:
       - id: 1
         wait: 3
-        position:
-          - x: 7
-          - y: 8.5
-          - theta: -1.5
+        position: [7, 8.5, -1.5]
       - id: 2
         wait: 5
-        position:
-          - x: 16
-          - y: 15
-          - theta: -1.5    
+        position: [16, 15, -1.5]  
   - name: task2
     arrt: 10
     status: true
     tasks:
       - id: 3
         wait: 3
-        position:
-          - x: 5.5
-          - y: 5.5
-          - theta: -1.5
+        position: [5.5, 5.5, -1.5]
       - id: 4
         wait: 10
-        position:
-          - x: 2
-          - y: 19
-          - theta: -1.5 
+        position: [2, 19, -1.5]
   

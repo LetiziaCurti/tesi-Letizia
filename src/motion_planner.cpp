@@ -13,11 +13,10 @@
 #include <lemon/lgf_reader.h>
 #include <lemon/graph_to_eps.h>
 #include <lemon/dim2.h>
-// #include <gmlreader/gmlreader.hpp>
-// #include <gmlreader/lemon_wrapper.hpp>
-// #include <gmlreader/gmlwriter.hpp>
-// #include <gmlreader/graphmsgs_wrapper.hpp>
-// #include <graph_msgs/GeometryGraph.h>
+#include <lemon/dijkstra.h>
+#include <lemon/adaptors.h>
+#include <lemon/concepts/maps.h>
+#include <lemon/path.h>
 #include "geometry_msgs/Twist.h"
 #include "task_assign/vect_task.h"
 #include "task_assign/vect_robot.h"
@@ -773,8 +772,11 @@ int main(int argc, char **argv)
     recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
     
     sleep(1);
+
     
     
+    
+    // Carica il grafo dal file .lgf, mettilo nella struttura g (grafo orientato)
     SmartDigraph g;
     SmartDigraph::NodeMap<float> coord_x(g);
     SmartDigraph::NodeMap<float> coord_y(g);
@@ -809,6 +811,37 @@ int main(int argc, char **argv)
 	double tex = 1/VELOCITY*getDistance(coord_x[g.source(a)],coord_y[g.source(a)],coord_x[g.target(a)],coord_y[g.target(a)]);
 	len[a] = tex;
     }
+    
+    
+    
+    
+    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(g,len);
+
+//     dijkstra_test.run(random_start_node.at(i), random_goal_node.at(i));
+//     // std::cout << "PATH Robot" << i << ": ";
+// 
+//     if (dijkstra_test.dist(random_goal_node.at(i)) > 0)
+//     { 
+//     for (Node v = random_goal_node.at(i); v != random_start_node.at(i); v = dijkstra_test.predNode(v))
+//     {
+//     geometry_msgs::Pose2D tmp;
+//     tmp.y = coord_y[v];
+//     tmp.x = coord_x[v];
+//     robots[i].ref.push_back(tmp);
+//     robots[i].ref_node.push_back(v);
+//     // std::cout << g.id(v) << " <- ";
+//     }
+//     //    std::cout << g.id(random_start_node.at(i))<< std::endl;
+//     std::reverse(robots[i].ref.begin(),robots[i].ref.end());
+//     std::reverse(robots[i].ref_node.begin(),robots[i].ref_node.end());
+//     }
+//     else
+//     {
+//     geometry_msgs::Pose2D tmp;
+//     tmp.x = robots[i].curr_pose.x;
+//     tmp.y = robots[i].curr_pose.y;
+//     robots[i].ref.push_back(tmp);
+//     }
 
     
     

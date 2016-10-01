@@ -130,7 +130,7 @@ endif(NEW_YAMLCPP_FOUND)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES task_assign
-  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime yaml-cpp
+  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime yaml-cpp lemon_ros gmlreader
 #  DEPENDS system_lib
 )
 
@@ -198,7 +198,7 @@ target_link_libraries(task_node ${catkin_LIBRARIES})
 target_link_libraries(central_node ${catkin_LIBRARIES})
 target_link_libraries(users_node yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(task_manager ${catkin_LIBRARIES})
-target_link_libraries(motion_planner ${catkin_LIBRARIES})
+target_link_libraries(motion_planner lemon_ros gmlreader ${catkin_LIBRARIES})
 target_link_libraries(obstacle_node ${catkin_LIBRARIES})
 target_link_libraries(master glpk yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(robot ${catkin_LIBRARIES})

@@ -25,6 +25,8 @@
 #include "task_assign/task_path.h"
 #include "task_assign/assignment.h"
 #include "task_assign/rech_vect.h"
+#include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
 
 
 inline const char * const BoolToString(bool b)
@@ -55,6 +57,7 @@ ros::Publisher rob_info_pub;
 ros::Publisher rech_info_pub;
 ros::Publisher assignment_pub;
 ros::Publisher recharge_pub;
+ros::Publisher marker_pub;
 
 #define VELOCITY 10
 #define BATTERY_THR 10
@@ -89,6 +92,9 @@ struct mappa
 
 vector<mappa> GlobMap;   				// la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path 
 							// per andare da un robot ad un task, va passata dall'esterno
+
+SmartDigraph Mappa; 
+							
 vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
 
 
@@ -741,7 +747,58 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 
 
 
+void publishMarker(task_assign::waypoint p, int id_marker)
+{
+    visualization_msgs::Marker marker;
+    // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+    marker.header.frame_id = "world";
+    marker.header.stamp = ros::Time::now();
 
+    // Set the namespace and id for this marker.  This serves to create a unique ID
+    // Any marker sent with the same namespace and id will overwrite the old one
+    marker.ns = "motion_planner";
+    marker.id = id_marker;
+
+    // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+    marker.type = visualization_msgs::Marker::CUBE;
+
+    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+    marker.action = visualization_msgs::Marker::ADD;
+
+    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+    marker.pose.position.x = p.x;
+    marker.pose.position.y = p.y;
+    marker.pose.position.z = 0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+
+    // Set the scale of the marker -- 1x1x1 here means 1m on a side
+    marker.scale.x = 1.5;
+    marker.scale.y = 1.5;
+    marker.scale.z = 1.5;
+
+    // Set the color -- be sure to set alpha to something non-zero!
+    marker.color.r = 0.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 0.7;
+
+    marker.lifetime = ros::Duration();
+
+    // Publish the marker
+    while (marker_pub.getNumSubscribers() < 1)
+    {
+      if (!ros::ok())
+      {
+	break;
+      }
+      ROS_WARN_ONCE("Please create a subscriber to the marker");
+      sleep(1);
+    }
+    marker_pub.publish(marker);
+}
 
 
 
@@ -771,27 +828,27 @@ int main(int argc, char **argv)
     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
     recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
     
+    marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+    
     sleep(1);
 
     
     
     
-    // Carica il grafo dal file .lgf, mettilo nella struttura g (grafo orientato)
-    SmartDigraph g;
-    SmartDigraph::NodeMap<float> coord_x(g);
-    SmartDigraph::NodeMap<float> coord_y(g);
-    SmartDigraph::NodeMap<dim2::Point<float> > coords(g);
-    SmartDigraph::ArcMap<double> len(g);
+    // Carica il grafo dal file .lgf, e lo mette nel grafo orientato Mappa (var globale)
+    SmartDigraph::NodeMap<float> coord_x(Mappa);
+    SmartDigraph::NodeMap<float> coord_y(Mappa);
+    SmartDigraph::NodeMap<int> id(Mappa);
+    SmartDigraph::NodeMap<dim2::Point<float> > coords(Mappa);
+    SmartDigraph::ArcMap<double> len(Mappa);
 
     try
     {
-	digraphReader(g, "/home/letizia/catkin_ws/src/task_assign/config/magazzino.gml.lgf")
-
+	digraphReader(Mappa, "/home/letizia/catkin_ws/src/task_assign/config/griglia.gml.lgf")
 	.nodeMap("coordinates_x",coord_x)
-	.nodeMap("coordinates_y",coord_y).
-//         nodeMap("label",id);
-      
- 	run();
+	.nodeMap("coordinates_y",coord_y)
+        .nodeMap("label",id)   
+ 	.run();
     }
     catch (Exception& error)
     {
@@ -799,23 +856,29 @@ int main(int argc, char **argv)
 	exit(1);
     }
     
-    for (SmartDigraph::NodeIt n(g); n != INVALID; ++n)
+    for (SmartDigraph::NodeIt n(Mappa); n != INVALID; ++n)
     {
-	coord_x[n]=coord_x[n];
-	coord_y[n]=1861 - coord_y[n];
+	coord_x[n]=coord_x[n]/10;
+	coord_y[n]=coord_y[n]/10;
 	coords[n]=dim2::Point<float>(coord_x[n], coord_y[n]);
+	
+// 	task_assign::waypoint wp;
+// 	wp.x = coord_x[n];
+// 	wp.y = coord_y[n];
+// 	publishMarker(wp,id[n]);
     }
 
-    for (SmartDigraph::ArcIt a(g); a != INVALID; ++a)
+    for (SmartDigraph::ArcIt a(Mappa); a != INVALID; ++a)
     {
-	double tex = 1/VELOCITY*getDistance(coord_x[g.source(a)],coord_y[g.source(a)],coord_x[g.target(a)],coord_y[g.target(a)]);
+	double tex = 1/VELOCITY*getDistance(coord_x[Mappa.source(a)],coord_y[Mappa.source(a)],coord_x[Mappa.target(a)],coord_y[Mappa.target(a)]);
 	len[a] = tex;
     }
     
     
     
     
-    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(g,len);
+    
+    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
 
 //     dijkstra_test.run(random_start_node.at(i), random_goal_node.at(i));
 //     // std::cout << "PATH Robot" << i << ": ";

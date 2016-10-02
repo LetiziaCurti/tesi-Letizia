@@ -175,55 +175,138 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 
 
-    //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
-    //posizioni di robot e task). il percorso consiste in una sequenza di nodi che viene memorizzata in un vettore, che 
-    //poi viene ribaltato per avere la sequenza di wp che il robot deve percorrere per arrivare al task
-//     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
 
-//     dijkstra_test.run(random_start_node.at(i), random_goal_node.at(i));
-//     // std::cout << "PATH Robot" << i << ": ";
-// 
-//     if (dijkstra_test.dist(random_goal_node.at(i)) > 0)
-//     { 
-//     for (Node v = random_goal_node.at(i); v != random_start_node.at(i); v = dijkstra_test.predNode(v))
-//     {
-//     geometry_msgs::Pose2D tmp;
-//     tmp.y = coord_y[v];
-//     tmp.x = coord_x[v];
-//     robots[i].ref.push_back(tmp);
-//     robots[i].ref_node.push_back(v);
-//     // std::cout << g.id(v) << " <- ";
-//     }
-//     //    std::cout << g.id(random_start_node.at(i))<< std::endl;
-//     std::reverse(robots[i].ref.begin(),robots[i].ref.end());
-//     std::reverse(robots[i].ref_node.begin(),robots[i].ref_node.end());
-//     }
-//     else
-//     {
-//     geometry_msgs::Pose2D tmp;
-//     tmp.x = robots[i].curr_pose.x;
-//     tmp.y = robots[i].curr_pose.y;
-//     robots[i].ref.push_back(tmp);
-//     }
+// // TODO se non si vuole dare dall'esterno i task e i robot in base agli id ma in base alle posizioni, 
+// // con una function bisogna cercare nel grafo il nodo n con le coords[n] uguali alla posizione, e prendere l'id del nodo n
+// // ma computazionalmente è costosissimo quindi per ora si evita
+// int poseToId(float x, float y, SmartDigraph maps)
+// {
+//     
+// }
+
+
+
+double CalcPathNode(SmartDigraph maps, vector<SmartDigraph::Node> wpoints)
+{
+    double dist(0);
+    SmartDigraph::Arc arc;  
+    SmartDigraph::ArcMap<double> len(maps);
+    
+    for(int i=0; i<wpoints.size()-1; i++)
+    {
+	arc = lemon::findArc(maps,wpoints[i],wpoints[i+1]);
+	dist += 1/VELOCITY*len[arc];
+    }
+    
+    return dist;
+}
+
 
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
-vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph maps, int i)
+vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph maps, int op)
 {
+    // vettore delle info in uscita
+    vector<task_assign::info> tex;
+		
+	
     // creo i vettori dei nodi corrispondenti alle posizioni dei robots e dei tasks
     vector<SmartDigraph::Node> rob_start_nodes;
-    vector<SmartDigraph::Node> task_goal_nodes;
+    vector<SmartDigraph::Node> taska_goal_nodes;
+    vector<SmartDigraph::Node> taskb_goal_nodes;
     
     // metti nei vettori i nodi corrispondenti
     for(auto elem : robots)
     {
 	rob_start_nodes.push_back(SmartDigraph::nodeFromId(elem.id));
     }
+    
+    for(auto elem : tasks)
+    {
+	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
+	taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
+    }
   
-  
-    vector<task_assign::info> tex;
-//     task_assign::info info;
+
+    
+    
+    //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
+    //posizioni di robot e task). il percorso consiste in una sequenza di nodi che viene memorizzata in un vettore, che 
+    //poi viene ribaltato per avere la sequenza di wp che il robot deve percorrere per arrivare al task0
+    SmartDigraph::ArcMap<double> len(maps);
+    SmartDigraph::NodeMap<float> coord_x(maps);
+    SmartDigraph::NodeMap<float> coord_y(maps);
+    task_assign::info info;
+    vector<task_assign::waypoint> path;
+    vector<SmartDigraph::Node> path_node;
+    double time_a(0);
+    double time_b(0);
+    
+    
+    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(maps,len);
+    
+    for(int i=0; i<robots.size(); i++)
+    {
+	for(int j=0; j<tasks.size(); j++)
+	{
+	    info.r_name = robots[i].name;
+	    info.t_name = tasks[j].name;
+	    
+	  
+	    // prima parte dei task
+	    
+	    dijkstra_test.run(rob_start_nodes.at(i), taska_goal_nodes.at(j));
+	    // se il task non coincide col robot
+	    if (dijkstra_test.dist(taska_goal_nodes.at(j)) > 0)
+	    { 
+		// ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
+		// arrivare al successivo
+		// memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
+		// i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
+		for (SmartDigraph::Node v = taska_goal_nodes.at(j); v != rob_start_nodes.at(i); v = dijkstra_test.predNode(v))
+		{
+		    task_assign::waypoint tmp;
+		    tmp.y = coord_y[v];
+		    tmp.x = coord_x[v];
+		    path.push_back(tmp);
+		    path_node.push_back(v);
+		}
+		reverse(path.begin(),path.end());
+		reverse(path_node.begin(),path_node.end());
+		
+		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
+		for (SmartDigraph::ArcIt a(Mappa); a != INVALID; ++a)
+		{
+		    double tex = 1/VELOCITY*getDistance(coord_x[Mappa.source(a)],coord_y[Mappa.source(a)],coord_x[Mappa.target(a)],coord_y[Mappa.target(a)]);
+		    len[a] = tex;
+		    
+		}
+		
+	    }
+	    else
+	    {
+		time_a = 0.001;
+	    }
+	    
+	    
+	    
+	    
+	    if(!op)
+	    {
+		info.t_ex0 = time_a + tasks[j].wait1 + time_b + tasks[j].wait1;
+		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait1;
+	    }
+	    else
+		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait1;
+	    
+	    tex.push_back(info);
+	}
+    }
+    
+    
+    
+
 //     double time_a(0);
 //     double time_b(0);
 //     bool in_map(false);
@@ -978,8 +1061,8 @@ int main(int argc, char **argv)
 
     for (SmartDigraph::ArcIt a(Mappa); a != INVALID; ++a)
     {
-	double tex = 1/VELOCITY*getDistance(coord_x[Mappa.source(a)],coord_y[Mappa.source(a)],coord_x[Mappa.target(a)],coord_y[Mappa.target(a)]);
-	len[a] = tex;
+	double dist = getDistance(coord_x[Mappa.source(a)],coord_y[Mappa.source(a)],coord_x[Mappa.target(a)],coord_y[Mappa.target(a)]);
+	len[a] = dist;
     }
     
 

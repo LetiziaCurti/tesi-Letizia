@@ -1,5 +1,7 @@
 // Nodo che modella gli ostacoli e gli imprevisti
 
+// TODO	il nodo legge da un file yaml quali sono i nodi del grafo che diventano ostacoli e li manda al motion planner
+// inoltre il nodo simula la rottura dei robot, inviando ai robot interessati il messaggio di rottura
 
 #include <iostream>
 #include <vector>

@@ -186,6 +186,38 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 
 
+// Se il robot è in una posizione che non sta nella mappa, cerca il nodo più vicino e aggiungi nodo e arco alla mappa
+void addNodeToMap(double rx, double ry, double tx, double ty, SmartDigraph maps)
+{
+    double min_dist(1000);
+    double dist(0.0);
+//     pair<double,double> coord;
+//     coord = make_pair(rx, ry);
+//     mappa min_elem;
+// 
+//     
+//     for(auto elem : maps)
+//     {
+//     	dist = getDistance(rx, ry, elem.start.first, elem.start.second);
+// 	if(dist <= SEC_DIST && tx == elem.end.first && ty == elem.end.second)
+// 	{
+// 	    if(dist < min_dist)
+// 	    {
+// 	    	min_dist = dist;
+// 	    	min_elem.start = elem.start;
+// 	    	min_elem.end = elem.end;
+// 	    	min_elem.wpoints = elem.wpoints;
+// 	    }
+// 	}
+//     }
+//     
+//     min_elem.wpoints.insert(min_elem.wpoints.begin(), coord);
+//     min_elem.start = coord;
+//     GlobMap.push_back(min_elem);
+}
+
+
+
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
@@ -327,58 +359,6 @@ vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector
 	    tex.push_back(info);
 	}
     }
-    
-    
-    
-
-//     double time_a(0);
-//     double time_b(0);
-//     bool in_map(false);
-//     
-//     // idea 1
-//     for(auto rob : robots)
-//     {
-// 	// vedo se elem sta già in task_to_assign
-// 	for(auto task : tasks)
-// 	{
-// 	    info.r_name = rob.name;
-// 	    info.t_name = task.name;
-// 	    
-// 	    for(auto elem : maps)
-// 	    {
-// 		if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
-// 		{
-// 		    in_map = true;
-// 		    time_a = 1/VELOCITY*CalcPath(elem.wpoints);
-// 		    break;
-// 		}
-// 	    }
-// 	    if(!in_map)
-// 	    {
-// 		time_a = 1/VELOCITY*CalcPath(CalcDistMap(rob.x, rob.y, task.x1, task.y1, GlobMap));
-// 	    }
-// 	    in_map = false;
-// 	    
-// 	    for(auto elem : maps)
-// 	    {
-// 		if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
-// 		{
-// 		    time_b = 1/VELOCITY*CalcPath(elem.wpoints);
-// 		    break;
-// 		}
-// 	    }
-// 	    
-// 	    if(!i)
-// 	    {
-// 		info.t_ex0 = time_a + task.wait1 + time_b + task.wait1;
-// 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
-// 	    }
-// 	    else
-// 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
-// 	    
-// 	    tex.push_back(info);
-// 	}
-//     }
     
     return tex;
 }

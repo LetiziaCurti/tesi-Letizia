@@ -174,6 +174,113 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 
 
+
+    //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
+    //posizioni di robot e task). il percorso consiste in una sequenza di nodi che viene memorizzata in un vettore, che 
+    //poi viene ribaltato per avere la sequenza di wp che il robot deve percorrere per arrivare al task
+//     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
+
+//     dijkstra_test.run(random_start_node.at(i), random_goal_node.at(i));
+//     // std::cout << "PATH Robot" << i << ": ";
+// 
+//     if (dijkstra_test.dist(random_goal_node.at(i)) > 0)
+//     { 
+//     for (Node v = random_goal_node.at(i); v != random_start_node.at(i); v = dijkstra_test.predNode(v))
+//     {
+//     geometry_msgs::Pose2D tmp;
+//     tmp.y = coord_y[v];
+//     tmp.x = coord_x[v];
+//     robots[i].ref.push_back(tmp);
+//     robots[i].ref_node.push_back(v);
+//     // std::cout << g.id(v) << " <- ";
+//     }
+//     //    std::cout << g.id(random_start_node.at(i))<< std::endl;
+//     std::reverse(robots[i].ref.begin(),robots[i].ref.end());
+//     std::reverse(robots[i].ref_node.begin(),robots[i].ref_node.end());
+//     }
+//     else
+//     {
+//     geometry_msgs::Pose2D tmp;
+//     tmp.x = robots[i].curr_pose.x;
+//     tmp.y = robots[i].curr_pose.y;
+//     robots[i].ref.push_back(tmp);
+//     }
+
+
+// Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
+// se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
+vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph maps, int i)
+{
+    // creo i vettori dei nodi corrispondenti alle posizioni dei robots e dei tasks
+    vector<SmartDigraph::Node> rob_start_nodes;
+    vector<SmartDigraph::Node> task_goal_nodes;
+    
+    // metti nei vettori i nodi corrispondenti
+    for(auto elem : robots)
+    {
+	rob_start_nodes.push_back(SmartDigraph::nodeFromId(elem.id));
+    }
+  
+  
+    vector<task_assign::info> tex;
+//     task_assign::info info;
+//     double time_a(0);
+//     double time_b(0);
+//     bool in_map(false);
+//     
+//     // idea 1
+//     for(auto rob : robots)
+//     {
+// 	// vedo se elem sta già in task_to_assign
+// 	for(auto task : tasks)
+// 	{
+// 	    info.r_name = rob.name;
+// 	    info.t_name = task.name;
+// 	    
+// 	    for(auto elem : maps)
+// 	    {
+// 		if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
+// 		{
+// 		    in_map = true;
+// 		    time_a = 1/VELOCITY*CalcPath(elem.wpoints);
+// 		    break;
+// 		}
+// 	    }
+// 	    if(!in_map)
+// 	    {
+// 		time_a = 1/VELOCITY*CalcPath(CalcDistMap(rob.x, rob.y, task.x1, task.y1, GlobMap));
+// 	    }
+// 	    in_map = false;
+// 	    
+// 	    for(auto elem : maps)
+// 	    {
+// 		if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
+// 		{
+// 		    time_b = 1/VELOCITY*CalcPath(elem.wpoints);
+// 		    break;
+// 		}
+// 	    }
+// 	    
+// 	    if(!i)
+// 	    {
+// 		info.t_ex0 = time_a + task.wait1 + time_b + task.wait1;
+// 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
+// 	    }
+// 	    else
+// 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
+// 	    
+// 	    tex.push_back(info);
+// 	}
+//     }
+    
+    return tex;
+}
+
+    
+
+// Questo blocco va modificato considerando la mappa in lemon e l'alg. di Dijkstra per calcolare i tex sul grafo
+//-----------------------------------------------------------------------------------------------------------------//
+
 double CalcPath(vector<pair<double,double>> wpoints)
 {
     double dist(0);
@@ -280,6 +387,9 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
     
     return tex;
 }
+
+
+//-----------------------------------------------------------------------------------------------------------------//
 
 
 
@@ -734,10 +844,8 @@ void publishRecharge()
 
 
 
-
-
-
-
+//TODO obstacle_node manda al motion planner gli id dei nodi che sono diventati ostacoli --> in corrispondenza
+//dei "nodi ostacolo", vanno settati i pesi degli archi incidenti ad un numero elevatissimo
 
 // Legge "obstacles_topic" 
 void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
@@ -874,39 +982,7 @@ int main(int argc, char **argv)
 	len[a] = tex;
     }
     
-    
-    
-    
-    
-    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
 
-//     dijkstra_test.run(random_start_node.at(i), random_goal_node.at(i));
-//     // std::cout << "PATH Robot" << i << ": ";
-// 
-//     if (dijkstra_test.dist(random_goal_node.at(i)) > 0)
-//     { 
-//     for (Node v = random_goal_node.at(i); v != random_start_node.at(i); v = dijkstra_test.predNode(v))
-//     {
-//     geometry_msgs::Pose2D tmp;
-//     tmp.y = coord_y[v];
-//     tmp.x = coord_x[v];
-//     robots[i].ref.push_back(tmp);
-//     robots[i].ref_node.push_back(v);
-//     // std::cout << g.id(v) << " <- ";
-//     }
-//     //    std::cout << g.id(random_start_node.at(i))<< std::endl;
-//     std::reverse(robots[i].ref.begin(),robots[i].ref.end());
-//     std::reverse(robots[i].ref_node.begin(),robots[i].ref_node.end());
-//     }
-//     else
-//     {
-//     geometry_msgs::Pose2D tmp;
-//     tmp.x = robots[i].curr_pose.x;
-//     tmp.y = robots[i].curr_pose.y;
-//     robots[i].ref.push_back(tmp);
-//     }
-
-    
     
 
     

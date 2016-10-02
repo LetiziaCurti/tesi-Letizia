@@ -186,35 +186,13 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 
 
-// Se il robot è in una posizione che non sta nella mappa, cerca il nodo più vicino e aggiungi nodo e arco alla mappa
-void addNodeToMap(double rx, double ry, double tx, double ty, SmartDigraph maps)
-{
-    double min_dist(1000);
-    double dist(0.0);
-//     pair<double,double> coord;
-//     coord = make_pair(rx, ry);
-//     mappa min_elem;
-// 
-//     
-//     for(auto elem : maps)
-//     {
-//     	dist = getDistance(rx, ry, elem.start.first, elem.start.second);
-// 	if(dist <= SEC_DIST && tx == elem.end.first && ty == elem.end.second)
-// 	{
-// 	    if(dist < min_dist)
-// 	    {
-// 	    	min_dist = dist;
-// 	    	min_elem.start = elem.start;
-// 	    	min_elem.end = elem.end;
-// 	    	min_elem.wpoints = elem.wpoints;
-// 	    }
-// 	}
-//     }
-//     
-//     min_elem.wpoints.insert(min_elem.wpoints.begin(), coord);
-//     min_elem.start = coord;
-//     GlobMap.push_back(min_elem);
-}
+// // TODO Se si vuole aggiungere la possibilità che il robot sia in una posizione che non sta nella mappa, 
+// // usa questa function per cercare il nodo più vicino e aggiungere nuovi nodo e arco alla mappa
+// void addNodeToMap(double rx, double ry, double tx, double ty, SmartDigraph maps)
+// {
+//     double min_dist(1000);
+//     double dist(0.0);
+// }
 
 
 

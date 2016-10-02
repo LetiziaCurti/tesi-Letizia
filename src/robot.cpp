@@ -221,6 +221,7 @@ public:
 
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.name = robot_name;
+	status_msg.id = id_marker;
 	status_msg.status = true;
 	status_msg.b_level0 = b_level0;
 	status_msg.b_level = b_level;

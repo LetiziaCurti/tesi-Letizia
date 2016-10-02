@@ -1,6 +1,7 @@
 Header header
 string name
 bool status
+int32 id
 
 float64 b_level0
 float64 b_level

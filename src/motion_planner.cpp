@@ -186,22 +186,6 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 
 
-double CalcPathNode(SmartDigraph maps, vector<SmartDigraph::Node> wpoints)
-{
-    double dist(0);
-    SmartDigraph::Arc arc;  
-    SmartDigraph::ArcMap<double> len(maps);
-    
-    for(int i=0; i<wpoints.size()-1; i++)
-    {
-	arc = lemon::findArc(maps,wpoints[i],wpoints[i+1]);
-	dist += 1/VELOCITY*len[arc];
-    }
-    
-    return dist;
-}
-
-
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
@@ -209,6 +193,7 @@ vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector
 {
     // vettore delle info in uscita
     vector<task_assign::info> tex;
+    task_assign::info info;
 		
 	
     // creo i vettori dei nodi corrispondenti alle posizioni dei robots e dei tasks
@@ -237,11 +222,12 @@ vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector
     SmartDigraph::ArcMap<double> len(maps);
     SmartDigraph::NodeMap<float> coord_x(maps);
     SmartDigraph::NodeMap<float> coord_y(maps);
-    task_assign::info info;
     vector<task_assign::waypoint> path;
     vector<SmartDigraph::Node> path_node;
     double time_a(0);
     double time_b(0);
+    double dist(0);
+    SmartDigraph::Arc arc; 
     
     
     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(maps,len);
@@ -254,7 +240,7 @@ vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector
 	    info.t_name = tasks[j].name;
 	    
 	  
-	    // prima parte dei task
+	    // prima parte del task
 	    
 	    dijkstra_test.run(rob_start_nodes.at(i), taska_goal_nodes.at(j));
 	    // se il task non coincide col robot
@@ -275,12 +261,11 @@ vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector
 		reverse(path.begin(),path.end());
 		reverse(path_node.begin(),path_node.end());
 		
-		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
-		for (SmartDigraph::ArcIt a(Mappa); a != INVALID; ++a)
+		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato		
+		for(int i=0; i<path_node.size()-1; i++)
 		{
-		    double tex = 1/VELOCITY*getDistance(coord_x[Mappa.source(a)],coord_y[Mappa.source(a)],coord_x[Mappa.target(a)],coord_y[Mappa.target(a)]);
-		    len[a] = tex;
-		    
+		    arc = lemon::findArc(maps,path_node[i],path_node[i+1]);
+		    dist += 1/VELOCITY*len[arc];
 		}
 		
 	    }
@@ -289,16 +274,55 @@ vector<task_assign::info> CalcolaTempi(vector<task_assign::robot> robots, vector
 		time_a = 0.001;
 	    }
 	    
+	    path.clear();
+	    path_node.clear();
+	    
+	    
+	    
+	    // seconda parte del task
+	    
+	    dijkstra_test.run(taska_goal_nodes.at(j), taskb_goal_nodes.at(j));
+	    // se il task non coincide col robot
+	    if (dijkstra_test.dist(taskb_goal_nodes.at(j)) > 0)
+	    { 
+		// ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
+		// arrivare al successivo
+		// memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
+		// i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
+		for (SmartDigraph::Node v = taskb_goal_nodes.at(j); v != taska_goal_nodes.at(j); v = dijkstra_test.predNode(v))
+		{
+		    task_assign::waypoint tmp;
+		    tmp.y = coord_y[v];
+		    tmp.x = coord_x[v];
+		    path.push_back(tmp);
+		    path_node.push_back(v);
+		}
+		reverse(path.begin(),path.end());
+		reverse(path_node.begin(),path_node.end());
+		
+		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
+		for(int i=0; i<path_node.size()-1; i++)
+		{
+		    arc = lemon::findArc(maps,path_node[i],path_node[i+1]);
+		    dist += 1/VELOCITY*len[arc];
+		}
+		
+	    }
+	    else
+	    {
+		time_b = 0.001;
+	    }
+	    
 	    
 	    
 	    
 	    if(!op)
 	    {
-		info.t_ex0 = time_a + tasks[j].wait1 + time_b + tasks[j].wait1;
-		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait1;
+		info.t_ex0 = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
+		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
 	    }
 	    else
-		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait1;
+		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
 	    
 	    tex.push_back(info);
 	}

@@ -40,8 +40,16 @@ using namespace std;
 
 
 
+
 ros::Subscriber reass_sub;
-ros::Publisher reass_pub;
+
+ros::Publisher rt_pub;
+ros::Publisher rech_pub;
+// ros::Subscriber rob_ass_sub;
+// ros::Subscriber rob_rech_sub;
+// ros::Subscriber rob_info_sub;
+// ros::Subscriber rech_info_sub;
+// ros::Subscriber task_ass_sub;
 
 vector<task_assign::task> task_to_assign;    	//T: vettore dei task da assegnare che cambia nel tempo (di dim m(k))
 vector<task_assign::robot> robot_to_assign;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
@@ -69,9 +77,7 @@ void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 	robot_to_assign = msg->rob_to_ass;
 	robots_in_recharge = msg->rob_in_rech;
 	tex_info_vect = msg->rob_info;
-	tex0_info_vect = msg->rob_info0;
 	rech_info_vect = msg->rech_rob_info;
-	rech_info0_vect = msg->rech_rob_info0;
 	
 	do_reassign = true;
     }
@@ -79,9 +85,10 @@ void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 
 
 
-// pubblica l'assignment r-t
-void StoVectRT(vector<vector<int>> S)
+// Pubblica al motion planner gli assignments task-robot
+void publishRT(vector<vector<int>> S)
 {
+    task_assign::rt_vect vect_msg;
     task_assign::rt msg;
     
     for(int i=0; i<robot_to_assign.size(); i++)
@@ -92,19 +99,23 @@ void StoVectRT(vector<vector<int>> S)
 	    {
 		msg.robot = robot_to_assign[i];
 		msg.task = task_to_assign[j];
-		r_t_ass.push_back(msg);
+		vect_msg.rt_vect.push_back(msg);
 	    }
 	}
     }
+    
+    sleep(1);
+    rt_pub.publish(vect_msg);
 }
 
 
 
-// pubblica l'assignment r-p.ti di ric.
-void StoVectRR(vector<vector<int>> S)
+// Pubblica al motion planner gli assignments task-robot
+void publishRech(vector<vector<int>> S)
 {
+    task_assign::rt_vect vect_msg;
     task_assign::rt msg;
-
+    
     for(int i=0; i<robots_in_recharge.size(); i++)
     {
 	for(int j=0; j<recharge_points.size(); j++)
@@ -113,25 +124,15 @@ void StoVectRR(vector<vector<int>> S)
 	    {
 		msg.robot = robots_in_recharge[i];
 		msg.task = recharge_points[j];
-		r_rech_ass.push_back(msg);
+		vect_msg.rt_vect.push_back(msg);
 	    }
 	}
     }
-}
-
-
-
-// Pubblica al motion planner gli assignments task-robot o robot-rech. point
-void publishSol()
-{
-    task_assign::glpk_sol vect_msg;
-    
-    vect_msg.r_t_ass = r_t_ass;
-    vect_msg.r_rech_ass = r_rech_ass;   
     
     sleep(1);
-    reass_pub.publish(vect_msg);
+    rech_pub.publish(vect_msg);
 }
+
 
 
 
@@ -443,7 +444,15 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "master");
     ros::NodeHandle node;
     
-    reass_pub = node.advertise<task_assign::glpk_sol>("glpk_sol_topic", 10);
+//     rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
+//     rob_rech_sub = node.subscribe("rob_recharge_topic", 20, &RobInRechCallback);
+//     rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
+//     rech_info_sub = node.subscribe("rech_info_topic", 20, &RechInfoCallback);
+//     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
+    
+    rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
+    rech_pub = node.advertise<task_assign::rt_vect>("rech_topic", 10);
+    
     reass_sub = node.subscribe("glpk_in_topic", 20, &InCallback);
     
     sleep(1);
@@ -478,7 +487,7 @@ int main(int argc, char **argv)
 		S = TASolver(n, m, U);
 		printMatrix(S);
 		
-		StoVectRT(S);	
+		publishRT(S);	
 		ROS_INFO_STREAM("Il master ha calcolato l'assignment di " << robot_to_assign.size() << " robot per " 
 		<< task_to_assign.size() << " task" << "\n");
 	    }
@@ -494,12 +503,11 @@ int main(int argc, char **argv)
 		S = TASolver(r, s, U);
 		printMatrix(S);
 		
-		StoVectRR(S);
+		publishRech(S);
 		ROS_INFO_STREAM("Il master ha calcolato l'assignment di " << robot_to_assign.size() << 
 		" robot per i punti di ircarica" << "\n");
 	    }
 	    
-	    publishSol();
 	    do_reassign = false;
 	}
 	
@@ -508,7 +516,8 @@ int main(int argc, char **argv)
 // 	robots_in_recharge.clear();
 	
 	ros::spinOnce();
-	rate.sleep();	
+	rate.sleep();
+	
     }
 
 // 	if(robot_to_assign.size() != n || task_to_assign.size() != m)

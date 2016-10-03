@@ -38,181 +38,82 @@ int Min(int a, int b)
 
 using namespace std;
 
-ros::Publisher rt_pub;
-ros::Publisher rech_pub;
-ros::Subscriber rob_ass_sub;
-ros::Subscriber rob_rech_sub;
-ros::Subscriber rob_info_sub;
-ros::Subscriber rech_info_sub;
-ros::Subscriber task_ass_sub;
+
 
 ros::Subscriber reass_sub;
 ros::Publisher reass_pub;
-
 
 vector<task_assign::task> task_to_assign;    	//T: vettore dei task da assegnare che cambia nel tempo (di dim m(k))
 vector<task_assign::robot> robot_to_assign;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
 vector<task_assign::info> tex_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
 vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-vector<task_assign::robot> delete_rob;		//robot esclusi dall'assignment perché superano le soglie
 vector<task_assign::robot> robots_in_recharge;  //R: vettore dei robot che devono essere caricati
-vector<task_assign::info> rech_info_vect;	
+vector<task_assign::info> rech_info_vect;
+vector<task_assign::info> rech_info0_vect;
 
 vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
+
+
 
 
 
 // Legge su "task_assign_topic" il vettore dei task da eseguire m(k)
 void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 {
-
-}
-
-
-// Legge su "task_assign_topic" il vettore dei task da eseguire m(k)
-void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
-{
-    bool add_task(true);
-    
-    for(auto elem : msg->task_vect)
+    if(msg->reassign)
     {
-	// vedo se elem sta già in task_to_assign
-	for(auto newel : task_to_assign)
-	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-		add_task = false;
-	}
-	
-	if(add_task)
-	    task_to_assign.push_back(elem);
-    }
-}
-
-
-
-// Legge su "rob_assign_topic" il vettore dei robot da assegnare n(k)
-void RobToAssCallback(const task_assign::vect_robot::ConstPtr& msg)
-{
-    bool add_rob(true);
-    
-    for(auto elem : msg->robot_vect)
-    {
-	// vedo se elem sta già in robot_to_assign
-	for(auto newel : robot_to_assign)
-	{
-	    if(newel.name == elem.name)
-		add_rob = false;
-	}
-	
-	if(add_rob)
-	    robot_to_assign.push_back(elem);
-    }
-}
-
-
-
-// Legge su "rob_assign_topic" il vettore dei robot da assegnare n(k)
-void RobInRechCallback(const task_assign::vect_robot::ConstPtr& msg)
-{
-    bool add_rob(true);
-    
-    for(auto elem : msg->robot_vect)
-    {
-	// vedo se elem sta già in robot_to_assign
-	for(auto newel : robots_in_recharge)
-	{
-	    if(newel.name == elem.name)
-		add_rob = false;
-	}
-	
-	if(add_rob)
-	    robots_in_recharge.push_back(elem);
-    }
-}
-
-
-
-// Legge su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare)
-void RobInfoCallback(const task_assign::vect_info::ConstPtr& msg)
-{
-    // non è importante l'ordine
-    for(auto elem : msg->info_vect)
-    {
-	tex_info_vect.push_back(elem);
-    }
-}
-
-
-
-// Legge su "rob_ini_topic" le info relative ai robot al tempo 0 (tutti: già assegnati e da assegnare)
-void RechInfoCallback(const task_assign::vect_info::ConstPtr& msg)
-{
-    // non è importante l'ordine
-    for(auto elem : msg->info_vect)
-    {
-	rech_info_vect.push_back(elem);
+	task_to_assign = msg->task_to_ass;
+	robot_to_assign = msg->rob_to_ass;
+	robots_in_recharge = msg->rob_in_rech;
+	tex_info_vect = msg->rob_info;
+	tex0_info_vect = msg->rob_info0;
+	rech_info_vect = msg->rech_rob_info;
+	rech_info0_vect = msg->rech_rob_info0;
     }
 }
 
 
 
 // Pubblica al motion planner gli assignments task-robot
-void publishRT(vector<vector<int>> S)
-{
-    task_assign::rt_vect vect_msg;
-    task_assign::rt msg;
-    
-    for(int i=0; i<robot_to_assign.size(); i++)
-    {
-	for(int j=0; j<task_to_assign.size(); j++)
-	{
-	    if(S[i][j]==1)
-	    {
-		msg.robot = robot_to_assign[i];
-		msg.task = task_to_assign[j];
-		vect_msg.rt_vect.push_back(msg);
-	    }
-	}
-    }
-    
-//     sleep(1);
-    rt_pub.publish(vect_msg);
-}
-
-
-
-// Pubblica al motion planner gli assignments task-robot
-void publishRech(vector<vector<int>> S)
-{
-    task_assign::rt_vect vect_msg;
-    task_assign::rt msg;
-    
-    for(int i=0; i<robots_in_recharge.size(); i++)
-    {
-	for(int j=0; j<recharge_points.size(); j++)
-	{
-	    if(S[i][j]==1)
-	    {
-		msg.robot = robots_in_recharge[i];
-		msg.task = recharge_points[j];
-		vect_msg.rt_vect.push_back(msg);
-	    }
-	}
-    }
-    
-//     sleep(1);
-    rech_pub.publish(vect_msg);
-}
-
-
-// Pubblica al motion planner gli assignments task-robot
-void publishSol()
+void publishSol(vector<vector<int>> S, int op)
 {
     task_assign::glpk_sol vect_msg;
     task_assign::rt msg;
     
+    // se op=1, pubblico l'assignment r-t
+    if(op)
+    {
+	for(int i=0; i<robot_to_assign.size(); i++)
+	{
+	    for(int j=0; j<task_to_assign.size(); j++)
+	    {
+		if(S[i][j]==1)
+		{
+		    msg.robot = robot_to_assign[i];
+		    msg.task = task_to_assign[j];
+		    vect_msg.r_t_ass.push_back(msg);
+		}
+	    }
+	}
+    }
+    // se op=0, pubblico l'assignment r-p.ti di ric.
+    else
+    {
+	for(int i=0; i<robots_in_recharge.size(); i++)
+	{
+	    for(int j=0; j<recharge_points.size(); j++)
+	    {
+		if(S[i][j]==1)
+		{
+		    msg.robot = robots_in_recharge[i];
+		    msg.task = recharge_points[j];
+		    vect_msg.r_rech_ass.push_back(msg);
+		}
+	    }
+	}
+    }
     
-//     sleep(1);
+    sleep(1);
     reass_pub.publish(vect_msg);
 }
 
@@ -516,6 +417,9 @@ void printMatrix(vector<vector<int>> M)
 
 
 
+
+
+
 int main(int argc, char **argv)
 {
   
@@ -523,16 +427,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "master");
     ros::NodeHandle node;
     
-//     rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
-//     rob_rech_sub = node.subscribe("rob_recharge_topic", 20, &RobInRechCallback);
-//     rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
-//     rech_info_sub = node.subscribe("rech_info_topic", 20, &RechInfoCallback);
-//     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
-    
     reass_pub = node.advertise<task_assign::glpk_sol>("glpk_sol_topic", 10);
     reass_sub = node.subscribe("glpk_in_topic", 20, &InCallback);
-//     rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
-//     rech_pub = node.advertise<task_assign::rt_vect>("rech_topic", 10);
     
     sleep(1);
     
@@ -564,7 +460,7 @@ int main(int argc, char **argv)
 		S = TASolver(n, m, U);
 		printMatrix(S);
 		
-		publishRT(S);
+		publishSol(S,1);
 	    }
 	    else if(n==0)
 		ROS_INFO_STREAM("There aren't any available robots \n");
@@ -591,11 +487,11 @@ int main(int argc, char **argv)
 	    {
 		vector<vector<int>> S(r+s+1, vector<int> (r*s,0)); 
 		
-		U = calcUFun(recharge_points, robots_in_recharge, tex_info_vect, tex0_info_vect, "recharge");
+		U = calcUFun(recharge_points, robots_in_recharge, rech_info_vect, rech_info0_vect, "recharge");
 		S = TASolver(r, s, U);
 		printMatrix(S);
 		
-		publishRech(S);
+		publishSol(S,0);
 	    }
 	    else if(r==0)
 		ROS_INFO_STREAM("There aren't any robots in recharge \n");

@@ -4,17 +4,20 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <stdio.h>            /* C input/output                       */
+#include <stdlib.h>           /* C standard library                   */
+#include <glpk.h>             /* GNU GLPK linear/mixed integer solver */
+#include <yaml-cpp/yaml.h>
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "task_assign/vect_task.h"
 #include "task_assign/vect_robot.h"
 #include "task_assign/rt_vect.h"
 #include "task_assign/vect_info.h"
+#include "task_assign/glpk_in.h"
+#include "task_assign/glpk_sol.h"
 
-#include <stdio.h>            /* C input/output                       */
-#include <stdlib.h>           /* C standard library                   */
-#include <glpk.h>             /* GNU GLPK linear/mixed integer solver */
-#include <yaml-cpp/yaml.h>
+
 
 
 inline const char * const BoolToString(bool b)
@@ -43,6 +46,9 @@ ros::Subscriber rob_info_sub;
 ros::Subscriber rech_info_sub;
 ros::Subscriber task_ass_sub;
 
+ros::Subscriber reass_sub;
+ros::Publisher reass_pub;
+
 
 vector<task_assign::task> task_to_assign;    	//T: vettore dei task da assegnare che cambia nel tempo (di dim m(k))
 vector<task_assign::robot> robot_to_assign;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
@@ -56,6 +62,11 @@ vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti d
 
 
 
+// Legge su "task_assign_topic" il vettore dei task da eseguire m(k)
+void InCallback(const task_assign::glpk_in::ConstPtr& msg)
+{
+
+}
 
 
 // Legge su "task_assign_topic" il vettore dei task da eseguire m(k)
@@ -191,6 +202,18 @@ void publishRech(vector<vector<int>> S)
     
 //     sleep(1);
     rech_pub.publish(vect_msg);
+}
+
+
+// Pubblica al motion planner gli assignments task-robot
+void publishSol()
+{
+    task_assign::glpk_sol vect_msg;
+    task_assign::rt msg;
+    
+    
+//     sleep(1);
+    reass_pub.publish(vect_msg);
 }
 
 
@@ -500,14 +523,16 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "master");
     ros::NodeHandle node;
     
-    rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
-    rob_rech_sub = node.subscribe("rob_recharge_topic", 20, &RobInRechCallback);
-    rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
-    rech_info_sub = node.subscribe("rech_info_topic", 20, &RechInfoCallback);
-    task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
+//     rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
+//     rob_rech_sub = node.subscribe("rob_recharge_topic", 20, &RobInRechCallback);
+//     rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
+//     rech_info_sub = node.subscribe("rech_info_topic", 20, &RechInfoCallback);
+//     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
     
-    rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
-    rech_pub = node.advertise<task_assign::rt_vect>("rech_topic", 10);
+    reass_pub = node.advertise<task_assign::glpk_sol>("glpk_sol_topic", 10);
+    reass_sub = node.subscribe("glpk_in_topic", 20, &InCallback);
+//     rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
+//     rech_pub = node.advertise<task_assign::rt_vect>("rech_topic", 10);
     
     sleep(1);
     

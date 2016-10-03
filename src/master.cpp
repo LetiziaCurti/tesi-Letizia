@@ -53,11 +53,11 @@ vector<task_assign::info> rech_info0_vect;
 
 vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
 
+bool do_reassign(false);
 
 
 
-
-// Legge su "task_assign_topic" il vettore dei task da eseguire m(k)
+// Legge su "glpk_in_topic" i vettori delle info che vanno in ingresso all'alg. di assignment MA solo se reassign è a true
 void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 {
     if(msg->reassign)
@@ -69,12 +69,14 @@ void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 	tex0_info_vect = msg->rob_info0;
 	rech_info_vect = msg->rech_rob_info;
 	rech_info0_vect = msg->rech_rob_info0;
+	
+	do_reassign = true;
     }
 }
 
 
 
-// Pubblica al motion planner gli assignments task-robot
+// Pubblica al motion planner gli assignments task-robot o robot-rech. point
 void publishSol(vector<vector<int>> S, int op)
 {
     task_assign::glpk_sol vect_msg;

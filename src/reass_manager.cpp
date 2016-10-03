@@ -295,10 +295,10 @@ int main(int argc, char **argv)
     ros::NodeHandle node;
     
     rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
+    task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
     rob_rech_sub = node.subscribe("rob_recharge_topic", 20, &RobInRechCallback);
     rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
     rech_info_sub = node.subscribe("rech_info_topic", 20, &RechInfoCallback);
-    task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
     
     reass_pub = node.advertise<task_assign::glpk_in>("glpk_in_topic", 10);
     reass_sub = node.subscribe("glpk_sol_topic", 20, &AssCallback);

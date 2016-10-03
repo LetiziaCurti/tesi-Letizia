@@ -1,4 +1,4 @@
-// Nodo che modella il master
+// Nodo che gestisce il reassignment
 
 
 #include <iostream>
@@ -63,7 +63,6 @@ vector<task_assign::robot> robots_in_recharge;  //R: vettore dei robot che devon
 vector<task_assign::info> rech_info_vect;	
 
 vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
-
 
 
 
@@ -304,9 +303,8 @@ int main(int argc, char **argv)
     reass_pub = node.advertise<task_assign::glpk_in>("glpk_in_topic", 10);
     reass_sub = node.subscribe("glpk_sol_topic", 20, &AssCallback);
     
-    assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
-    recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
-    
+    rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
+    rech_pub = node.advertise<task_assign::rt_vect>("rech_topic", 10);
 
     
     sleep(1);

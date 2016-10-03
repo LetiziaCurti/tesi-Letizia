@@ -78,6 +78,7 @@ vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare
 vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
 vector<task_assign::info> rob_info_vect;
 vector<task_assign::info> rob_info0_vect;
+vector<task_assign::info> rech_info0_vect;
 vector<task_assign::info> rech_info_vect;
 
 
@@ -194,7 +195,7 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
-vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
+vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps)
 {
     // vettore delle info in uscita
     vector<task_assign::info> tex;
@@ -319,15 +320,8 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 	    }
 	    
 	    
-	    
-	    
-	    if(!op)
-	    {
-		info.t_ex0 = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
-		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
-	    }
-	    else
-		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
+	    info.t_ex0 = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
+	    info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
 	    
 	    tex.push_back(info);
 	}
@@ -494,11 +488,12 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 //     {}
     
     //vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-    rob_info0_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
-    rob_info_vect = CalcTex(robots_in_execution, tasks_to_assign, Mappa, 1);
+    rob_info0_vect = CalcTex(available_robots, tasks_to_assign, Mappa);
+    rob_info_vect = CalcTex(robots_in_execution, tasks_to_assign, Mappa);
     
     // vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i punti ri ricarica
-    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1); 
+    rech_info0_vect = CalcTex(available_robots, tasks_to_assign, Mappa);
+    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa); 
 }
 
 
@@ -782,7 +777,7 @@ void publishInfoRecharge()
     task_assign::vect_info vect_msg;
     
     vect_msg.info_vect = rech_info_vect;
-//     vect_msg.info0_vect = rech_info0_vect;
+    vect_msg.info0_vect = rech_info0_vect;
     
     sleep(1);
     rech_info_pub.publish(vect_msg);
@@ -906,8 +901,8 @@ int main(int argc, char **argv)
     ros::NodeHandle node;
     
     obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
-//     rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
-//     rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
+    rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
+    rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
     status_rob_sub = node.subscribe("status_rob_topic", 20, &StatusCallback);
     new_task_sub = node.subscribe("new_task_topic", 20, &TaskToAssCallback);
     
@@ -918,8 +913,8 @@ int main(int argc, char **argv)
     rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
     rech_info_pub = node.advertise<task_assign::vect_info>("rech_info_topic", 10);
     
-//     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
-//     recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
+    assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
+    recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
     
     marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     

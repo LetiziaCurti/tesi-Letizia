@@ -508,8 +508,8 @@ int main(int argc, char **argv)
 // 	robots_in_recharge.clear();
 	
 	ros::spinOnce();
-	rate.sleep();
-	
+	rate.sleep();	
+    }
 
 // 	if(robot_to_assign.size() != n || task_to_assign.size() != m)
 // 	{
@@ -572,7 +572,6 @@ int main(int argc, char **argv)
 // 	    ROS_INFO_STREAM("There aren't robots in recharge  \n");
 // 	}
 
-    }
     
 
 

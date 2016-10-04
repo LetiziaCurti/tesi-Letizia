@@ -492,12 +492,22 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	{
 	    available_robots.push_back(*msg);
 	    rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+	    
+	    if(tasks_to_assign.size()>0)
+	    {
+		publishMasterIn();
+	    }
 	}
 	
 	else if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
 	{
 	    robots_in_recharge.push_back(*msg);
 	    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+	    
+	    if(recharge_points.size()>0)
+	    {
+		publishMasterIn();
+	    }
 	}
 	
 	else if(available)
@@ -589,16 +599,11 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1); 
 	}
     }
-    // TODO se status è false il robot è rotto --> attiva modulo di salvataggio
-//     else
-//     {}
-    
-    //vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-//     rob_info0_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
-//     rob_info_vect = CalcTex(robots_in_execution, tasks_to_assign, Mappa, 1);
-    
-    // vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i punti ri ricarica
-//     rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1); 
+    // se il robot è rotto
+    else
+    {
+	// TODO modulo di salvataggio
+    }
 }
 
 

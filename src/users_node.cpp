@@ -13,6 +13,7 @@
 using namespace std;
 ros::Publisher new_task_pub;
 vector<task_assign::task> new_task_vect;
+map<double, task_assign::task> map_task;
 
 
 
@@ -93,9 +94,79 @@ void CreateNewTask()
 	    }
 	}
 	
-	new_task_vect.push_back(newTask);
+	map_task[newTask.ar_time] = newTask;
+	
+// 	new_task_vect.push_back(newTask);
     }
+}
+
+
+
+
+void publishVectTask()
+{
+    task_assign::vect_task vect_msg;
+    vect_msg.task_vect = new_task_vect;
     
+    // Wait for the publisher to connect to subscribers
+//     sleep(1.0);
+    new_task_pub.publish(vect_msg);
+    
+    for(auto elem : vect_msg.task_vect)
+    {
+	ROS_INFO_STREAM("The users node is publishing the task: "<< elem.name << " with the couple " << elem.id1 << " - " << elem.id2);
+    }
+}
+
+
+inline const char * const BoolToString(bool b)
+{
+    return b ? "true" : "false";
+}
+
+
+
+
+int main(int argc, char **argv)
+{
+  
+    // Initialize the node
+    ros::init(argc, argv, "users_node");
+    ros::NodeHandle node;
+    
+    new_task_pub = node.advertise<task_assign::vect_task>("task_arrival_topic", 10);
+    sleep(1);
+    
+    // carico i task dal file yaml e li metto nella mappa map_task, in cui vengono ordinati dal primo che arriva all'ultimo
+    CreateNewTask();
+    
+    ros::Rate rate(10);
+    double current_at;
+    current_at = map_task.begin()->first;
+    
+    map<double, task_assign::task>::iterator it=map_task.begin();
+    while(it!=map_task.end() && ros::ok())
+    {
+	if(it->first == current_at)
+	    new_task_vect.push_back(it->second);
+	else
+	{
+	    sleep(current_at);
+	    publishVectTask();
+	    
+	    current_at = it->first;
+	}  
+	
+	++it;
+	ros::spinOnce();
+	rate.sleep();
+    }
+
+
+    return 0;
+}
+
+
 //     // aggiungo il task1
 //     newTask.ar_time = 5;
 //     newTask.name = "task1";
@@ -171,56 +242,3 @@ void CreateNewTask()
 //     newTask.y2 = 17;
 //     newTask.theta2 = -1.5; 
 //     new_task_vect.push_back(newTask);
-}
-
-
-
-
-void publishVectTask()
-{
-    task_assign::vect_task vect_msg;
-    vect_msg.task_vect = new_task_vect;
-    
-    // Wait for the publisher to connect to subscribers
-    sleep(1.0);
-    new_task_pub.publish(vect_msg);
-    
-    for(auto elem : vect_msg.task_vect)
-    {
-	ROS_INFO_STREAM("The users node is publishing the task: "<< elem.name << " with the couple " << elem.id1 << " - " << elem.id2);
-    }
-}
-
-
-inline const char * const BoolToString(bool b)
-{
-    return b ? "true" : "false";
-}
-
-
-
-
-int main(int argc, char **argv)
-{
-  
-    // Initialize the node
-    ros::init(argc, argv, "users_node");
-    ros::NodeHandle node;
-    
-    new_task_pub = node.advertise<task_assign::vect_task>("task_arrival_topic", 10);
-    sleep(1);
-    
-    CreateNewTask();
-    
-    ros::Rate rate(10);
-    while (ros::ok()) 
-    {
-	publishVectTask();
-	ros::spinOnce();
-	rate.sleep();
-    }
-
-
-
-    return 0;
-}

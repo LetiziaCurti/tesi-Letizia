@@ -199,10 +199,10 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
-vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
+void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
 {
     // vettore delle info in uscita
-    vector<task_assign::info> tex;
+//     vector<task_assign::info> tex;
     task_assign::info info;
 		
 	
@@ -249,7 +249,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 	    info.r_name = robots[i].name;
 	    info.t_name = tasks[j].name;
 	    
-	  
+
 	    // prima parte del task
 	    
 	    dijkstra_test.run(rob_start_nodes.at(i), taska_goal_nodes.at(j));
@@ -330,11 +330,21 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 	    else
 		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
 	    
-	    tex.push_back(info);
+	    
+	    for(auto elem : info_vect)
+	    {
+		if(elem.r_name == robots[i].name && elem.t_name == tasks[j].name)
+		{
+		      elem = info;
+		      break;
+		}
+	    }
+	    
+// 	    tex.push_back(info);
 	}
     }
     
-    return tex;
+//     return tex;
 }
 
 
@@ -405,8 +415,8 @@ void ReAssFunc(task_assign::robot msg, Assign ass)
 	tasks_to_assign.push_back(ass.task);
 	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
 	
-	rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
-	rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+	CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+	CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 	
 	publishMasterIn();
     }
@@ -491,7 +501,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level > BATTERY_THR)
 	{
 	    available_robots.push_back(*msg);
-	    rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+	    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 	    
 	    if(tasks_to_assign.size()>0)
 	    {
@@ -502,7 +512,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	else if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
 	{
 	    robots_in_recharge.push_back(*msg);
-	    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+	    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 	    
 	    if(recharge_points.size()>0)
 	    {
@@ -515,16 +525,16 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    if(msg->b_level <= BATTERY_THR)
 	    {
 		    robots_in_recharge.push_back(*msg);
-		    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+		    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 		    available_robots = deleteRob(msg->name, available_robots);
 	    }
 	    else
-		rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);	      
+		CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);	      
 	}
 	
 	else if(avail_rech)
 	{	    	    
-	   rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);      
+	   CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);      
 	}
 	
 	else if(in_execution)
@@ -545,7 +555,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			if(msg->b_level > BATTERY_THR)
 			{
 			    available_robots.push_back(*msg);
-			    rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+			    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 			    if(tasks_to_assign.size()>0)
 			    {
 				publishMasterIn();
@@ -554,7 +564,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			else
 			{
 			    robots_in_recharge.push_back(*msg);
-			    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+			    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 			    if(recharge_points.size()>0)
 			    {
 				publishMasterIn();
@@ -577,7 +587,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			// verifica sull'errore tra tempi di esecuzione				
 			else
 			{				
-			    rt_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 1);
+			    CalcTex(rt_info_vect, robots_in_execution, tasks_in_execution, Mappa, 1);
 			    
 			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
 			    tex0 = i_rob.t_ex0;
@@ -609,7 +619,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
 			
 			available_robots.push_back(*msg);
-			rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+			CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 			if(tasks_to_assign.size()>0)
 			{
 			    publishMasterIn();
@@ -631,7 +641,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			// verifica sull'errore tra tempi di esecuzione				
 			else
 			{				
-			    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1);
+			    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 1);
 			    
 			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
 			    tex0 = i_rob.t_ex0;

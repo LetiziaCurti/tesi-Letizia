@@ -322,7 +322,7 @@ void publishTaskToAssign()
     
     for(auto elem : assignment_msg.task_vect)
     {
-	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.id1 << " - " << elem.id2);
+	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " with the couple " << elem.id1 << " - " << elem.id2);
     }
 }
 

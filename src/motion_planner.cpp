@@ -67,16 +67,27 @@ bool new_task(false);
 
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
-vector<task_assign::robot> robots_in_execution;    	//vettore dei robot che stanno eseguendo dei task o che stanno andando a ricaricarsi
-vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot che stanno eseguendo dei task o che stanno andando a ricaricarsi
+vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot disponibili all'assegnazione di punti di ricarica
+vector<task_assign::robot> robots_in_execution;    	//vettore dei robot che stanno eseguendo dei task
+vector<task_assign::robot> robots_in_exec_rech;    	//vettore dei robot che stanno andando a ricaricarsi
+
 vector<task_assign::task> tasks_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dimensione m(k)
 vector<task_assign::task> tasks_in_execution;		//vettore dei task già in esecuzione
 vector<task_assign::task> completed_tasks;		//vettore dei task completati che viene inviato al task_manager
+
 vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
 vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
-vector<task_assign::info> rob_info_vect;
-vector<task_assign::info> rob_info0_vect;
+vector<task_assign::info> rt_info_vect;
+// vector<task_assign::info> rob_info0_vect;
+
 vector<task_assign::info> rech_info_vect;
+// vector<task_assign::info> avail_info_vect;
+// vector<task_assign::info> exec_info_vect;
+
+
+//TODO carica il vettore recharge_points iniziale da un file yaml
+vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica LIBERI presenti nello scenario
+vector<task_assign::task> recharge_points_busy; 
 
 
 
@@ -92,10 +103,6 @@ vector<mappa> GlobMap;   				// la mappa globale è un vettore di strutture mapp
 							// per andare da un robot ad un task, va passata dall'esterno
 
 SmartDigraph Mappa; 
-
-//TODO carica il vettore da un file yaml
-vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
-
 
 
 struct Assign
@@ -316,9 +323,10 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 		time_b = 0.001;
 	    }
 
-	    
+	    // if op=0 carico le info in tex0
 	    if(!op)
 		info.t_ex0 = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
+	    // else carico le info in tex
 	    else
 		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
 	    
@@ -330,9 +338,6 @@ vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task
 }
 
 
-
-void ReAssFunc()
-{}
 
 
 bool reass_task(false);
@@ -364,20 +369,58 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 
 
 
+void publishMasterIn()
+{
+    task_assign::glpk_in msg;
+    
+    msg.reassign = true;
+    msg.rob_to_ass = available_robots;
+    msg.task_to_ass = tasks_to_assign;
+    msg.rob_in_rech = robots_in_recharge;
+    msg.rob_info = rt_info_vect;
+    msg.rech_rob_info = rech_info_vect;
+    
+    
+    // Wait for the publisher to connect to subscribers
+    sleep(1.0);
+    reass_pub.publish(msg);
+    
+//     for(auto elem : vect_msg.task_vect)
+//     {
+// 	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.id1 << " - " << elem.id2);
+//     }
+
+}
+
+
+
+void ReAssFunc()
+{
+  rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+  rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+  
+  publishMasterIn();
+}
+
+
+
 // Legge "status_rob_topic" 
 void StatusCallback(const task_assign::robot::ConstPtr& msg)
 {    
     bool in_charge(false);
     bool in_execution(false);
     bool available(false);
+    bool avail_rech(false);
     bool completed(false);
     
     if(msg->status)
     {	
+	// vedo se il robot è già in uno dei vettori
 	for(auto elem : available_robots)
 	{
 	    if(elem.name == msg->name)
 	    {
+		// il robot è già in available_robots
 		available = true;
 		break;
 	    }
@@ -385,22 +428,38 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	
 	if(!available)
 	{
+	    // vedo se il robot è già in uno dei vettori
+	    for(auto elem : robots_in_recharge)
+	    {
+		if(elem.name == msg->name)
+		{
+		    // il robot è già in available_robots
+		    avail_rech = true;
+		    break;
+		}
+	    }
+	}
+	
+	if(!available && !avail_rech)
+	{
 	    for(auto elem : robots_in_execution)
 	    {
 		if(elem.name == msg->name)
 		{
+		    // il robot è già in robots_in_execution
 		    in_execution = true;
 		    break;
 		}
 	    }
 	}
 	
-	if(!available && !in_execution)
+	if(!available && !avail_rech && !in_execution)
 	{
-	    for(auto elem : robots_in_recharge)
+	    for(auto elem : robots_in_exec_rech)
 	    {
 		if(elem.name == msg->name)
 		{
+		    // il robot è già in robots_in_recharge
 		    in_charge = true;
 		    break;
 		}
@@ -408,23 +467,33 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	}
 	
    
-	if(!available && !in_execution && !in_charge && msg->b_level > BATTERY_THR)
+	if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level > BATTERY_THR)
 	{
 	    available_robots.push_back(*msg);
+	    rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
 	}
 	
-	else if(!available && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
+	else if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
 	{
 	    robots_in_recharge.push_back(*msg);
+	    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
 	}
 	
 	else if(available)
-	{
+	{	    	    
 	    if(msg->b_level <= BATTERY_THR)
 	    {
 		    robots_in_recharge.push_back(*msg);
+		    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
 		    available_robots = deleteRob(msg->name, available_robots);
 	    }
+	    else
+		rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);	      
+	}
+	
+	else if(avail_rech)
+	{	    	    
+	   rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);      
 	}
 	
 	else if(in_execution)
@@ -443,39 +512,55 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
 			
 			if(msg->b_level > BATTERY_THR)
+			{
 			    available_robots.push_back(*msg);
+			    rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+			}
 			else
+			{
 			    robots_in_recharge.push_back(*msg);
-			
-			completed = true;
-			break;
+			    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+			}
 		    }
-
-		
-		    // il robot sta eseguendo il task e non ha ancora finito
-		    if(!completed)
-		    {
+		    // se il robot sta eseguendo il task e non ha ancora finito
+		    else
+		    {	    
+			// verifica sul livello di batteria
 			if(msg->b_level <= BATTERY_THR)
 			{
-			    // se manca "poco" al task (distanza inferiore ad una certa soglia), ce lo faccio arrivare e poi 
+			    // se la distanza dal task è inferiore alla soglia SEC_DIST, ce lo faccio arrivare e poi 
 			    // lo manderò in carica
 			    // (quindi non faccio nulla)
 			  
-			    // altrimenti mando subito il robot in carica e rimetto il task tra i task da assegnare  
-			    //TODO se il robot sta arrivando alla seconda parte del task e è scarico, 
-			    // intervieni con il modulo di salvataggio
-			    if(getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
+			    // se sono lontana da taska e non ho ancora eseguito taska
+			    if(!msg->taska && getDistance(msg->x, msg->y, ass.task.x1, ass.task.y1) > SEC_DIST)
 			    {
 				robots_in_execution = deleteRob(msg->name, robots_in_execution);
 				robots_in_recharge.push_back(*msg);
 				tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 				tasks_to_assign.push_back(ass.task);
 				Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
-			    }    
+				
+				ReAssFunc();
+			    }
+			    // se ho eseguito taska e ora sono lontana sia da taska sia da taskb
+			    // TODO intervieni con il modulo di salvataggio 
+			    else if(msg->taska && getDistance(msg->x, msg->y, ass.task.x1, ass.task.y1) > SEC_DIST && getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
+			    {
+// 				robots_in_execution = deleteRob(msg->name, robots_in_execution);
+// 				robots_in_recharge.push_back(*msg);
+// 				tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+// 				tasks_to_assign.push_back(ass.task);
+// 				Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
+			    } 
 			}
+			
+			// verifica sull'errore tra tempi di esecuzione					
+			rt_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 1);
 		    }
+		    
+		    break;		    
 		}
-		break;
 	    }
 	}
 	
@@ -487,6 +572,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
 		available_robots.push_back(*msg);
 	    }
+	    else
+		rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1); 
 	}
     }
     // TODO se status è false il robot è rotto --> attiva modulo di salvataggio
@@ -494,11 +581,11 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 //     {}
     
     //vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-    rob_info0_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
-    rob_info_vect = CalcTex(robots_in_execution, tasks_to_assign, Mappa, 1);
+//     rob_info0_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+//     rob_info_vect = CalcTex(robots_in_execution, tasks_to_assign, Mappa, 1);
     
     // vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i punti ri ricarica
-    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1); 
+//     rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1); 
 }
 
 
@@ -656,6 +743,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		
 		robots_in_execution.push_back(rt.robot);
 		available_robots = deleteRob(rt.robot.name, available_robots);
+// 		exec_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 0);
 		
 		tasks_in_execution.push_back(rt.task);
 		tasks_to_assign = deleteTask(rt.task.name, tasks_to_assign);
@@ -703,6 +791,13 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    {
 		new_in_rech = true;
 		
+		robots_in_exec_rech.push_back(rt.robot);
+		robots_in_recharge = deleteRob(rt.robot.name, robots_in_recharge);
+// 		exec_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 0);
+		
+		recharge_points_busy.push_back(rt.task);
+		recharge_points = deleteTask(rt.task.name, tasks_to_assign);
+		
 // 		ass = MapToCatal(GlobMap, rt, 0);
 		ass = MinPath(Mappa, rt);
 		robRech_vect.push_back(ass.path_tot);
@@ -715,36 +810,6 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	}
     }
 }
-
-
-
-
-void publishMasterIn()
-{
-    task_assign::glpk_in msg;
-    
-    msg.reassign = true;
-    msg.rob_to_ass = available_robots;
-    msg.task_to_ass = tasks_to_assign;
-    msg.rob_in_rech = robots_in_recharge;
-    msg.rob_info = rob_info_vect;
-    msg.rech_rob_info = rech_info_vect;
-    
-    
-    // Wait for the publisher to connect to subscribers
-    sleep(1.0);
-    reass_pub.publish(msg);
-    
-//     for(auto elem : vect_msg.task_vect)
-//     {
-// 	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.id1 << " - " << elem.id2);
-//     }
-
-}
-
-
-
-
 
 
 

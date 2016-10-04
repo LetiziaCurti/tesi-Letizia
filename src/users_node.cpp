@@ -144,13 +144,15 @@ int main(int argc, char **argv)
     double current_at;
     current_at = map_task.begin()->first;
     
-    
     while(ros::ok())
     {
 	for(map<double, task_assign::task>::iterator it=map_task.begin(); it!=map_task.end(); ++it)
 	{
 	    if(it->first == current_at)
+	    {
 		new_task_vect.push_back(it->second);
+		map_task.erase(it);
+	    }
 	    else
 	    {
 		// pubblico tutti i task con lo stesso tempo di arrivo
@@ -160,9 +162,9 @@ int main(int argc, char **argv)
 		
 		current_at = it->first;
 		new_task_vect.push_back(it->second);
+		map_task.erase(it);
 	    }  
 	}
-	
 
 	ros::spinOnce();
 	rate.sleep();

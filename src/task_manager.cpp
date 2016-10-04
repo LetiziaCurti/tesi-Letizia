@@ -170,30 +170,36 @@ void broadcastPose(task_assign::waypoint posa, std::string name, int id_marker)
 // Legge "task_arrival_topic" e mette i nuovi task nel vettore new_task
 void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 {
-    bool add_task(true);
+//     bool add_task(true);
     task_assign::waypoint pos;
-    
+
     for(auto elem : msg->task_vect)
     {
-	// vedo se elem sta già in new_task
-	for(auto newel : new_task)
-	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-		add_task = false;
-	}
-	
-	if(add_task)
-	{
-	    // vedo se elem sta già in executed_task
-	    for(auto newel : executed_task)
-	    {
-		if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-		    add_task = false;
-	    }
-	}
-	
-	if(add_task)
-	{
+// 	// vedo se elem sta già in new_task
+// 	for(auto newel : new_task)
+// 	{
+// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+// 	    {
+// 		add_task = false;
+// 		break;
+// 	    }
+// 	}
+// 	
+// 	if(add_task)
+// 	{
+// 	    // vedo se elem sta già in executed_task
+// 	    for(auto newel : executed_task)
+// 	    {
+// 		if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+// 		{
+// 		    add_task = false;
+// 		    break;
+// 		}
+// 	    }
+// 	}
+// 	
+// 	if(add_task)
+// 	{
 	    new_task.push_back(elem);
 	    
 	    pos.x = elem.x1;
@@ -205,9 +211,9 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 	    pos.y = elem.y2;
 	    pos.theta = elem.theta2;
 	    publishMarker(pos, elem.id2);
-	}
-	
-	add_task = true;
+// 	}
+// 	
+// 	add_task = true;
     }
 }
 
@@ -216,20 +222,23 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 // Legge "task_exec_topic" e mette i nuovi task nel vettore exec_task
 void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 {   
-    bool add_task(true);
+//     bool add_task(true);
     task_assign::waypoint pos;
     
     for(auto elem : msg->task_vect)
     {
-	// vedo se elem sta già in executed_task
-	for(auto newel : executed_task)
-	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-		add_task = false;
-	}
-	
-	if(add_task)
-	{
+// 	// vedo se elem sta già in executed_task
+// 	for(auto newel : executed_task)
+// 	{
+// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+// 	    {
+// 		add_task = false;
+// 		break;
+// 	    }
+// 	}
+// 	
+// 	if(add_task)
+// 	{
 	   executed_task.push_back(elem);
 	   
 // 	   pos.x = elem.x1;
@@ -241,9 +250,9 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 	   pos.y = elem.y2;
 	   pos.theta = elem.theta2;
 	   deleteMarker(pos, elem.id2);
-	}
-	
-	add_task = true;
+// 	}
+// 	
+// 	add_task = true;
     }
 }
 
@@ -253,14 +262,17 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 void taskManagement()
 {
     bool add_task(true);
-    
+    // metto i nuovi task in task_to_assign
     for(auto elem : new_task)
     {
 	// vedo se elem sta già in task_to_assign
 	for(auto newel : task_to_assign)
 	{
 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+	    {
 		add_task = false;
+		break;
+	    }
 	}
 	
 	if(add_task)
@@ -268,7 +280,7 @@ void taskManagement()
 	
 	add_task = true;
     }
-    
+    // tolgo i task eseguiti da task_to_assign
     bool erase_task(false);
     for(auto elem : executed_task)
     {
@@ -292,7 +304,7 @@ void taskManagement()
 	erase_task = false;
     }
   
-    dim_n = task_to_assign.size();
+//     dim_n = task_to_assign.size();
 }
 
 
@@ -342,10 +354,16 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
+	while (new_task.size()==0 && executed_task.size()==0 && ros::ok()) 
+	{
+	    ros::spinOnce();
+	    rate.sleep();
+	}
+	// se c'è o un nuovo task o un task eseguito o entrambi    
 	taskManagement();
-	
-	if(dim_n > 0)
-	    publishTaskToAssign();
+	publishTaskToAssign();
+	new_task.clear();
+	executed_task.clear();
 	
 	ros::spinOnce();
 	rate.sleep();

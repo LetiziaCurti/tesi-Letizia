@@ -394,15 +394,37 @@ void publishMasterIn()
 
 
 
-void ReAssFunc()
+void ReAssFunc(task_assign::robot msg, Assign ass)
 {
-  rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
-  rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
-  
-  publishMasterIn();
+    // se sono lontana da taska e non ho ancora eseguito taska
+    if(!msg.taska && getDistance(msg.x, msg.y, ass.task.x1, ass.task.y1) > SEC_DIST)
+    {
+	robots_in_execution = deleteRob(msg.name, robots_in_execution);
+	robots_in_recharge.push_back(msg);
+	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+	tasks_to_assign.push_back(ass.task);
+	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
+	
+	rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+	rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+	
+	publishMasterIn();
+    }
+    // se ho eseguito taska e ora sono lontana sia da taska sia da taskb
+    // TODO intervieni con il modulo di salvataggio 
+    else if(msg.taska && getDistance(msg.x, msg.y, ass.task.x2, ass.task.y2) > SEC_DIST)
+    {
+// 	robots_in_execution = deleteRob(msg->name, robots_in_execution);
+// 	robots_in_recharge.push_back(*msg);
+// 	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+// 	tasks_to_assign.push_back(ass.task);
+// 	Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
+    } 			 
 }
 
 
+double tex0, tex;
+task_assign::info i_rob;
 
 // Legge "status_rob_topic" 
 void StatusCallback(const task_assign::robot::ConstPtr& msg)
@@ -411,7 +433,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
     bool in_execution(false);
     bool available(false);
     bool avail_rech(false);
-    bool completed(false);
     
     if(msg->status)
     {	
@@ -532,31 +553,23 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    // lo manderò in carica
 			    // (quindi non faccio nulla)
 			  
-			    // se sono lontana da taska e non ho ancora eseguito taska
-			    if(!msg->taska && getDistance(msg->x, msg->y, ass.task.x1, ass.task.y1) > SEC_DIST)
-			    {
-				robots_in_execution = deleteRob(msg->name, robots_in_execution);
-				robots_in_recharge.push_back(*msg);
-				tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
-				tasks_to_assign.push_back(ass.task);
-				Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
-				
-				ReAssFunc();
-			    }
-			    // se ho eseguito taska e ora sono lontana sia da taska sia da taskb
-			    // TODO intervieni con il modulo di salvataggio 
-			    else if(msg->taska && getDistance(msg->x, msg->y, ass.task.x1, ass.task.y1) > SEC_DIST && getDistance(msg->x, msg->y, ass.task.x2, ass.task.y2) > SEC_DIST)
-			    {
-// 				robots_in_execution = deleteRob(msg->name, robots_in_execution);
-// 				robots_in_recharge.push_back(*msg);
-// 				tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
-// 				tasks_to_assign.push_back(ass.task);
-// 				Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
-			    } 
+			    //altrimenti faccio reassignment
+			    ReAssFunc(*msg,ass);
 			}
-			
-			// verifica sull'errore tra tempi di esecuzione					
-			rt_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 1);
+			// verifica sull'errore tra tempi di esecuzione				
+			else
+			{				
+			    rt_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 1);
+			    
+			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
+			    tex0 = i_rob.t_ex0;
+			    tex = i_rob.t_ex;
+			    
+			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
+			    {
+				ReAssFunc(*msg,ass);
+			    }
+			}
 		    }
 		    
 		    break;		    

@@ -39,7 +39,7 @@ int dim_n(0);
 
 
 
-
+// i task sono cilindri azzurri
 void publishMarker(task_assign::waypoint p, int id_marker)
 {
     visualization_msgs::Marker marker;
@@ -53,7 +53,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     marker.id = id_marker;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.type = visualization_msgs::Marker::CYLINDER;
 
     // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
     marker.action = visualization_msgs::Marker::ADD;
@@ -73,9 +73,9 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 1.0f;
-    marker.color.g = 0.0f;
-    marker.color.b = 0.0f;
+    marker.color.r = 0.5f;
+    marker.color.g = 1.0f;
+    marker.color.b = 0.8f;
     marker.color.a = 0.7;
 
     marker.lifetime = ros::Duration();
@@ -108,7 +108,7 @@ void deleteMarker(task_assign::waypoint task_pose, int id_marker)
     marker.id = id_marker;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-    marker.type = visualization_msgs::Marker::CUBE;
+    marker.type = visualization_msgs::Marker::CYLINDER;
 
     // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
     marker.action = visualization_msgs::Marker::DELETE;
@@ -128,9 +128,9 @@ void deleteMarker(task_assign::waypoint task_pose, int id_marker)
     marker.scale.z = 1.0;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 1.0f;
+    marker.color.r = 0.5f;
     marker.color.g = 1.0f;
-    marker.color.b = 0.0f;
+    marker.color.b = 0.8f;
     marker.color.a = 0.7;
 
     marker.lifetime = ros::Duration();
@@ -180,6 +180,16 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 	{
 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 		add_task = false;
+	}
+	
+	if(add_task)
+	{
+	    // vedo se elem sta già in executed_task
+	    for(auto newel : executed_task)
+	    {
+		if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+		    add_task = false;
+	    }
 	}
 	
 	if(add_task)

@@ -44,26 +44,23 @@ public:
     std::string robot_name;
     int id_marker;
     task_assign::waypoint turtlesim_pose;
-    double b_level0;
-    double b_level;
+    double b_level0, b_level;
 
     ros::Subscriber assignment_sub;
     ros::Subscriber recharge_sub;
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
     
-    task_assign::waypoint taska_pose;
-    task_assign::waypoint taskb_pose;
+    task_assign::waypoint taska_pose, taskb_pose;
 
     bool assignment = false;
     bool in_recharge = false;
     string task_name;
-    int taska_id_marker;
-    int taskb_id_marker;
-    double wait_a;
-    double wait_b;
-    vector<task_assign::waypoint> path_a;
-    vector<task_assign::waypoint> path_b;
+    int taska_id_marker, taskb_id_marker;
+    double wait_a, wait_b;
+    vector<task_assign::waypoint> path_a, path_b;
+    
+    bool taska, taskb;
     
 
     Robot(ros::NodeHandle& node, string name, int id, task_assign::waypoint pos, double b_l0) 
@@ -73,6 +70,9 @@ public:
 	
 	b_level0 = b_l0;
 	b_level = b_l0;
+	
+	taska = false;
+	taskb = false;
 	
 	turtlesim_pose.x = pos.x;
 	turtlesim_pose.y = pos.y;
@@ -225,6 +225,8 @@ public:
 	status_msg.status = true;
 	status_msg.b_level0 = b_level0;
 	status_msg.b_level = b_level;
+	status_msg.taska = taska;
+	status_msg.taskb = taskb;
 	
 	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
 	{
@@ -416,6 +418,7 @@ int main(int argc, char **argv)
 	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a*0.1;
+	    robot.taska = true;
 	    robot.publishStatus(); 
 	    robot.deleteMarker(robot.taska_pose, robot.taska_id_marker);
 
@@ -426,6 +429,7 @@ int main(int argc, char **argv)
 	    }
 	    sleep(robot.wait_b);
 	    robot.b_level -= robot.wait_b*0.1;
+	    robot.taskb = true;
 	    robot.publishStatus(); 
 // 	    robot.deleteMarker(robot.taskb_pose, robot.taskb_id_marker);
  

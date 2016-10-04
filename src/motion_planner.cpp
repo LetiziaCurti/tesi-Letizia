@@ -546,11 +546,19 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			{
 			    available_robots.push_back(*msg);
 			    rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+			    if(tasks_to_assign.size()>0)
+			    {
+				publishMasterIn();
+			    }
 			}
 			else
 			{
 			    robots_in_recharge.push_back(*msg);
 			    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 0);
+			    if(recharge_points.size()>0)
+			    {
+				publishMasterIn();
+			    }			    
 			}
 		    }
 		    // se il robot sta eseguendo il task e non ha ancora finito
@@ -588,15 +596,57 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	}
 	
 	else if(in_charge)
-	{
-	    if(msg->b_level == msg->b_level0)
+	{	    
+	    // cerco il p.to di ric. corrispondente al robot
+	    for(auto ass : Catalogo_Rech)
 	    {
-		robots_in_recharge = deleteRob(msg->name, robots_in_recharge);
-		Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
-		available_robots.push_back(*msg);
+		if(msg->name == ass.rob.name)
+		{
+		    // vedo se il robot si è ricaricato
+		    if(msg->b_level == msg->b_level0)
+		    {
+			robots_in_recharge = deleteRob(msg->name, robots_in_recharge);
+			Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
+			
+			available_robots.push_back(*msg);
+			rt_info_vect = CalcTex(available_robots, tasks_to_assign, Mappa, 0);
+			if(tasks_to_assign.size()>0)
+			{
+			    publishMasterIn();
+			}
+		    }
+		    // se il robot sta andando nel punto di ricarica e non ha batteria, faccio reassignment
+		    else if(!msg->taska)
+		    {	    
+			// verifica sul livello di batteria
+			if(msg->b_level <= BATTERY_THR)
+			{
+			    // se la distanza dal task è inferiore alla soglia SEC_DIST, ce lo faccio arrivare e poi 
+			    // lo manderò in carica
+			    // (quindi non faccio nulla)
+			  
+			    //altrimenti faccio reassignment
+			    ReAssFunc(*msg,ass);
+			}
+			// verifica sull'errore tra tempi di esecuzione				
+			else
+			{				
+			    rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1);
+			    
+			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
+			    tex0 = i_rob.t_ex0;
+			    tex = i_rob.t_ex;
+			    
+			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
+			    {
+				ReAssFunc(*msg,ass);
+			    }
+			}
+		    }
+		    
+		    break;		    
+		}
 	    }
-	    else
-		rech_info_vect = CalcTex(robots_in_recharge, recharge_points, Mappa, 1); 
 	}
     }
     // se il robot è rotto
@@ -761,7 +811,6 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		
 		robots_in_execution.push_back(rt.robot);
 		available_robots = deleteRob(rt.robot.name, available_robots);
-// 		exec_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 0);
 		
 		tasks_in_execution.push_back(rt.task);
 		tasks_to_assign = deleteTask(rt.task.name, tasks_to_assign);
@@ -811,7 +860,6 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 		
 		robots_in_exec_rech.push_back(rt.robot);
 		robots_in_recharge = deleteRob(rt.robot.name, robots_in_recharge);
-// 		exec_info_vect = CalcTex(robots_in_execution, tasks_in_execution, Mappa, 0);
 		
 		recharge_points_busy.push_back(rt.task);
 		recharge_points = deleteTask(rt.task.name, tasks_to_assign);

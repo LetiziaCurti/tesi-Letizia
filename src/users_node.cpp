@@ -151,10 +151,13 @@ int main(int argc, char **argv)
 	    new_task_vect.push_back(it->second);
 	else
 	{
+	    // pubblico tutti i task con lo stesso tempo di arrivo
 	    sleep(current_at);
 	    publishVectTask();
+	    new_task_vect.clear();	    
 	    
 	    current_at = it->first;
+	    new_task_vect.push_back(it->second);
 	}  
 	
 	++it;

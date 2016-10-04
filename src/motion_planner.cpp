@@ -119,6 +119,16 @@ vector<Assign> Catalogo_Rech;				//struttura che tiene in memoria tutti gli assi
 
 
 
+//TODO obstacle_node manda al motion planner gli id dei nodi che sono diventati ostacoli --> in corrispondenza
+//dei "nodi ostacolo", vanno settati i pesi degli archi incidenti ad un numero elevatissimo
+
+// Legge "obstacles_topic" 
+void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
+{
+
+}
+
+
 
 // Function che elimina il robot con il nome passato in argomento dal vettore di robot passato in argomento
 vector<task_assign::robot> deleteRob(string name, vector<task_assign::robot> vect)
@@ -349,10 +359,6 @@ void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> rob
 
 
 
-
-bool reass_task(false);
-
-
 // Legge su "new_task_topic" il vettore dei task da eseguire T
 void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 {
@@ -368,13 +374,23 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	
 	if(new_task)
-	{
 	    tasks_to_assign.push_back(elem);
-	    reass_task = true;
-	}
 	
 	new_task = true;
     }
+}
+
+
+
+// Pubblica al task manager i task completati su "task_exec_topic"
+void publishExecTask()
+{
+    task_assign::vect_task msg;
+    
+    msg.task_vect = completed_tasks;
+    
+    sleep(1);
+    exec_task_pub.publish(msg);
 }
 
 
@@ -548,6 +564,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    if(msg->x == ass.task.x2 && msg->y == ass.task.y2)
 		    {
 			completed_tasks.push_back(ass.task);
+			publishExecTask();
 			tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 			robots_in_execution = deleteRob(msg->name, robots_in_execution);
 			Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
@@ -903,19 +920,6 @@ void publishAssign()
 
 
 
-// Pubblica al task manager i task completati su "task_exec_topic"
-void publishExecTask()
-{
-    task_assign::vect_task msg;
-    
-    msg.task_vect = completed_tasks;
-    
-    sleep(1);
-    exec_task_pub.publish(msg);
-}
-
-
-
 // Pubblica ai robot che devono andare in carica il loro punto di ricarica
 void publishRecharge()
 {
@@ -925,17 +929,6 @@ void publishRecharge()
     
     sleep(1);
     recharge_pub.publish(msg);
-}
-
-
-
-//TODO obstacle_node manda al motion planner gli id dei nodi che sono diventati ostacoli --> in corrispondenza
-//dei "nodi ostacolo", vanno settati i pesi degli archi incidenti ad un numero elevatissimo
-
-// Legge "obstacles_topic" 
-void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
-{
-
 }
 
 
@@ -1075,52 +1068,25 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
-// 	while(!new_assign && ros::ok())
-// 	{
-// 	    if(available_robots.size() > 0 && tasks_to_assign.size() > 0)
-// 	    {
-// 		publishTaskToAssign();
-// 		publishRobotToAssign();
-// 		publishRobotInfo();
-// 	    }
-// 	    
-// 	    if(completed_tasks.size() > 0)
-// 		publishExecTask();
-// 	    
-// 	    if(robots_in_recharge.size() > 0)
-// 		publishRecharge();	  
-// 	}
-//       
-// 	if(new_assign && ros::ok())
-// 	{
-// 	    publishAssign();
-// 	    
-// 	    if(completed_tasks.size() > 0)
-// 		publishExecTask();
-// 	    
-// 	    if(robots_in_recharge.size() > 0)
-// 		publishRecharge();
-// 	    
-// 	    new_assign = false;
-// 	}
-// 	
-// 	
-// 	if(available_robots.size() > 0 && tasks_to_assign.size() > 0)
-// 	{
-// 	    publishTaskToAssign();
-// 	    publishRobotToAssign();
-// 	    publishRobotInfo();
-// 	}
-// 	
-// 	if(completed_tasks.size() > 0)
-// 	    publishExecTask();
-// 	
-// 	if(robots_in_recharge.size() > 0)
-// 	    publishRecharge();
-// 	    
-// 
-// 	ros::spinOnce();
-// 	rate.sleep();
+	while(!new_assign && !new_in_rech && ros::ok())
+	{
+	    ros::spinOnce();
+	    rate.sleep();	  
+	}
+      
+	if(new_assign && ros::ok())
+	{
+	    publishAssign();
+	    new_assign = false;
+	}
+	if(new_in_rech && ros::ok())
+	{
+	    publishRecharge();
+	    new_in_rech = false;
+	}	    
+
+	ros::spinOnce();
+	rate.sleep();
     }		
 
 

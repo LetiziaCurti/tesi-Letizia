@@ -144,23 +144,26 @@ int main(int argc, char **argv)
     double current_at;
     current_at = map_task.begin()->first;
     
-    map<double, task_assign::task>::iterator it=map_task.begin();
-    while(it!=map_task.end() && ros::ok())
+    
+    while(ros::ok())
     {
-	if(it->first == current_at)
-	    new_task_vect.push_back(it->second);
-	else
+	for(map<double, task_assign::task>::iterator it=map_task.begin(); it!=map_task.end(); ++it)
 	{
-	    // pubblico tutti i task con lo stesso tempo di arrivo
-	    sleep(current_at);
-	    publishVectTask();
-	    new_task_vect.clear();	    
-	    
-	    current_at = it->first;
-	    new_task_vect.push_back(it->second);
-	}  
+	    if(it->first == current_at)
+		new_task_vect.push_back(it->second);
+	    else
+	    {
+		// pubblico tutti i task con lo stesso tempo di arrivo
+		sleep(current_at);
+		publishVectTask();
+		new_task_vect.clear();	    
+		
+		current_at = it->first;
+		new_task_vect.push_back(it->second);
+	    }  
+	}
 	
-	++it;
+
 	ros::spinOnce();
 	rate.sleep();
     }

@@ -175,19 +175,19 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 		{
 		    t_ex_0 = ex0.t_ex;
 		    P += 1/t_ex_0;
-		    C -= t_ex_0;
+// 		    C -= t_ex_0;
 		}
 		break;
 	    }
-	    for(auto ex : ex_t)
-	    {
-		if(task.name == ex.t_name && robot.name == ex.r_name)
-		{
-		    t_ex = ex.t_ex;
-		    C += t_ex;
-		}
-		break;
-	    }
+// 	    for(auto ex : ex_t)
+// 	    {
+// 		if(task.name == ex.t_name && robot.name == ex.r_name)
+// 		{
+// 		    t_ex = ex.t_ex;
+// 		    C += t_ex;
+// 		}
+// 		break;
+// 	    }
 	    
 	    U = P-C;
 	    if(U<=0)

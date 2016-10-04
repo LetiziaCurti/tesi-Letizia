@@ -9,3 +9,6 @@ float64 b_level
 float32 x
 float32 y
 float32 theta
+
+bool taska
+bool taskb

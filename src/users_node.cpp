@@ -95,7 +95,7 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.color.r = rgb[0]*0.01f;
     marker.color.g = rgb[1]*0.01f;
     marker.color.b = rgb[2]*0.01f;
-    marker.color.a = 0.7;
+    marker.color.a = 1;
 
     marker.lifetime = ros::Duration();
     
@@ -136,7 +136,7 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.color.r = rgb[0]*0.01f;
     marker.color.g = rgb[1]*0.01f;
     marker.color.b = rgb[2]*0.01f;
-    marker.color.a = 0.7;
+    marker.color.a = 0.2;
 
     marker.lifetime = ros::Duration();
     

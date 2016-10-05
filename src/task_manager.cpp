@@ -356,13 +356,14 @@ int main(int argc, char **argv)
     {
 	while (new_task.size()==0 && executed_task.size()==0 && ros::ok()) 
 	{
+	    publishTaskToAssign();
 	    ROS_INFO_STREAM("no tasks");
 	    ros::spinOnce();
 	    rate.sleep();
 	}
 	// se c'è o un nuovo task o un task eseguito o entrambi    
 	taskManagement();
-	publishTaskToAssign();
+	publishTaskToAssign();	
 	new_task.clear();
 	executed_task.clear();
 	

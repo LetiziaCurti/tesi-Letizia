@@ -58,7 +58,8 @@ public:
     string task_name;
     int taska_id_marker, taskb_id_marker;
     double wait_a, wait_b;
-    vector<task_assign::waypoint> path_a, path_b;
+    vector<task_assign::waypoint> path_a;
+    vector<task_assign::waypoint> path_b;
     
     bool taska, taskb;
     
@@ -129,8 +130,13 @@ public:
 		    wp = path_b.back();
 		    taskb_pose.x = wp.x;
 		    taskb_pose.y = wp.y;
-		    taskb_pose.theta = wp.wait;
+		    taskb_pose.theta = wp.theta;
 		    wait_b = wp.wait;
+		    
+		    for(auto wp : path_a)
+		    {
+			ROS_INFO_STREAM("coordinate dei wp per taska: "<< wp.x <<" - " << wp.y);
+		    }
 		    		    
 		    break;		  
 		}
@@ -169,10 +175,8 @@ public:
 		    taska_pose.theta = wp.theta;
 		    wait_a = wp.wait;
 		    
-		    
-// 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
+		    break;
 		}
-		break;
 	    }   
 	}
     }
@@ -181,30 +185,32 @@ public:
     
     // Function for bringing the robot in the position of the task to accomplish and then in the position of
     // the exit
-    void moveToWP(task_assign::waypoint goal_pose, double distance_tolerance)
+    void moveToWP(vector <task_assign::waypoint> wps, double distance_tolerance)
     {
 	double vel_x;
 	double vel_z;
-	double time = 0.1;
+	double time = 0.4;
 	
-	
-	ros::Rate rate(10);
-	do{
-	      publishMarker(turtlesim_pose);
-	      broadcastPose(turtlesim_pose,robot_name);
-	      
-	      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
-	      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
-	      
-	      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
-	      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
-	      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
-	      
-	      b_level-=0.3;
+	for(auto goal_pose : wps)
+	{
+	    ros::Rate rate(10);
+	    do{
+		  publishMarker(turtlesim_pose);
+		  broadcastPose(turtlesim_pose,robot_name);
+		  
+		  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+		  vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
+		  
+		  turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
+		  turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
+		  turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
+		  
+		  b_level-=0.01;
 
-	      ros::spinOnce();
-	      rate.sleep(); 
-	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
+		  ros::spinOnce();
+		  rate.sleep(); 
+	    }while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
+	}
 	
 // 	deleteMarker(goal_pose, task_id_marker);
 
@@ -409,22 +415,16 @@ int main(int argc, char **argv)
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
 	    
-	    for(auto wp : robot.path_a)
-	    {
-		robot.publishStatus(); 
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
-	    }
+	    robot.publishStatus(); 
+	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a*0.1;
 	    robot.taska = true;
 	    robot.publishStatus(); 
-	    robot.deleteMarker(robot.taska_pose, robot.taska_id_marker);
+// 	    robot.deleteMarker(robot.path_a.back(), robot.taska_id_marker);
 
-	    for(auto wp : robot.path_b)
-	    {
-		robot.publishStatus(); 
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
-	    }
+	    robot.publishStatus(); 
+	    robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
 	    sleep(robot.wait_b);
 	    robot.b_level -= robot.wait_b*0.1;
 	    robot.taskb = true;
@@ -438,12 +438,9 @@ int main(int argc, char **argv)
 	{  
 	    // il robot va a ricaricarsi
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS GOING TO RECHARGE IN  " << robot.task_name);
-	    
-	    for(auto wp : robot.path_a)
-	    {
-		robot.publishStatus(); 
-		robot.moveToWP(wp, DISTANCE_TOLERANCE);
-	    }
+
+	    robot.publishStatus(); 
+	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
 	    
 	    sleep(RECHARGE_DURATION);
 	    robot.b_level = b_level0;

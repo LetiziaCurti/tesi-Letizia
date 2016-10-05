@@ -235,9 +235,7 @@ void CreateNewTask()
 	    }
 	}
 	
-	map_task[newTask.ar_time] = newTask;
-	
-// 	new_task_vect.push_back(newTask);
+	map_task[newTask.ar_time] = newTask;	
     }
 }
 
@@ -302,7 +300,7 @@ int main(int argc, char **argv)
     // carico i task dal file yaml e li metto nella mappa map_task, in cui vengono ordinati dal primo che arriva all'ultimo
     CreateNewTask();
     
-//     markers.clear();
+    vector<float> rgb;
     vector<task_assign::task> perm;
     ros::Rate rate(10);
     double prec_at(0.0);
@@ -346,14 +344,16 @@ int main(int argc, char **argv)
 	    i--;
 	}
 	
-	vector<float> rgb = gen3rand();
+	rgb = gen3rand();
 	MyMarker mark;
 	for(auto elem : perm)
 	{
-	    mark.task = elem;
-	    mark.rgb = rgb;
-	    markers.push_back(mark);
-	  
+	    if(ros::ok())
+	    {
+		mark.task = elem;
+		mark.rgb = rgb;
+		markers.push_back(mark);
+	    }	  
 	}
 	perm.clear();
 	    
@@ -368,80 +368,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-
-//     // aggiungo il task1
-//     newTask.ar_time = 5;
-//     newTask.name = "task1";
-//     newTask.name1 = "taska";
-//     newTask.id1 = 1;
-//     newTask.status1 = true;
-//     newTask.wait1 = 3;
-//     newTask.x1 = 7;
-//     newTask.y1 = 8.5;
-//     newTask.theta1 = -1.5;
-//     newTask.name2 = "taskb";
-//     newTask.id2 = 3;
-//     newTask.status2 = true;
-//     newTask.wait2 = 5;
-//     newTask.x2 = 16;
-//     newTask.y2 = 15;
-//     newTask.theta2 = -1.5; 
-//     new_task_vect.push_back(newTask);
-//     
-//     // aggiungo il task2
-//     newTask.ar_time = 10;
-//     newTask.name = "task2";
-//     newTask.name1 = "taskc";
-//     newTask.id1 = 4;
-//     newTask.status1 = true;
-//     newTask.wait1 = 3;
-//     newTask.x1 = 5.5;
-//     newTask.y1 = 5.5;
-//     newTask.theta1 = -1.5;
-//     newTask.name2 = "taskd";
-//     newTask.id2 = 2;
-//     newTask.status2 = true;
-//     newTask.wait2 = 10;
-//     newTask.x2 = 2;
-//     newTask.y2 = 19;
-//     newTask.theta2 = -1.5; 
-//     new_task_vect.push_back(newTask);
-//     
-//     // aggiungo il task3
-//     newTask.ar_time = 15;
-//     newTask.name = "task3";
-//     newTask.name1 = "taske";
-//     newTask.id1 = 5;
-//     newTask.status1 = true;
-//     newTask.wait1 = 3;
-//     newTask.x1 = 18;
-//     newTask.y1 = 10;
-//     newTask.theta1 = -1.5;
-//     newTask.name2 = "taskf";
-//     newTask.id2 = 6;
-//     newTask.status2 = true;
-//     newTask.wait2 = 15;
-//     newTask.x2 = 1;
-//     newTask.y2 = 1;
-//     newTask.theta2 = -1.5; 
-//     new_task_vect.push_back(newTask);
-//     
-//         // aggiungo il task4
-//     newTask.ar_time = 10;
-//     newTask.name = "task4";
-//     newTask.name1 = "taskg";
-//     newTask.id1 = 7;
-//     newTask.status1 = true;
-//     newTask.wait1 = 20;
-//     newTask.x1 = 18;
-//     newTask.y1 = 3;
-//     newTask.theta1 = -1.5;
-//     newTask.name2 = "taskh";
-//     newTask.id2 = 8;
-//     newTask.status2 = true;
-//     newTask.wait2 = 5;
-//     newTask.x2 = 11;
-//     newTask.y2 = 17;
-//     newTask.theta2 = -1.5; 
-//     new_task_vect.push_back(newTask);

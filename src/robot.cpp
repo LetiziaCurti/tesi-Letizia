@@ -96,6 +96,7 @@ public:
     void AssignCallback(const task_assign::assignment::ConstPtr& msg)
     {
 	task_assign::waypoint wp;
+// 	ROS_INFO_STREAM(robot_name << " I AM LISTENING THE ASSIGNMENT FROM MOTION PLANNER");
 
 	if(assignment) return;
 	
@@ -103,13 +104,13 @@ public:
 	{
 	    //check: deve essere arrivato qualcosa
 	    if(elem.t_name!="" && elem.r_name!="")
-	    {
-// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
-	    
+	    {	    
 		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
 		// altri messaggi finché non ho finito il task
 		if(elem.r_name==robot_name)
 		{
+		    ROS_INFO_STREAM(robot_name << " is listening its assignment from motion_planner");
+		    
 		    assignment = true;
 		    task_name = elem.t_name;
 		    taska_id_marker = elem.id_a;
@@ -130,11 +131,9 @@ public:
 		    taskb_pose.y = wp.y;
 		    taskb_pose.theta = wp.wait;
 		    wait_b = wp.wait;
-		    
-		    
-// 		    ROS_INFO("the pose of %s is: x: %.2f, y: %.2f, theta: %.2f", task_name.c_str(), task_pose.x, task_pose.y, task_pose.theta);
+		    		    
+		    break;		  
 		}
-		break;
 	    }   
 	}
     }
@@ -152,8 +151,7 @@ public:
 	    //check: deve essere arrivato qualcosa
 	    if(elem.t_name!="" && elem.r_name!="")
 	    {
-// 		ROS_INFO_STREAM(robot_name << " is listening " << status_msg->robot_id << " with robot assigned " << status_msg->robot_assign.id);
-	    
+		ROS_INFO_STREAM(robot_name << " is listening its recharge point from motion_planner");	    
 		// se devo andare in ricarica metto in_recharge a true così smetto di ascoltare
 		// altri messaggi finché non ho finito di ricaricarmi
 		if(elem.r_name==robot_name)
@@ -206,7 +204,7 @@ public:
 
 	      ros::spinOnce();
 	      rate.sleep(); 
-	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance);
+	}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
 	
 // 	deleteMarker(goal_pose, task_id_marker);
 
@@ -236,7 +234,7 @@ public:
 	}
 
 	// Wait for the publisher to connect to subscribers
-	sleep(1);
+	sleep(2);
 	status_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
@@ -312,7 +310,7 @@ public:
 	marker.id = t_id;
 
 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-	marker.type = visualization_msgs::Marker::CUBE;
+	marker.type = visualization_msgs::Marker::CYLINDER;
 
 	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
 	marker.action = visualization_msgs::Marker::DELETE;

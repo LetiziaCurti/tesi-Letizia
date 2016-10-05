@@ -19,15 +19,45 @@ ros::Publisher new_task_pub;
 ros::Publisher marker_pub;
 
 vector<task_assign::task> new_task_vect;
-vector<task_assign::task> markers;
 map<double, task_assign::task> map_task;
 
+struct MyMarker
+{
+    task_assign::task task;
+    vector<float> rgb;
+};
+vector<MyMarker> markers;
 
 
+
+
+vector<float> gen3rand()
+{
+    vector<float> rgb;
+    float r,g,b;
+    r = rand()%100 + 1;
+    rgb.push_back(r);
+    
+    g = r;
+    b = g;
+
+    while(g == r)
+    {
+	g = rand()%100 + 1;
+    }
+    rgb.push_back(g);
+    while(b == g)
+    {
+	b = rand()%100 + 1;
+    }
+    rgb.push_back(b);
+    
+    return rgb;
+}
 
 
 // i task sono cilindri viola
-void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id_marker1, int id_marker2)
+void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id_marker1, int id_marker2, vector<float> rgb)
 {
     visualization_msgs::MarkerArray markers_vect;
     
@@ -62,9 +92,9 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 0.5f;
-    marker.color.g = id_marker1*0.01f;
-    marker.color.b = 0.8f;
+    marker.color.r = rgb[0]*0.01f;
+    marker.color.g = rgb[1]*0.01f;
+    marker.color.b = rgb[2]*0.01f;
     marker.color.a = 0.7;
 
     marker.lifetime = ros::Duration();
@@ -103,9 +133,9 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 0.5f;
-    marker.color.g = id_marker1*0.01f;
-    marker.color.b = 0.8f;
+    marker.color.r = rgb[0]*0.01f;
+    marker.color.g = rgb[1]*0.01f;
+    marker.color.b = rgb[2]*0.01f;
     marker.color.a = 0.7;
 
     marker.lifetime = ros::Duration();
@@ -212,20 +242,22 @@ void CreateNewTask()
 }
 
 
-void VectMarker(vector<task_assign::task> markers)
+void VectMarker(vector<MyMarker> markers)
 {
     task_assign::waypoint p1;
     task_assign::waypoint p2;
+    vector<float> colours;
     
     for(auto elem : markers)
     {
-	p1.x = elem.x1;
-	p1.y = elem.y1;
-	p1.theta = elem.theta1;
-	p2.x = elem.x2;
-	p2.y = elem.y2;
-	p2.theta = elem.theta2;
-	publishMarkerPair(p1, p2, elem.id1, elem.id2);
+	p1.x = elem.task.x1;
+	p1.y = elem.task.y1;
+	p1.theta = elem.task.theta1;
+	p2.x = elem.task.x2;
+	p2.y = elem.task.y2;
+	p2.theta = elem.task.theta2;
+	colours = elem.rgb;
+	publishMarkerPair(p1, p2, elem.task.id1, elem.task.id2, colours);
     }
 }
 
@@ -270,7 +302,7 @@ int main(int argc, char **argv)
     // carico i task dal file yaml e li metto nella mappa map_task, in cui vengono ordinati dal primo che arriva all'ultimo
     CreateNewTask();
     
-    markers.clear();
+//     markers.clear();
     vector<task_assign::task> perm;
     ros::Rate rate(10);
     double prec_at(0.0);
@@ -314,9 +346,13 @@ int main(int argc, char **argv)
 	    i--;
 	}
 	
+	vector<float> rgb = gen3rand();
+	MyMarker mark;
 	for(auto elem : perm)
-	{	
-	    markers.push_back(elem);
+	{
+	    mark.task = elem;
+	    mark.rgb = rgb;
+	    markers.push_back(mark);
 	  
 	}
 	perm.clear();

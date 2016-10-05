@@ -606,14 +606,17 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	
 	else if(in_execution)
 	{
+	    ROS_INFO_STREAM("il robot " << msg->name << " è in posizione "<<floor(msg->x+0.5)<<" - "<<floor(msg->y+0.5));
+	    ROS_INFO_STREAM("il robot " << msg->name << " ha livello di batteria "<<msg->b_level);
 	    // cerco il task corrispondente al robot
 	    for(auto ass : Catalogo_Ass)
 	    {
 		if(msg->name == ass.rob.name)
 		{
 		    // vedo se il robot è arrivato al task
-		    if(msg->x == ass.task.x2 && msg->y == ass.task.y2)
+		    if(floor(msg->x+0.5) == ass.task.x2 && floor(msg->y+0.5) == ass.task.y2)
 		    {
+			ROS_INFO_STREAM("il task " << ass.task.name << " è stato completato");
 			completed_tasks.push_back(ass.task);
 			publishExecTask();
 			tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
@@ -762,9 +765,9 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
 {
     Assign ass;   
-    SmartDigraph::ArcMap<double> len(Map);
-    SmartDigraph::NodeMap<float> coord_x(Map);
-    SmartDigraph::NodeMap<float> coord_y(Map);
+//     SmartDigraph::ArcMap<double> len(Map);
+//     SmartDigraph::NodeMap<float> coord_x(Map);
+//     SmartDigraph::NodeMap<float> coord_y(Map);
     SmartDigraph::Node rob;
     SmartDigraph::Node taska;
     SmartDigraph::Node taskb;
@@ -786,7 +789,7 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
     taska = SmartDigraph::nodeFromId(r_t.task.id1);
     taskb = SmartDigraph::nodeFromId(r_t.task.id2);
  
-    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Map,len);
+    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
     
     
 
@@ -823,8 +826,8 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
     }
     else
     {
-	tmp.y = r_t.robot.x;
-	tmp.x = r_t.robot.y;
+	tmp.x = r_t.robot.x;
+	tmp.y = r_t.robot.y;
 	path.push_back(tmp);
     }
 
@@ -866,8 +869,8 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
     // altrimenti taska coincide con taskb, questo significa che il task è un punto di ricarica
     else
     {
-	tmp.y = r_t.task.x1;
-	tmp.x = r_t.task.y1;
+	tmp.x = r_t.task.x1;
+	tmp.y = r_t.task.y1;
 	path.push_back(tmp);
     }
     
@@ -893,7 +896,8 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	for(auto rt : msg->rt_vect)
 	{
 	    ROS_INFO_STREAM("il motion planner ha ricevuto dal master la coppia r-t "<< rt.robot.name << " - " << rt.task.name);
-	    
+	    ROS_INFO_STREAM("il task ha coordinate:	taska "<< rt.task.x1 << " - " << rt.task.y1<<"	taskb: "<< rt.task.x2 << " - " << rt.task.y2);
+		    
 	    //vedo se è già nel catalogo
 	    for(auto elem : Catalogo_Ass)
 	    {
@@ -993,6 +997,10 @@ void publishAssign()
     for(auto elem : msg.assign_vect)
     {
 	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned task " << elem.t_name);
+// 	for(auto wp : elem.path_a)
+// 	{
+// 	  ROS_INFO_STREAM("coordinate dei wp per taska: "<< wp.x <<" - " << wp.y);
+// 	} 
     }
 }
 

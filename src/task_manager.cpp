@@ -227,32 +227,19 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
     
     for(auto elem : msg->task_vect)
     {
-// 	// vedo se elem sta già in executed_task
-// 	for(auto newel : executed_task)
-// 	{
-// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-// 	    {
-// 		add_task = false;
-// 		break;
-// 	    }
-// 	}
-// 	
-// 	if(add_task)
-// 	{
-	   executed_task.push_back(elem);
+      	ROS_INFO_STREAM("The task_manager is listening the executed task: "<< elem.name);
+
+	executed_task.push_back(elem);
 	   
-// 	   pos.x = elem.x1;
-// 	   pos.y = elem.y1;
-// 	   pos.theta = elem.theta1;
-// 	   deleteMarker(pos, elem.id1);
-	   
-	   pos.x = elem.x2;
-	   pos.y = elem.y2;
-	   pos.theta = elem.theta2;
-	   deleteMarker(pos, elem.id2);
-// 	}
-// 	
-// 	add_task = true;
+	pos.x = elem.x1;
+	pos.y = elem.y1;
+	pos.theta = elem.theta1;
+	deleteMarker(pos, elem.id1);
+	
+	pos.x = elem.x2;
+	pos.y = elem.y2;
+	pos.theta = elem.theta2;
+	deleteMarker(pos, elem.id2);
     }
 }
 

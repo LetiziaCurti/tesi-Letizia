@@ -99,6 +99,11 @@ vector<mappa> GlobMap;   				// la mappa globale è un vettore di strutture mapp
 							// per andare da un robot ad un task, va passata dall'esterno
 
 SmartDigraph Mappa; 
+SmartDigraph::NodeMap<float> coord_x(Mappa);
+SmartDigraph::NodeMap<float> coord_y(Mappa);
+SmartDigraph::NodeMap<int> id(Mappa);
+SmartDigraph::NodeMap<dim2::Point<float> > coords(Mappa);
+SmartDigraph::ArcMap<double> len(Mappa);
 
 
 struct Assign
@@ -205,7 +210,7 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
-void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
+vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
 {
     // vettore delle info in uscita
 //     vector<task_assign::info> tex;
@@ -235,18 +240,18 @@ void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> rob
     //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
     //posizioni di robot e task). il percorso consiste in una sequenza di nodi che viene memorizzata in un vettore, che 
     //poi viene ribaltato per avere la sequenza di wp che il robot deve percorrere per arrivare al task0
-    SmartDigraph::ArcMap<double> len(maps);
-    SmartDigraph::NodeMap<float> coord_x(maps);
-    SmartDigraph::NodeMap<float> coord_y(maps);
+//     SmartDigraph::ArcMap<double> len(Mappa);
+//     SmartDigraph::NodeMap<float> coord_x(Mappa);
+//     SmartDigraph::NodeMap<float> coord_y(Mappa);
     vector<task_assign::waypoint> path;
     vector<SmartDigraph::Node> path_node;
     SmartDigraph::Arc arc;
     double time_a(0);
     double time_b(0);
-    double dist(0); 
+ 
     
     
-    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(maps,len);
+    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
     
     for(int i=0; i<robots.size(); i++)
     {
@@ -254,7 +259,7 @@ void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> rob
 	{
 	    info.r_name = robots[i].name;
 	    info.t_name = tasks[j].name;
-	    
+	    double dist(0);
 
 	    // prima parte del task
 	    
@@ -278,16 +283,15 @@ void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> rob
 		reverse(path_node.begin(),path_node.end());
 		
 		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato		
-		for(int i=0; i<path_node.size()-1; i++)
+		for(int k=0; k<path_node.size()-1; k++)
 		{
-		    arc = lemon::findArc(maps,path_node[i],path_node[i+1]);
+		    arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
 		    dist += 1/VELOCITY*len[arc];
-		}
-		
+		}		
 	    }
 	    else
 	    {
-		time_a = 0.001;
+		time_a = 0;
 	    }
 	    
 	    path.clear();
@@ -296,7 +300,7 @@ void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> rob
 	    
 	    
 	    // seconda parte del task
-	    
+	    dist = 0;
 	    dijkstra_test.run(taska_goal_nodes.at(j), taskb_goal_nodes.at(j));
 	    // se il task non coincide col robot
 	    if (dijkstra_test.dist(taskb_goal_nodes.at(j)) > 0)
@@ -317,16 +321,15 @@ void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> rob
 		reverse(path_node.begin(),path_node.end());
 		
 		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
-		for(int i=0; i<path_node.size()-1; i++)
+		for(int k=0; k<path_node.size()-1; k++)
 		{
-		    arc = lemon::findArc(maps,path_node[i],path_node[i+1]);
+		    arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
 		    dist += 1/VELOCITY*len[arc];
-		}
-		
+		}		
 	    }
 	    else
 	    {
-		time_b = 0.001;
+		time_b = 0;
 	    }
 
 	    // if op=0 carico le info in tex0
@@ -336,21 +339,26 @@ void CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> rob
 	    else
 		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
 	    
-	    
+	    bool in = false;
 	    for(auto elem : info_vect)
 	    {
 		if(elem.r_name == robots[i].name && elem.t_name == tasks[j].name)
 		{
 		      elem = info;
+		      in = true;
 		      break;
 		}
 	    }
+	    if(!in)
+		info_vect.push_back(info);
+	    
+	    in = false;
 	    
 // 	    tex.push_back(info);
 	}
     }
     
-//     return tex;
+    return info_vect;
 }
 
 
@@ -469,8 +477,8 @@ void ReAssFunc(task_assign::robot msg, Assign ass)
 	tasks_to_assign.push_back(ass.task);
 	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
 	
-	CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
-	CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+	rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+	rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 	
 // 	publishMasterIn();
 	pub_master_in = true;
@@ -584,16 +592,16 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    if(msg->b_level <= BATTERY_THR)
 	    {
 		    robots_in_recharge.push_back(*msg);
-		    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+		    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 		    available_robots = deleteRob(msg->name, available_robots);
 	    }
 	    else
-		CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);	      
+		rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);	      
 	}
 	
 	else if(avail_rech)
 	{	    	    
-	   CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);      
+	   rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);      
 	}
 	
 	else if(in_execution)
@@ -615,7 +623,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			if(msg->b_level > BATTERY_THR)
 			{
 			    available_robots.push_back(*msg);
-			    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+			    rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 			    if(tasks_to_assign.size()>0)
 			    {
 // 				publishMasterIn();
@@ -625,7 +633,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			else
 			{
 			    robots_in_recharge.push_back(*msg);
-			    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+			    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 			    if(recharge_points.size()>0)
 			    {
 // 				publishMasterIn();
@@ -649,7 +657,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			// verifica sull'errore tra tempi di esecuzione				
 			else
 			{				
-			    CalcTex(rt_info_vect, robots_in_execution, tasks_in_execution, Mappa, 1);
+			    rt_info_vect = CalcTex(rt_info_vect, robots_in_execution, tasks_in_execution, Mappa, 1);
 			    
 			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
 			    tex0 = i_rob.t_ex0;
@@ -681,7 +689,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
 			
 			available_robots.push_back(*msg);
-			CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+			rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 			if(tasks_to_assign.size()>0)
 			{
 // 			    publishMasterIn();
@@ -704,7 +712,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			// verifica sull'errore tra tempi di esecuzione				
 			else
 			{				
-			    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 1);
+			    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 1);
 			    
 			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
 			    tex0 = i_rob.t_ex0;
@@ -725,13 +733,13 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	bool as = false;
 	if(tasks_to_assign.size()>0 && available_robots.size()>0)
 	{
-	    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+	    rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 	    as = true;
 // 	    publishMasterIn();
 	}
 	if(recharge_points.size()>0 && robots_in_recharge.size()>0)
 	{
-	    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+	    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 	    as = true;
 // 	    publishMasterIn();
 	}
@@ -1089,11 +1097,7 @@ int main(int argc, char **argv)
     
     
     // Carica il grafo dal file .lgf, e lo mette nel grafo orientato Mappa (var globale)
-    SmartDigraph::NodeMap<float> coord_x(Mappa);
-    SmartDigraph::NodeMap<float> coord_y(Mappa);
-    SmartDigraph::NodeMap<int> id(Mappa);
-    SmartDigraph::NodeMap<dim2::Point<float> > coords(Mappa);
-    SmartDigraph::ArcMap<double> len(Mappa);
+
 
     try
     {
@@ -1167,268 +1171,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-
-
-// Questo blocco va modificato considerando la mappa in lemon e l'alg. di Dijkstra per calcolare i tex sul grafo
-//-----------------------------------------------------------------------------------------------------------------//
-
-// double CalcPath(vector<pair<double,double>> wpoints)
-// {
-//     double dist(0);
-//     
-//     for(int i=0; i<wpoints.size()-1; i++)
-//     {
-// 	dist += getDistance(wpoints[i].first,wpoints[i].second,wpoints[i+1].first,wpoints[i+1].second);
-//     }
-//     
-//     return dist;
-// }
-// 
-// 
-// 
-// // Function che calcola il path partendo dalla posizione di un robot che non sta tra i wp della mappa
-// // idea: cerca il wp più vicino sulla mappa e somma la distanza fino al wp con il resto del path (dal wp al task)
-// vector<pair<double,double>> CalcDistMap(double rx, double ry, double tx, double ty, vector<mappa> maps)
-// {
-//     double min_dist(1000);
-//     double dist(0.0);
-//     pair<double,double> coord;
-//     coord = make_pair(rx, ry);
-//     mappa min_elem;
-// 
-//     
-//     for(auto elem : maps)
-//     {
-//     	dist = getDistance(rx, ry, elem.start.first, elem.start.second);
-// 	if(dist <= SEC_DIST && tx == elem.end.first && ty == elem.end.second)
-// 	{
-// 	    if(dist < min_dist)
-// 	    {
-// 	    	min_dist = dist;
-// 	    	min_elem.start = elem.start;
-// 	    	min_elem.end = elem.end;
-// 	    	min_elem.wpoints = elem.wpoints;
-// 	    }
-// 	}
-//     }
-//     
-//     min_elem.wpoints.insert(min_elem.wpoints.begin(), coord);
-//     min_elem.start = coord;
-//     GlobMap.push_back(min_elem);
-//     
-//     return min_elem.wpoints;
-// }
-// 
-// 
-// 
-// // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
-// // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
-// vector<task_assign::info> CalcTex(vector<task_assign::robot> robots, vector<task_assign::task> tasks, vector<mappa> maps, int i)
-// {
-//     vector<task_assign::info> tex;
-//     task_assign::info info;
-//     double time_a(0);
-//     double time_b(0);
-//     bool in_map(false);
-//     
-//     // idea 1
-//     for(auto rob : robots)
-//     {
-// 	// vedo se elem sta già in task_to_assign
-// 	for(auto task : tasks)
-// 	{
-// 	    info.r_name = rob.name;
-// 	    info.t_name = task.name;
-// 	    
-// 	    for(auto elem : maps)
-// 	    {
-// 		if(rob.x == elem.start.first && rob.y == elem.start.second && task.x1 == elem.end.first && task.y1 == elem.end.second)
-// 		{
-// 		    in_map = true;
-// 		    time_a = 1/VELOCITY*CalcPath(elem.wpoints);
-// 		    break;
-// 		}
-// 	    }
-// 	    if(!in_map)
-// 	    {
-// 		time_a = 1/VELOCITY*CalcPath(CalcDistMap(rob.x, rob.y, task.x1, task.y1, GlobMap));
-// 	    }
-// 	    in_map = false;
-// 	    
-// 	    for(auto elem : maps)
-// 	    {
-// 		if(task.x1 == elem.start.first && task.y1 == elem.start.second && task.x2 == elem.end.first && task.y2 == elem.end.second)
-// 		{
-// 		    time_b = 1/VELOCITY*CalcPath(elem.wpoints);
-// 		    break;
-// 		}
-// 	    }
-// 	    
-// 	    if(!i)
-// 	    {
-// 		info.t_ex0 = time_a + task.wait1 + time_b + task.wait1;
-// 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
-// 	    }
-// 	    else
-// 		info.t_ex = time_a + task.wait1 + time_b + task.wait1;
-// 	    
-// 	    tex.push_back(info);
-// 	}
-//     }
-//     
-//     return tex;
-// }
-
-
-//-----------------------------------------------------------------------------------------------------------------//
-
-
-// Questo blocco va modificato considerando la mappa in lemon e l'alg. di Dijkstra per calcolare i path sul grafo
-//-----------------------------------------------------------------------------------------------------------------//
-
-// // Function che copia una lista di w.p. dalla mappa globale in una lista di oggetti task_assign/waypoint
-// vector<task_assign::waypoint> CopiaPath(vector<pair<double,double>> wpoints)
-// {
-//     task_assign::waypoint wp;
-//     vector<task_assign::waypoint> path;
-//     
-//     for(auto pair : wpoints)
-//     {
-// 	wp.x = pair.first;
-// 	wp.y = pair.second;
-// 	
-// 	path.push_back(wp);
-//     }
-//     
-//     
-//     return path;
-// }
-// 
-// 
-// 
-// // Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
-// // e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
-// Assign MapToCatal(vector<mappa> Map, task_assign::rt r_t, int i)
-// {
-//     vector<task_assign::waypoint> path;
-//     task_assign::waypoint wp;
-//     Assign ass;
-//     bool in_map(false);
-//   
-//   
-//     ass.rob = r_t.robot;
-//     ass.task = r_t.task;
-//     
-//     ass.path_tot.r_name = r_t.robot.name;
-//     ass.path_tot.t_name = r_t.task.name;
-//     ass.path_tot.id_a = r_t.task.id1;
-//     ass.path_tot.id_b = r_t.task.id2;
-//     
-//     //ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di task_a di r_t
-//     for(auto elem : Map)
-//     {
-// 	if(r_t.robot.x == elem.start.first && r_t.robot.y == elem.start.second && r_t.task.x1 == elem.end.first && r_t.task.y1 == elem.end.second)
-// 	{
-// 	    in_map = true;
-// 	    ass.path_tot.path_a = CopiaPath(elem.wpoints);
-// 	    break;
-// 	}
-//     }
-//     if(!in_map)
-//     {
-// 	ass.path_tot.path_a = CopiaPath(CalcDistMap(r_t.robot.x, r_t.robot.y, r_t.task.x1, r_t.task.y1, GlobMap));
-//     }
-// 
-//     //se i=1 sto usando la function per gli assignment, altrimenti per i recharge e quindi non serbe task b
-//     if(i)
-//     {
-// 	//ora scrivo path_b prendendo dalla mappa la lista di waypoint che vanno dalla posizione di task_a all posizione di task_b di r_t
-// 	for(auto elem : Map)
-// 	{
-// 	    if(r_t.task.x1 == elem.start.first && r_t.task.y1 == elem.start.second && r_t.task.x2 == elem.end.first && r_t.task.y2 == elem.end.second)
-// 	    {
-// 		ass.path_tot.path_b = CopiaPath(elem.wpoints);	    
-// 		break;
-// 	    }
-// 	}
-//     }
-//     
-//     
-//     return ass;
-// }
-
-//-----------------------------------------------------------------------------------------------------------------//
-
-
-// // Pubblica al master il vettore dei task da eseguire task_to_assign
-// void publishTaskToAssign()
-// {
-//     task_assign::vect_task vect_msg; 
-//     
-//     vect_msg.task_vect = tasks_to_assign;
-// 
-//     // Wait for the publisher to connect to subscribers
-//     sleep(1.0);
-//     task_ass_pub.publish(vect_msg);
-//     
-// //     for(auto elem : vect_msg.task_vect)
-// //     {
-// // 	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.id1 << " - " << elem.id2);
-// //     }
-// }
-// 
-// 
-// 
-// // Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
-// void publishRobotToAssign()
-// {
-//     task_assign::vect_robot vect_msg;
-//     
-//     vect_msg.robot_vect = available_robots;
-//     
-//     sleep(1);
-//     rob_ass_pub.publish(vect_msg);
-// }
-// 
-// 
-// 
-// // Pubblica al master su "rob_assign_topic" il vettore dei robot da assegnare
-// void publishRobInRecharge()
-// {
-//     task_assign::vect_robot vect_msg;
-//     
-//     vect_msg.robot_vect = robots_in_recharge;
-//     
-//     sleep(1);
-//     rob_ass_pub.publish(vect_msg);
-// }
-// 
-// 
-// 
-// // Pubblica al master su "rob_info_topic" le info relative ai robot (tutti: già assegnati e da assegnare), pubblica tex0_info_vect
-// void publishRobotInfo()
-// {
-//     task_assign::vect_info vect_msg;
-//     
-//     vect_msg.info_vect = rob_info_vect;
-//     vect_msg.info0_vect = rob_info0_vect;
-//     
-//     sleep(1);
-//     rob_info_pub.publish(vect_msg);
-//    
-// }
-// 
-// 
-// 
-// // Pubblica al master i tempi richiesti da ogni ogni robot per raggiungere ciascun punto di ricarica
-// void publishInfoRecharge()
-// {
-//     task_assign::vect_info vect_msg;
-//     
-//     vect_msg.info_vect = rech_info_vect;
-// //     vect_msg.info0_vect = rech_info0_vect;
-//     
-//     sleep(1);
-//     rech_info_pub.publish(vect_msg);
-// }

@@ -5,15 +5,126 @@
 #include <vector>
 #include <string>
 #include "ros/ros.h"
+#include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include "geometry_msgs/Twist.h"
 #include "task_assign/vect_task.h"
+#include "task_assign/waypoint.h"
 #include "yaml-cpp/yaml.h"
 
 
 using namespace std;
 ros::Publisher new_task_pub;
+ros::Publisher marker_pub;
+
 vector<task_assign::task> new_task_vect;
+vector<task_assign::task> markers;
 map<double, task_assign::task> map_task;
+
+
+
+
+
+// i task sono cilindri viola
+void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id_marker1, int id_marker2)
+{
+    visualization_msgs::MarkerArray markers_vect;
+    
+    visualization_msgs::Marker marker;
+    // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+    marker.header.frame_id = "world";
+    marker.header.stamp = ros::Time::now();
+
+    // Set the namespace and id for this marker.  This serves to create a unique ID
+    // Any marker sent with the same namespace and id will overwrite the old one
+    marker.ns = "robot_node";
+    marker.id = id_marker1;
+
+    // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+    marker.type = visualization_msgs::Marker::CYLINDER;
+
+    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+    marker.action = visualization_msgs::Marker::ADD;
+
+    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+    marker.pose.position.x = p1.x;
+    marker.pose.position.y = p1.y;
+    marker.pose.position.z = 0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = p1.theta;
+    marker.pose.orientation.w = 1.0;
+
+    // Set the scale of the marker -- 1x1x1 here means 1m on a side
+    marker.scale.x = 1.5;
+    marker.scale.y = 1.5;
+    marker.scale.z = 1.5;
+
+    // Set the color -- be sure to set alpha to something non-zero!
+    marker.color.r = 0.5f;
+    marker.color.g = id_marker1*0.01f;
+    marker.color.b = 0.8f;
+    marker.color.a = 0.7;
+
+    marker.lifetime = ros::Duration();
+    
+    markers_vect.markers.push_back(marker);
+
+    
+
+    // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+    marker.header.frame_id = "world";
+    marker.header.stamp = ros::Time::now();
+
+    // Set the namespace and id for this marker.  This serves to create a unique ID
+    // Any marker sent with the same namespace and id will overwrite the old one
+    marker.ns = "robot_node";
+    marker.id = id_marker2;
+
+    // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+    marker.type = visualization_msgs::Marker::CYLINDER;
+
+    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+    marker.action = visualization_msgs::Marker::ADD;
+
+    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+    marker.pose.position.x = p2.x;
+    marker.pose.position.y = p2.y;
+    marker.pose.position.z = 0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = p2.theta;
+    marker.pose.orientation.w = 1.0;
+
+    // Set the scale of the marker -- 1x1x1 here means 1m on a side
+    marker.scale.x = 1.5;
+    marker.scale.y = 1.5;
+    marker.scale.z = 1.5;
+
+    // Set the color -- be sure to set alpha to something non-zero!
+    marker.color.r = 0.5f;
+    marker.color.g = id_marker1*0.01f;
+    marker.color.b = 0.8f;
+    marker.color.a = 0.7;
+
+    marker.lifetime = ros::Duration();
+    
+    markers_vect.markers.push_back(marker);
+    
+
+    // Publish the markers
+    while (marker_pub.getNumSubscribers() < 1)
+    {
+      if (!ros::ok())
+      {
+	break;
+      }
+      ROS_WARN_ONCE("Please create a subscriber to the marker");
+      sleep(1);
+    }
+    marker_pub.publish(markers_vect);
+}
 
 
 
@@ -101,6 +212,23 @@ void CreateNewTask()
 }
 
 
+void VectMarker(vector<task_assign::task> markers)
+{
+    task_assign::waypoint p1;
+    task_assign::waypoint p2;
+    
+    for(auto elem : markers)
+    {
+	p1.x = elem.x1;
+	p1.y = elem.y1;
+	p1.theta = elem.theta1;
+	p2.x = elem.x2;
+	p2.y = elem.y2;
+	p2.theta = elem.theta2;
+	publishMarkerPair(p1, p2, elem.id1, elem.id2);
+    }
+}
+
 
 
 void publishVectTask()
@@ -135,36 +263,67 @@ int main(int argc, char **argv)
     ros::NodeHandle node;
     
     new_task_pub = node.advertise<task_assign::vect_task>("task_arrival_topic", 10);
+    marker_pub = node.advertise<visualization_msgs::MarkerArray>("visualization_marker_array", 10);
+	
     sleep(1);
     
     // carico i task dal file yaml e li metto nella mappa map_task, in cui vengono ordinati dal primo che arriva all'ultimo
     CreateNewTask();
     
+    markers.clear();
+    vector<task_assign::task> perm;
     ros::Rate rate(10);
+    double prec_at(0.0);
+    double pre_prec_at(0.0);
     double current_at;
     current_at = map_task.begin()->first;
+    map<double, task_assign::task>::iterator current_it;
+    current_it = map_task.begin();
     
-    while(ros::ok())
+    while(ros::ok() && map_task.size()>markers.size())
     {
-	for(map<double, task_assign::task>::iterator it=map_task.begin(); it!=map_task.end(); ++it)
+	VectMarker(markers);
+	
+	map<double, task_assign::task>::iterator it = current_it;
+	while(it!=map_task.end() && ros::ok())
 	{
+	    VectMarker(markers);
+	    
 	    if(it->first == current_at)
 	    {
 		new_task_vect.push_back(it->second);
-		map_task.erase(it);
+		perm.push_back(it->second);
 	    }
 	    else
-	    {
-		// pubblico tutti i task con lo stesso tempo di arrivo
-		sleep(current_at);
-		publishVectTask();
-		new_task_vect.clear();	    
-		
+	    {	     
+		pre_prec_at = prec_at;
+		prec_at = current_at;
 		current_at = it->first;
-		new_task_vect.push_back(it->second);
-		map_task.erase(it);
+		current_it = it;
+		break;
 	    }  
+	    ++it;
 	}
+	
+	
+	int i = prec_at-pre_prec_at;
+	while(i>0 && ros::ok())
+	{
+	    VectMarker(markers);
+	    sleep(1);
+	    i--;
+	}
+	
+	for(auto elem : perm)
+	{	
+	    markers.push_back(elem);
+	  
+	}
+	perm.clear();
+	    
+	VectMarker(markers);
+	publishVectTask();
+	new_task_vect.clear();
 
 	ros::spinOnce();
 	rate.sleep();

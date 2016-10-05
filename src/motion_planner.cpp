@@ -47,11 +47,6 @@ ros::Subscriber status_rob_sub;
 ros::Subscriber new_task_sub;
 
 ros::Publisher exec_task_pub;
-// ros::Publisher rob_ass_pub;
-// ros::Publisher rob_rech_pub;
-// ros::Publisher task_ass_pub;
-// ros::Publisher rob_info_pub;
-// ros::Publisher rech_info_pub;
 ros::Publisher assignment_pub;
 ros::Publisher recharge_pub;
 ros::Publisher marker_pub;
@@ -374,7 +369,10 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	
 	if(new_task)
+	{
 	    tasks_to_assign.push_back(elem);
+	    ROS_INFO_STREAM("The motion_planner is storing the task to assign: "<< elem.name);
+	}
 	
 	new_task = true;
     }
@@ -391,6 +389,11 @@ void publishExecTask()
     
     sleep(1);
     exec_task_pub.publish(msg);
+    
+    for(auto elem : completed_tasks)
+    {
+	ROS_INFO_STREAM("The motion_planner is publishing to the task_manager the completed task: "<< elem.name);
+    }
 }
 
 
@@ -410,11 +413,33 @@ void publishMasterIn()
     // Wait for the publisher to connect to subscribers
     sleep(1.0);
     reass_pub.publish(msg);
-    
-//     for(auto elem : vect_msg.task_vect)
-//     {
-// 	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " whit the couple " << elem.id1 << " - " << elem.id2);
-//     }
+
+    ROS_INFO_STREAM("The motion_planner is publishing to the master: \n");
+    ROS_INFO_STREAM("Robot disponibili: \n");
+    for(auto elem : available_robots)
+    {
+	ROS_INFO_STREAM(elem.name << "\n");
+    }
+    ROS_INFO_STREAM("Task da assegnare: \n");
+    for(auto elem : tasks_to_assign)
+    {
+	ROS_INFO_STREAM(elem.name << "\n");
+    }
+    ROS_INFO_STREAM("Robot da ricaricare: \n");
+    for(auto elem : robots_in_recharge)
+    {
+	ROS_INFO_STREAM(elem.name << "\n");
+    }
+    ROS_INFO_STREAM("tempi di esec. robot-task: \n");
+    for(auto elem : rt_info_vect)
+    {
+	ROS_INFO_STREAM("rob: " << elem.r_name << "task: " << elem.t_name);
+    }
+    ROS_INFO_STREAM("tempi di esec. robot-punto di ric.: \n");
+    for(auto elem : rech_info_vect)
+    {
+	ROS_INFO_STREAM("rob: " << elem.r_name << "punto di ricarica: " << elem.t_name);
+    }
 
 }
 
@@ -462,12 +487,14 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
     
     if(msg->status)
     {	
+	ROS_INFO_STREAM("il motion planner sta ascoltando il robot " << msg->name);
+	
 	// vedo se il robot è già in uno dei vettori
 	for(auto elem : available_robots)
 	{
 	    if(elem.name == msg->name)
 	    {
-		// il robot è già in available_robots
+		ROS_INFO_STREAM("il robot " << msg->name << " e' gia' in available_robots");
 		available = true;
 		break;
 	    }
@@ -480,7 +507,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    {
 		if(elem.name == msg->name)
 		{
-		    // il robot è già in available_robots
+		    ROS_INFO_STREAM("il robot " << msg->name << " e' gia' tra i robot da ricaricare");
 		    avail_rech = true;
 		    break;
 		}
@@ -493,7 +520,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    {
 		if(elem.name == msg->name)
 		{
-		    // il robot è già in robots_in_execution
+		    ROS_INFO_STREAM("il robot " << msg->name << " e' gia' tra i robot in esecuzione");
 		    in_execution = true;
 		    break;
 		}
@@ -506,7 +533,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    {
 		if(elem.name == msg->name)
 		{
-		    // il robot è già in robots_in_recharge
+		    ROS_INFO_STREAM("il robot " << msg->name << " e' gia' in ricarica");
 		    in_charge = true;
 		    break;
 		}
@@ -517,23 +544,25 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level > BATTERY_THR)
 	{
 	    available_robots.push_back(*msg);
-	    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
-	    
-	    if(tasks_to_assign.size()>0)
-	    {
-		publishMasterIn();
-	    }
+	    ROS_INFO_STREAM("il robot " << msg->name << " viene messo in available_robots");
+// 	    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+// 	    
+// 	    if(tasks_to_assign.size()>0)
+// 	    {
+// 		publishMasterIn();
+// 	    }
 	}
 	
 	else if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
 	{
 	    robots_in_recharge.push_back(*msg);
-	    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
-	    
-	    if(recharge_points.size()>0)
-	    {
-		publishMasterIn();
-	    }
+	    ROS_INFO_STREAM("il robot " << msg->name << " viene messo in robots_in_recharge");
+// 	    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+// 	    
+// 	    if(recharge_points.size()>0)
+// 	    {
+// 		publishMasterIn();
+// 	    }
 	}
 	
 	else if(available)
@@ -675,6 +704,22 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		}
 	    }
 	}
+	
+	bool as = false;
+	if(tasks_to_assign.size()>0 && available_robots.size()>0)
+	{
+	    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+	    as = true;
+// 	    publishMasterIn();
+	}
+	if(recharge_points.size()>0 && robots_in_recharge.size()>0)
+	{
+	    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+	    as = true;
+// 	    publishMasterIn();
+	}
+	if(as)
+	    publishMasterIn();
     }
     // se il robot è rotto
     else
@@ -933,6 +978,7 @@ void publishRecharge()
 
 
 
+// i wp sono cubi verdi
 void publishMarker(task_assign::waypoint p, int id_marker)
 {
     visualization_msgs::Marker marker;
@@ -1004,11 +1050,6 @@ int main(int argc, char **argv)
     new_task_sub = node.subscribe("new_task_topic", 20, &TaskToAssCallback);
     
     exec_task_pub = node.advertise<task_assign::vect_task>("task_exec_topic", 10);   
-//     rob_ass_pub = node.advertise<task_assign::vect_robot>("rob_assign_topic", 10);
-//     rob_rech_pub = node.advertise<task_assign::vect_robot>("rob_recharge_topic", 10);
-//     task_ass_pub = node.advertise<task_assign::vect_task>("task_assign_topic", 10);
-//     rob_info_pub = node.advertise<task_assign::vect_info>("rob_info_topic", 10);
-//     rech_info_pub = node.advertise<task_assign::vect_info>("rech_info_topic", 10);
     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
     recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
     

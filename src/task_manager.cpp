@@ -39,7 +39,7 @@ int dim_n(0);
 
 
 
-// i task sono cilindri azzurri
+// i task sono cilindri viola
 void publishMarker(task_assign::waypoint p, int id_marker)
 {
     visualization_msgs::Marker marker;
@@ -74,7 +74,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
 
     // Set the color -- be sure to set alpha to something non-zero!
     marker.color.r = 0.5f;
-    marker.color.g = 1.0f;
+    marker.color.g = id_marker*0.01f;
     marker.color.b = 0.8f;
     marker.color.a = 0.7;
 
@@ -129,7 +129,7 @@ void deleteMarker(task_assign::waypoint task_pose, int id_marker)
 
     // Set the color -- be sure to set alpha to something non-zero!
     marker.color.r = 0.5f;
-    marker.color.g = 1.0f;
+    marker.color.g = id_marker*0.01f;
     marker.color.b = 0.8f;
     marker.color.a = 0.7;
 
@@ -202,15 +202,15 @@ void NewCallback(const task_assign::vect_task::ConstPtr& msg)
 // 	{
 	    new_task.push_back(elem);
 	    
-	    pos.x = elem.x1;
-	    pos.y = elem.y1;
-	    pos.theta = elem.theta1;
-	    publishMarker(pos, elem.id1);
-	    
-	    pos.x = elem.x2;
-	    pos.y = elem.y2;
-	    pos.theta = elem.theta2;
-	    publishMarker(pos, elem.id2);
+// 	    pos.x = elem.x1;
+// 	    pos.y = elem.y1;
+// 	    pos.theta = elem.theta1;
+// 	    publishMarker(pos, elem.id1);
+// 	    
+// 	    pos.x = elem.x2;
+// 	    pos.y = elem.y2;
+// 	    pos.theta = elem.theta2;
+// 	    publishMarker(pos, elem.id2);
 // 	}
 // 	
 // 	add_task = true;
@@ -356,6 +356,7 @@ int main(int argc, char **argv)
     {
 	while (new_task.size()==0 && executed_task.size()==0 && ros::ok()) 
 	{
+	    ROS_INFO_STREAM("no tasks");
 	    ros::spinOnce();
 	    rate.sleep();
 	}

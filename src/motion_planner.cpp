@@ -59,6 +59,7 @@ ros::Publisher reass_pub;
 bool new_assign(false);
 bool new_in_rech(false);
 bool new_task(false);
+bool pub_master_in(false);
 
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
@@ -365,7 +366,18 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	for(auto newel : tasks_to_assign)
 	{
 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+	    {
 		new_task = false;
+		break;
+	    }
+	}
+	for(auto newel : tasks_in_execution)
+	{
+	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+	    {
+		new_task = false;
+		break;
+	    }
 	}
 	
 	if(new_task)
@@ -447,6 +459,7 @@ void publishMasterIn()
 
 void ReAssFunc(task_assign::robot msg, Assign ass)
 {
+    ROS_INFO_STREAM("Sto facendo reassignment");
     // se sono lontana da taska e non ho ancora eseguito taska
     if(!msg.taska && getDistance(msg.x, msg.y, ass.task.x1, ass.task.y1) > SEC_DIST)
     {
@@ -459,7 +472,8 @@ void ReAssFunc(task_assign::robot msg, Assign ass)
 	CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 	CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 	
-	publishMasterIn();
+// 	publishMasterIn();
+	pub_master_in = true;
     }
     // se ho eseguito taska e ora sono lontana sia da taska sia da taskb
     // TODO intervieni con il modulo di salvataggio 
@@ -604,7 +618,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 			    if(tasks_to_assign.size()>0)
 			    {
-				publishMasterIn();
+// 				publishMasterIn();
+				pub_master_in = true;
 			    }
 			}
 			else
@@ -613,7 +628,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 			    if(recharge_points.size()>0)
 			    {
-				publishMasterIn();
+// 				publishMasterIn();
+				pub_master_in = true;				
 			    }			    
 			}
 		    }
@@ -668,7 +684,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 			if(tasks_to_assign.size()>0)
 			{
-			    publishMasterIn();
+// 			    publishMasterIn();
+			    pub_master_in = true;			  
 			}
 		    }
 		    // se il robot sta andando nel punto di ricarica e non ha batteria, faccio reassignment
@@ -719,7 +736,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 // 	    publishMasterIn();
 	}
 	if(as)
-	    publishMasterIn();
+	    pub_master_in = true;	  
+// 	    publishMasterIn();
     }
     // se il robot è rotto
     else
@@ -858,7 +876,6 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
 void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 {
     bool add(true);
-    new_assign = false;
     struct Assign ass;
     
     if(msg->rt_vect.size() > 0)
@@ -867,6 +884,8 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
 	{
+	    ROS_INFO_STREAM("il motion planner ha ricevuto dal master la coppia r-t "<< rt.robot.name << " - " << rt.task.name);
+	    
 	    //vedo se è già nel catalogo
 	    for(auto elem : Catalogo_Ass)
 	    {
@@ -891,6 +910,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 // 		ass = MapToCatal(GlobMap, rt, 1);
 		ass = MinPath(Mappa, rt);
 		assignments_vect.push_back(ass.path_tot);
+
 		
 		// Crea il Catalogo_Ass
 		Catalogo_Ass.push_back(ass);
@@ -907,7 +927,6 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 {
     bool add(true);
-    new_in_rech = false;
     struct Assign ass;
     
     if(msg->rt_vect.size() > 0)
@@ -916,6 +935,7 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
 	{
+	    ROS_INFO_STREAM("il motion planner ha ricevuto dal master la coppia r-rech.point "<< rt.robot.name << " - " << rt.task.name);
 	    //vedo se è già nel catalogo
 	    for(auto elem : Catalogo_Rech)
 	    {
@@ -961,6 +981,11 @@ void publishAssign()
     
     sleep(1);
     assignment_pub.publish(msg);
+    
+    for(auto elem : msg.assign_vect)
+    {
+	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned task " << elem.t_name);
+    }
 }
 
 
@@ -1109,14 +1134,22 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
-	while(!new_assign && !new_in_rech && ros::ok())
+	ros::spinOnce();
+	while(!pub_master_in && !new_assign && !new_in_rech && ros::ok())
 	{
+	    publishAssign();
 	    ros::spinOnce();
 	    rate.sleep();	  
 	}
-      
+	if(pub_master_in && ros::ok())
+	{
+	    sleep(1);
+	    publishMasterIn();
+	    pub_master_in = false;
+	}
 	if(new_assign && ros::ok())
 	{
+// 	    sleep(1);
 	    publishAssign();
 	    new_assign = false;
 	}

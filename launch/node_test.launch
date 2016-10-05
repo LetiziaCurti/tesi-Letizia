@@ -6,9 +6,9 @@
   <node name="obstacles" pkg="task_assign" type="obstacle_node" output="screen"/> 
   <node name="master" pkg="task_assign" type="master" output="screen"/> 
   
-  <node name="robota" pkg="task_assign" type="robot" args="robot1 1 5.54 1 1.5 20" output="screen"/> 
-  <node name="robotb" pkg="task_assign" type="robot" args="robot2 2 4 1 1.5 20" output="screen"/> 
-  <node name="robotc" pkg="task_assign" type="robot" args="robot3 3 3 2 1.5 20" output="screen"/> 
+  <node name="robota" pkg="task_assign" type="robot" args="robot1 0 0 0 1.5 20" output="screen"/> 
+  <node name="robotb" pkg="task_assign" type="robot" args="robot2 1 4 0 1.5 20" output="screen"/> 
+  <node name="robotc" pkg="task_assign" type="robot" args="robot3 2 8 0 1.5 20" output="screen"/> 
   
   
 </launch>

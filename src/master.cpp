@@ -71,7 +71,7 @@ bool do_reassign(false);
 // Legge su "glpk_in_topic" i vettori delle info che vanno in ingresso all'alg. di assignment MA solo se reassign è a true
 void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 {
-    if(msg->reassign)
+    if(msg->reassign && msg->task_to_ass.size()>0 && msg->rob_to_ass.size()>0)
     {
 	task_to_assign = msg->task_to_ass;
 	robot_to_assign = msg->rob_to_ass;
@@ -106,6 +106,11 @@ void publishRT(vector<vector<int>> S)
     
     sleep(1);
     rt_pub.publish(vect_msg);
+    
+//     for(auto elem : rt_pub)
+//     {
+// 	ROS_INFO_STREAM("The motion_planner is publishing to the task_manager the completed task: "<< elem.name);
+//     }
 }
 
 

@@ -3,20 +3,19 @@ TASK:
     arrt: 5
     status: true
     tasks:
-      - id: 1
+      - id: 32
         wait: 3
-        position: [7, 8.5, -1.5]
-      - id: 2
+        position: [32, 8, -1.5]
+      - id: 62
         wait: 5
-        position: [16, 15, -1.5]  
+        position: [8, 20, -1.5]  
   - name: task2
     arrt: 10
     status: true
     tasks:
-      - id: 3
+      - id: 25
         wait: 3
-        position: [5.5, 5.5, -1.5]
-      - id: 4
+        position: [4, 8, -1.5]
+      - id: 91
         wait: 10
-        position: [2, 19, -1.5]
-  
+        position: [28, 28, -1.5]

@@ -1,363 +1,266 @@
-// Nodo che modella il task manager
-//  tiene traccia dei nuovi task (pubblicati dal nodo_utenti) e di quelli che vengono completati (pubblicati dal 
-//  motion_planner), pubblica al central_node il vettore degli n(t) task da assegnare
+cmake_minimum_required(VERSION 2.8.3)
+project(task_assign)
+
+## Find catkin macros and libraries
+## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+## is used, also find other catkin packages
+find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  roscpp
+  rospy
+  std_msgs
+  message_generation
+  tf
+)
 
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include "ros/ros.h"
-#include "geometry_msgs/Twist.h"
-#include <tf/transform_broadcaster.h>
-#include <visualization_msgs/Marker.h>
-#include "task_assign/vect_task.h"
-#include "task_assign/waypoint.h"
+find_package(PkgConfig)
+pkg_check_modules(NEW_YAMLCPP yaml-cpp>=0.5)
+if(NEW_YAMLCPP_FOUND)
+
+add_definitions(-DHAVE_NEW_YAMLCPP)
+endif(NEW_YAMLCPP_FOUND)
+
+## System dependencies are found with CMake's conventions
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
-inline const char * const BoolToString(bool b)
-{
-  return b ? "true" : "false";
-}
+## Uncomment this if the package has a setup.py. This macro ensures
+## modules and global scripts declared therein get installed
+## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
+# catkin_python_setup()
+
+################################################
+## Declare ROS messages, services and actions ##
+################################################
+
+## To declare and build messages, services or actions from within this
+## package, follow these steps:
+## * Let MSG_DEP_SET be the set of packages whose message types you use in
+##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
+## * In the file package.xml:
+##   * add a build_depend tag for "message_generation"
+##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
+##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
+##     but can be declared for certainty nonetheless:
+##     * add a run_depend tag for "message_runtime"
+## * In this file (CMakeLists.txt):
+##   * add "message_generation" and every package in MSG_DEP_SET to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * add "message_runtime" and every package in MSG_DEP_SET to
+##     catkin_package(CATKIN_DEPENDS ...)
+##   * uncomment the add_*_files sections below as needed
+##     and list every .msg/.srv/.action file to be processed
+##   * uncomment the generate_messages entry below
+##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
+
+## Generate messages in the 'msg' folder
+ add_message_files(
+   FILES
+   AgentStatus.msg
+   SecondAgent.msg
+   IniStatus.msg
+   AssignMsg.msg
+   OneAssign.msg
+   task.msg
+   vect_task.msg
+   robot.msg
+   vect_robot.msg
+   rt.msg
+   rt_vect.msg
+   info.msg
+   vect_info.msg
+   waypoint.msg
+   task_path.msg
+   assignment.msg
+   recharge.msg
+   rech_vect.msg
+   glpk_in.msg
+   glpk_sol.msg
+ )
+
+## Generate services in the 'srv' folder
+# add_service_files(
+#   FILES
+#   Service1.srv
+#   Service2.srv
+# )
+
+## Generate actions in the 'action' folder
+# add_action_files(
+#   FILES
+#   Action1.action
+#   Action2.action
+# )
+
+## Generate added messages and services with any dependencies listed here
+ generate_messages(
+   DEPENDENCIES
+   std_msgs
+   geometry_msgs
+ )
+
+################################################
+## Declare ROS dynamic reconfigure parameters ##
+################################################
+
+## To declare and build dynamic reconfigure parameters within this
+## package, follow these steps:
+## * In the file package.xml:
+##   * add a build_depend and a run_depend tag for "dynamic_reconfigure"
+## * In this file (CMakeLists.txt):
+##   * add "dynamic_reconfigure" to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * uncomment the "generate_dynamic_reconfigure_options" section below
+##     and list every .cfg file to be processed
+
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+# generate_dynamic_reconfigure_options(
+#   cfg/DynReconf1.cfg
+#   cfg/DynReconf2.cfg
+# )
+
+###################################
+## catkin specific configuration ##
+###################################
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if you package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES task_assign
+  CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs message_runtime yaml-cpp lemon_ros gmlreader
+#  DEPENDS system_lib
+)
+
+###########
+## Build ##
+###########
+
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
+# include_directories(include)
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
+
+## Declare a C++ library
+# add_library(task_assign
+#   src/${PROJECT_NAME}/task_assign.cpp
+# )
+
+## Add cmake target dependencies of the library
+## as an example, code may need to be generated before libraries
+## either from message generation or dynamic reconfigure
+# add_dependencies(task_assign ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+## Declare a C++ executable
+# add_executable(task_assign_node src/task_assign_node.cpp)
+add_executable(robot_node src/robot_node.cpp)
+add_executable(task_node src/task_node.cpp)
+add_executable(central_node src/central_node.cpp)
+# add_executable(users_node src/users_node.cpp)
+add_executable(task_manager src/task_manager.cpp)
+add_executable(motion_planner src/motion_planner.cpp)
+add_executable(obstacle_node src/obstacle_node.cpp)
+add_executable(master src/master.cpp)
+add_executable(robot src/robot.cpp)
+# add_executable(temp src/temp.cpp)
+# add_executable(map src/map.cpp)
+add_executable(monsters_test src/monsters_test.cpp)
+# add_executable(task_test_config src/task_test_config.cpp)
+# add_executable(robot_node src/robot_node_2.cpp)
+# add_executable(task_node src/task_node_2.cpp)
+# add_executable(central_node src/central_node_2.cpp)
+
+## Add cmake target dependencies of the executable
+## same as for the library above
+# add_dependencies(task_assign_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(robot_node ${PROJECT_NAME}_gencpp)
+add_dependencies(task_node ${PROJECT_NAME}_gencpp)
+add_dependencies(central_node ${PROJECT_NAME}_gencpp)
+# add_dependencies(users_node ${PROJECT_NAME}_gencpp)
+add_dependencies(task_manager ${PROJECT_NAME}_gencpp)
+add_dependencies(motion_planner ${PROJECT_NAME}_gencpp)
+add_dependencies(obstacle_node ${PROJECT_NAME}_gencpp)
+add_dependencies(master ${PROJECT_NAME}_gencpp)
+add_dependencies(robot ${PROJECT_NAME}_gencpp)
+# add_dependencies(temp ${PROJECT_NAME}_gencpp)
+# add_dependencies(reass_manager ${PROJECT_NAME}_gencpp)
+# add_dependencies(map ${PROJECT_NAME}_gencpp)
+add_dependencies(monsters_test ${PROJECT_NAME}_gencpp)
+# add_dependencies(task_test_config ${PROJECT_NAME}_gencpp)
+
+## Specify libraries to link a library or executable target against
+# target_link_libraries(task_assign_node
+#   ${catkin_LIBRARIES}
+# )
+target_link_libraries(robot_node ${catkin_LIBRARIES})
+target_link_libraries(task_node ${catkin_LIBRARIES})
+target_link_libraries(central_node ${catkin_LIBRARIES})
+# target_link_libraries(users_node yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(task_manager yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(motion_planner lemon_ros gmlreader yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(obstacle_node ${catkin_LIBRARIES})
+target_link_libraries(master glpk yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(robot ${catkin_LIBRARIES})
+# target_link_libraries(temp yaml-cpp ${catkin_LIBRARIES})
+# target_link_libraries(reass_manager ${catkin_LIBRARIES})
+# target_link_libraries(map ${catkin_LIBRARIES})
+target_link_libraries(monsters_test yaml-cpp ${catkin_LIBRARIES})
+# target_link_libraries(task_test_config ${catkin_LIBRARIES})
 
 
+#############
+## Install ##
+#############
 
-using namespace std;
-ros::Subscriber new_task_sub;
-ros::Subscriber exec_task_sub;
-ros::Publisher new_task_pub;
-ros::Publisher marker_pub;
+# all install targets should use catkin DESTINATION variables
+# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
+## Mark executable scripts (Python etc.) for installation
+## in contrast to setup.py, you can choose the destination
+# install(PROGRAMS
+#   scripts/my_python_script
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
-// gli elementi dei vettori potrebbero essere già dei type task_Assign::task così quando il nodo deve pubblicare il vettore 
-// task_to_assign è già un vettore di elementi task, altrimenti le struct couple_task vanno copiate tutte nei type masg
-vector<task_assign::task> new_task;          		//vettore in cui vengono messi i nuovi task in arrivo da users_node
-vector<task_assign::task> executed_task;		//vettore in cui vengono messi i task eseguiti comunicati dal motion planner
+## Mark executables and/or libraries for installation
+# install(TARGETS task_assign task_assign_node
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
-vector<task_assign::task> task_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dim m(k)
+## Mark cpp header files for installation
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#   FILES_MATCHING PATTERN "*.h"
+#   PATTERN ".svn" EXCLUDE
+# )
 
-int dim_n(0);
+## Mark other files for installation (e.g. launch and bag files, etc.)
+# install(FILES
+#   # myfile1
+#   # myfile2
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
 
+#############
+## Testing ##
+#############
 
+## Add gtest based cpp test target and link libraries
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_task_assign.cpp)
+# if(TARGET ${PROJECT_NAME}-test)
+#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+# endif()
 
-// i task sono cilindri viola
-void publishMarker(task_assign::waypoint p, int id_marker)
-{
-    visualization_msgs::Marker marker;
-    // Set the frame ID and timestamp.  See the TF tutorials for information on these.
-    marker.header.frame_id = "world";
-    marker.header.stamp = ros::Time::now();
-
-    // Set the namespace and id for this marker.  This serves to create a unique ID
-    // Any marker sent with the same namespace and id will overwrite the old one
-    marker.ns = "robot_node";
-    marker.id = id_marker;
-
-    // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-    marker.type = visualization_msgs::Marker::CYLINDER;
-
-    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-    marker.action = visualization_msgs::Marker::ADD;
-
-    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-    marker.pose.position.x = p.x;
-    marker.pose.position.y = p.y;
-    marker.pose.position.z = 0;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = p.theta;
-    marker.pose.orientation.w = 1.0;
-
-    // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    marker.scale.x = 1.5;
-    marker.scale.y = 1.5;
-    marker.scale.z = 1.5;
-
-    // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 0.5f;
-    marker.color.g = id_marker*0.01f;
-    marker.color.b = 0.8f;
-    marker.color.a = 0.7;
-
-    marker.lifetime = ros::Duration();
-
-    // Publish the marker
-    while (marker_pub.getNumSubscribers() < 1)
-    {
-      if (!ros::ok())
-      {
-	break;
-      }
-      ROS_WARN_ONCE("Please create a subscriber to the marker");
-      sleep(1);
-    }
-    marker_pub.publish(marker);
-}
+## Add folders to be run by python nosetests
+# catkin_add_nosetests(test)
 
 
-
-void deleteMarker(task_assign::waypoint task_pose, int id_marker)
-{
-    visualization_msgs::Marker marker;
-    // Set the frame ID and timestamp.  See the TF tutorials for information on these.
-    marker.header.frame_id = "world";
-    marker.header.stamp = ros::Time::now();
-
-    // Set the namespace and id for this marker.  This serves to create a unique ID
-    // Any marker sent with the same namespace and id will overwrite the old one
-    marker.ns = "task_node";
-    marker.id = id_marker;
-
-    // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-    marker.type = visualization_msgs::Marker::CYLINDER;
-
-    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-    marker.action = visualization_msgs::Marker::DELETE;
-
-    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-    marker.pose.position.x = task_pose.x;
-    marker.pose.position.y = task_pose.y;
-    marker.pose.position.z = 0;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = task_pose.theta;
-    marker.pose.orientation.w = 1.0;
-
-    // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    marker.scale.x = 1.0;
-    marker.scale.y = 1.0;
-    marker.scale.z = 1.0;
-
-    // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 0.5f;
-    marker.color.g = id_marker*0.01f;
-    marker.color.b = 0.8f;
-    marker.color.a = 0.7;
-
-    marker.lifetime = ros::Duration();
-
-    // Publish the marker
-    while (marker_pub.getNumSubscribers() < 1)
-    {
-      if (!ros::ok())
-      {
-// 	    return 0;
-	break;
-      }
-      ROS_WARN_ONCE("Please create a subscriber to the marker");
-      sleep(1);
-    }
-    marker_pub.publish(marker);
-}
-
-
-    
-// Function con cui viene data al robot la posizione passata in argomento, che viene poi inviata a tf
-void broadcastPose(task_assign::waypoint posa, std::string name, int id_marker)
-{
-    static tf::TransformBroadcaster br;
-    tf::Transform transform;
-    transform.setOrigin( tf::Vector3(posa.x, posa.y, 0.0) );
-    tf::Quaternion q;
-    q.setRPY(0, 0, posa.theta);
-    transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", name));
-    
-    publishMarker(posa, id_marker);
-}
-
-
-
-// Legge "task_arrival_topic" e mette i nuovi task nel vettore new_task
-void NewCallback(const task_assign::vect_task::ConstPtr& msg)
-{
-//     bool add_task(true);
-    task_assign::waypoint pos;
-
-    for(auto elem : msg->task_vect)
-    {
-// 	// vedo se elem sta già in new_task
-// 	for(auto newel : new_task)
-// 	{
-// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-// 	    {
-// 		add_task = false;
-// 		break;
-// 	    }
-// 	}
-// 	
-// 	if(add_task)
-// 	{
-// 	    // vedo se elem sta già in executed_task
-// 	    for(auto newel : executed_task)
-// 	    {
-// 		if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-// 		{
-// 		    add_task = false;
-// 		    break;
-// 		}
-// 	    }
-// 	}
-// 	
-// 	if(add_task)
-// 	{
-	    new_task.push_back(elem);
-	    
-// 	    pos.x = elem.x1;
-// 	    pos.y = elem.y1;
-// 	    pos.theta = elem.theta1;
-// 	    publishMarker(pos, elem.id1);
-// 	    
-// 	    pos.x = elem.x2;
-// 	    pos.y = elem.y2;
-// 	    pos.theta = elem.theta2;
-// 	    publishMarker(pos, elem.id2);
-// 	}
-// 	
-// 	add_task = true;
-    }
-}
-
-
-
-// Legge "task_exec_topic" e mette i nuovi task nel vettore exec_task
-void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
-{   
-//     bool add_task(true);
-    task_assign::waypoint pos;
-    
-    for(auto elem : msg->task_vect)
-    {
-      	ROS_INFO_STREAM("The task_manager is listening the executed task: "<< elem.name);
-
-	executed_task.push_back(elem);
-	   
-	pos.x = elem.x1;
-	pos.y = elem.y1;
-	pos.theta = elem.theta1;
-	deleteMarker(pos, elem.id1);
-	
-	pos.x = elem.x2;
-	pos.y = elem.y2;
-	pos.theta = elem.theta2;
-	deleteMarker(pos, elem.id2);
-    }
-}
-
-
-
-// mette insieme executed_task(k), new_task(k) e task_to_assign(k-1) ed elabora un nuovo task_to_assign(k)
-void taskManagement()
-{
-    bool add_task(true);
-    // metto i nuovi task in task_to_assign
-    for(auto elem : new_task)
-    {
-	// vedo se elem sta già in task_to_assign
-	for(auto newel : task_to_assign)
-	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-	    {
-		add_task = false;
-		break;
-	    }
-	}
-	
-	if(add_task)
-	    task_to_assign.push_back(elem);
-	
-	add_task = true;
-    }
-    // tolgo i task eseguiti da task_to_assign
-    bool erase_task(false);
-    for(auto elem : executed_task)
-    {
-	// vedo se elem sta in task_to_assign
-	int count(0);
-	for(auto newel : task_to_assign)
-	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
-	    {
-		erase_task = true;
-		break;
-	    }
-	    count++;
-	}
-	
-	if(erase_task)
-	{  
-	    task_to_assign.erase(task_to_assign.begin()+count);
-	}
-	
-	erase_task = false;
-    }
-  
-//     dim_n = task_to_assign.size();
-}
-
-
-
-// Pubblica al motion_planner il vettore dei nuovi task da eseguire task_to_assign
-void publishTaskToAssign()
-{
-    task_assign::vect_task assignment_msg; 
-    
-    assignment_msg.task_vect = task_to_assign;
-
-    // Wait for the publisher to connect to subscribers
-    sleep(1.0);
-    new_task_pub.publish(assignment_msg);
-    
-    for(auto elem : assignment_msg.task_vect)
-    {
-	ROS_INFO_STREAM("The task_manager is publishing the task to assign: "<< elem.name << " with the couple " << elem.id1 << " - " << elem.id2);
-    }
-}
-
-
-
-
-
-
-
-
-
-int main(int argc, char **argv)
-{
-  
-    // Initialize the node
-    ros::init(argc, argv, "task_manager");
-    ros::NodeHandle node;
-    
-    new_task_sub = node.subscribe("task_arrival_topic", 20, &NewCallback);
-    exec_task_sub = node.subscribe("task_exec_topic", 20, &ExecCallback);
-    
-    new_task_pub = node.advertise<task_assign::vect_task>("new_task_topic", 10);
-    
-    marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
-    
-    sleep(1);
-
-    
-    ros::Rate rate(10);
-    while (ros::ok()) 
-    {
-	while (new_task.size()==0 && executed_task.size()==0 && ros::ok()) 
-	{
-	    publishTaskToAssign();
-	    ROS_INFO_STREAM("no tasks");
-	    ros::spinOnce();
-	    rate.sleep();
-	}
-	// se c'è o un nuovo task o un task eseguito o entrambi    
-	taskManagement();
-	publishTaskToAssign();	
-	new_task.clear();
-	executed_task.clear();
-	
-	ros::spinOnce();
-	rate.sleep();
-    }
-
-
-    return 0;
-}
+add_definitions(-std=gnu++11)

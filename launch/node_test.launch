@@ -1,7 +1,6 @@
 <launch> 
   
-  <node name="tasks" pkg="task_assign" type="users_node" output="screen"/> 
-  <node name="task_manager" pkg="task_assign" type="task_manager" output="screen"/> 
+  <node name="tasks" pkg="task_assign" type="task_manager" output="screen"/> 
   <node name="motion_planner" pkg="task_assign" type="motion_planner" output="screen"/> 
   <node name="obstacles" pkg="task_assign" type="obstacle_node" output="screen"/> 
   <node name="TA_solver" pkg="task_assign" type="master" output="screen"/> 

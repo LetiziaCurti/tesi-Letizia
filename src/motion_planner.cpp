@@ -1104,7 +1104,7 @@ void publishRecharge()
 
 
 
-// i wp sono cubi verdi
+// i punti di ricarica sono cubi verdi
 void publishMarker(task_assign::waypoint p, int id_marker)
 {
     visualization_msgs::Marker marker;
@@ -1164,6 +1164,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
 void RechPoints()
 {
     task_assign::task newTask;
+    task_assign::waypoint wp;
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
     YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/rech_points_config.yaml");
@@ -1238,6 +1239,14 @@ void RechPoints()
 	}
 	
 	recharge_points.push_back(newTask);	
+    }
+    
+    for(auto elem : recharge_points)
+    {
+	wp.x = elem.x1;
+	wp.y = elem.y1;
+	wp.theta = elem.theta1;
+	publishMarker(wp, elem.id1);
     }
 }
 

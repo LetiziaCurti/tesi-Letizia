@@ -75,6 +75,8 @@ endif(NEW_YAMLCPP_FOUND)
    assignment.msg
    recharge.msg
    rech_vect.msg
+   glpk_in.msg
+   glpk_sol.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -166,7 +168,8 @@ add_executable(motion_planner src/motion_planner.cpp)
 add_executable(obstacle_node src/obstacle_node.cpp)
 add_executable(master src/master.cpp)
 add_executable(robot src/robot.cpp)
-add_executable(map src/map.cpp)
+# add_executable(reass_manager src/reass_manager.cpp)
+# add_executable(map src/map.cpp)
 add_executable(monsters_test src/monsters_test.cpp)
 # add_executable(task_test_config src/task_test_config.cpp)
 # add_executable(robot_node src/robot_node_2.cpp)
@@ -185,7 +188,8 @@ add_dependencies(motion_planner ${PROJECT_NAME}_gencpp)
 add_dependencies(obstacle_node ${PROJECT_NAME}_gencpp)
 add_dependencies(master ${PROJECT_NAME}_gencpp)
 add_dependencies(robot ${PROJECT_NAME}_gencpp)
-add_dependencies(map ${PROJECT_NAME}_gencpp)
+# add_dependencies(reass_manager ${PROJECT_NAME}_gencpp)
+# add_dependencies(map ${PROJECT_NAME}_gencpp)
 add_dependencies(monsters_test ${PROJECT_NAME}_gencpp)
 # add_dependencies(task_test_config ${PROJECT_NAME}_gencpp)
 
@@ -198,11 +202,12 @@ target_link_libraries(task_node ${catkin_LIBRARIES})
 target_link_libraries(central_node ${catkin_LIBRARIES})
 target_link_libraries(users_node yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(task_manager ${catkin_LIBRARIES})
-target_link_libraries(motion_planner lemon_ros gmlreader ${catkin_LIBRARIES})
+target_link_libraries(motion_planner lemon_ros gmlreader yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(obstacle_node ${catkin_LIBRARIES})
 target_link_libraries(master glpk yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(robot ${catkin_LIBRARIES})
-target_link_libraries(map ${catkin_LIBRARIES})
+# target_link_libraries(reass_manager ${catkin_LIBRARIES})
+# target_link_libraries(map ${catkin_LIBRARIES})
 target_link_libraries(monsters_test yaml-cpp ${catkin_LIBRARIES})
 # target_link_libraries(task_test_config ${catkin_LIBRARIES})
 

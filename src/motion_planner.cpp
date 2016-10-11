@@ -14,6 +14,7 @@
 #include <lemon/adaptors.h>
 #include <lemon/concepts/maps.h>
 #include <lemon/path.h>
+#include <lemon/concepts/digraph.h>
 #include "geometry_msgs/Twist.h"
 #include "task_assign/vect_task.h"
 #include "task_assign/vect_robot.h"
@@ -73,12 +74,9 @@ vector<task_assign::task> completed_tasks;		//vettore dei task completati che vi
 
 vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
 vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
-vector<task_assign::info> rt_info_vect;
-// vector<task_assign::info> rob_info0_vect;
 
+vector<task_assign::info> rt_info_vect;
 vector<task_assign::info> rech_info_vect;
-// vector<task_assign::info> avail_info_vect;
-// vector<task_assign::info> exec_info_vect;
 
 
 //TODO carica il vettore recharge_points iniziale da un file yaml
@@ -104,6 +102,7 @@ SmartDigraph::NodeMap<float> coord_y(Mappa);
 SmartDigraph::NodeMap<int> id(Mappa);
 SmartDigraph::NodeMap<dim2::Point<float> > coords(Mappa);
 SmartDigraph::ArcMap<double> len(Mappa);
+map<int, SmartDigraph::Node> excl_task_nodes;
 
 
 struct Assign
@@ -115,6 +114,46 @@ struct Assign
 
 vector<Assign> Catalogo_Ass;				//struttura che tiene in memoria tutti gli assignment task - robot
 vector<Assign> Catalogo_Rech;				//struttura che tiene in memoria tutti gli assignment robot - p.to di ric.
+
+
+
+
+
+
+void delNode(map<int,SmartDigraph::Node> excl_nodes)
+{
+    for(auto elem : excl_nodes)
+    {
+	for (SmartDigraph::OutArcIt a(Mappa, elem.second); a != INVALID; ++a)
+	{
+	    len[a]+=10000;
+	}
+	
+	for (SmartDigraph::InArcIt a(Mappa, elem.second); a != INVALID; ++a)
+	{
+	    len[a]+=10000;
+	}
+    }
+}
+
+
+
+void insertNode(map<int,SmartDigraph::Node> excl_nodes)
+{
+    for(auto elem : excl_nodes)
+    {
+	for (SmartDigraph::OutArcIt a(Mappa, elem.second); a != INVALID; ++a)
+	{
+	    len[a]-=10000;
+	}
+	
+	for (SmartDigraph::InArcIt a(Mappa, elem.second); a != INVALID; ++a)
+	{
+	    len[a]-=10000;
+	}
+    }
+}
+
 
 
 
@@ -248,10 +287,13 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     SmartDigraph::Arc arc;
     double time_a(0);
     double time_b(0);
+    
+    map<int, SmartDigraph::Node>::iterator it;
+    SmartDigraph::Node n;
  
     
     
-    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
+   
     
     for(int i=0; i<robots.size(); i++)
     {
@@ -260,8 +302,17 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    info.r_name = robots[i].name;
 	    info.t_name = tasks[j].name;
 	    double dist(0);
-
-	    // prima parte del task
+	    
+	    
+	    // prima parte del task	    
+	    
+	    it=excl_task_nodes.find(tasks[j].id1);
+	    excl_task_nodes.erase(it);
+	    it=excl_task_nodes.find(tasks[j].id2);
+	    excl_task_nodes.erase(it);
+	    delNode(excl_task_nodes);
+	    
+	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
 	    
 	    dijkstra_test.run(rob_start_nodes.at(i), taska_goal_nodes.at(j));
 	    // se il task non coincide col robot
@@ -300,6 +351,13 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    
 	    
 	    // seconda parte del task
+	    
+// 	    it=excl_task_nodes.find(tasks[j].id2);
+// 	    excl_task_nodes.erase(it);
+// 	    delNode(excl_task_nodes);
+// 	    
+// 	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test2(Mappa,len);
+	    
 	    dist = 0;
 	    dijkstra_test.run(taska_goal_nodes.at(j), taskb_goal_nodes.at(j));
 	    // se il task non coincide col robot
@@ -355,6 +413,12 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    in = false;
 	    
 // 	    tex.push_back(info);
+	    
+	    insertNode(excl_task_nodes);
+	    n = SmartDigraph::nodeFromId(tasks[j].id1);
+	    excl_task_nodes[tasks[j].id1] = n;
+	    n = SmartDigraph::nodeFromId(tasks[j].id2);
+	    excl_task_nodes[tasks[j].id2] = n;
 	}
     }
     
@@ -367,6 +431,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 {
     bool new_task(true);
+    SmartDigraph::Node n;
     
     for(auto elem : msg->task_vect)
     {
@@ -392,6 +457,11 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	{
 	    tasks_to_assign.push_back(elem);
 	    ROS_INFO_STREAM("The motion_planner is storing the task to assign: "<< elem.name);
+	    // metti nel vettore excl_task_nodes i nodi corrispondenti ai nuovi task
+	    n = SmartDigraph::nodeFromId(elem.id1);
+	    excl_task_nodes[elem.id1] = n;
+	    n = SmartDigraph::nodeFromId(elem.id2);
+	    excl_task_nodes[elem.id2] = n;
 	}
 	
 	new_task = true;
@@ -506,6 +576,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
     bool in_execution(false);
     bool available(false);
     bool avail_rech(false);
+    map<int, SmartDigraph::Node>::iterator it;
     
     if(msg->status)
     {	
@@ -617,8 +688,15 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    if(floor(msg->x+0.5) == ass.task.x2 && floor(msg->y+0.5) == ass.task.y2)
 		    {
 			ROS_INFO_STREAM("il task " << ass.task.name << " è stato completato");
+			
 			completed_tasks.push_back(ass.task);
 			publishExecTask();
+			// aggiorno la mappa dei nodi esclusi
+			it=excl_task_nodes.find(ass.task.id1);
+			excl_task_nodes.erase(it);
+			it=excl_task_nodes.find(ass.task.id2);
+			excl_task_nodes.erase(it);
+	    
 			tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 			robots_in_execution = deleteRob(msg->name, robots_in_execution);
 			Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
@@ -762,7 +840,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 
 // Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
 // e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
-Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
+Assign MinPath(task_assign::rt r_t)
 {
     Assign ass;   
 //     SmartDigraph::ArcMap<double> len(Map);
@@ -774,7 +852,9 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
     task_assign::waypoint tmp;
     vector<task_assign::waypoint> path;
     vector<SmartDigraph::Node> path_node;
-    SmartDigraph::Arc arc;
+    
+    map<int, SmartDigraph::Node>::iterator it;
+    SmartDigraph::Node n;
   
   
     ass.rob = r_t.robot;
@@ -788,14 +868,18 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
     rob = SmartDigraph::nodeFromId(r_t.robot.id);
     taska = SmartDigraph::nodeFromId(r_t.task.id1);
     taskb = SmartDigraph::nodeFromId(r_t.task.id2);
- 
-    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
-    
     
 
     // prima parte del task
     // ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di 
     // task_a di r_t
+    it=excl_task_nodes.find(r_t.task.id1);
+    excl_task_nodes.erase(it);
+    it=excl_task_nodes.find(r_t.task.id2);
+    excl_task_nodes.erase(it);
+    delNode(excl_task_nodes);
+    
+    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
 
     dijkstra_test.run(rob, taska);
     // se il task non coincide col robot
@@ -813,16 +897,7 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
 	    path_node.push_back(v);
 	}
 	reverse(path.begin(),path.end());
-	reverse(path_node.begin(),path_node.end());
-	
-// 	// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
-// 	double dist(0.0);
-// 	for(int i=0; i<path_node.size()-1; i++)
-// 	{
-// 	    arc = lemon::findArc(Map,path_node[i],path_node[i+1]);
-// 	    dist += 1/VELOCITY*len[arc];
-// 	}
-	
+	reverse(path_node.begin(),path_node.end());	
     }
     else
     {
@@ -838,6 +913,13 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
     
     
     // seconda parte del task
+    
+    // rimetto gli archi entranti e uscenti di taskb a len originaria (tolgo 1000)
+//     it=excl_task_nodes.find(r_t.task.id2);
+//     excl_task_nodes.erase(it);
+//     delNode(excl_task_nodes);
+    
+//     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test2(Mappa,len);
 
     dijkstra_test.run(taska, taskb);
     // se il task non coincide col robot
@@ -855,16 +937,7 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
 	    path_node.push_back(v);
 	}
 	reverse(path.begin(),path.end());
-	reverse(path_node.begin(),path_node.end());
-	
-// 	// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
-// 	double dist(0.0);
-// 	for(int i=0; i<path_node.size()-1; i++)
-// 	{
-// 	    arc = lemon::findArc(Map,path_node[i],path_node[i+1]);
-// 	    dist += 1/VELOCITY*len[arc];
-// 	}
-	
+	reverse(path_node.begin(),path_node.end());	
     }
     // altrimenti taska coincide con taskb, questo significa che il task è un punto di ricarica
     else
@@ -877,6 +950,11 @@ Assign MinPath(SmartDigraph& Map, task_assign::rt r_t)
     ass.path_tot.path_b = path;
     path.clear();
     path_node.clear();
+    
+    
+    insertNode(excl_task_nodes);
+    excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+    excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
 	    
     return ass;
 }
@@ -920,7 +998,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		
 		
 // 		ass = MapToCatal(GlobMap, rt, 1);
-		ass = MinPath(Mappa, rt);
+		ass = MinPath(rt);
 		assignments_vect.push_back(ass.path_tot);
 
 		
@@ -969,7 +1047,7 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 		recharge_points = deleteTask(rt.task.name, tasks_to_assign);
 		
 // 		ass = MapToCatal(GlobMap, rt, 0);
-		ass = MinPath(Mappa, rt);
+		ass = MinPath(rt);
 		robRech_vect.push_back(ass.path_tot);
 		
 		// Crea il Catalogo_Ass

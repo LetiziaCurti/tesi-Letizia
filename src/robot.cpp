@@ -108,7 +108,7 @@ public:
 	    {	    
 		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
 		// altri messaggi finché non ho finito il task
-		if(elem.r_name==robot_name)
+		if(elem.r_name==robot_name && elem.t_name!=task_name)
 		{
 		    ROS_INFO_STREAM(robot_name << " is listening its assignment from motion_planner");
 		    
@@ -183,41 +183,6 @@ public:
     
     
     
-    // Function for bringing the robot in the position of the task to accomplish and then in the position of
-    // the exit
-    void moveToWP(vector <task_assign::waypoint> wps, double distance_tolerance)
-    {
-	double vel_x;
-	double vel_z;
-	double time = 0.4;
-	
-	for(auto goal_pose : wps)
-	{
-	    ros::Rate rate(10);
-	    do{
-		  publishMarker(turtlesim_pose);
-		  broadcastPose(turtlesim_pose,robot_name);
-		  
-		  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
-		  vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
-		  
-		  turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
-		  turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
-		  turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
-		  
-		  b_level-=0.01;
-
-		  ros::spinOnce();
-		  rate.sleep(); 
-	    }while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
-	}
-	
-// 	deleteMarker(goal_pose, task_id_marker);
-
-    }
-    
-    
-    
     // Il robot pubblica il suo stato su "status_rob_topic"
     void publishStatus() 
     {
@@ -244,6 +209,42 @@ public:
 	status_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
+	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its position \n");
+	ROS_INFO_STREAM("x: " << floor(status_msg.x+0.5) << " y: " << floor(status_msg.y+0.5) << "\n");
+    }
+    
+    
+    
+    // Function for bringing the robot in the position of the task to accomplish and then in the position of
+    // the exit
+    void moveToWP(vector <task_assign::waypoint> wps, double distance_tolerance)
+    {
+	double vel_x;
+	double vel_z;
+	double time = 0.4;
+	
+	for(auto goal_pose : wps)
+	{
+	    ros::Rate rate(10);
+	    do{
+		  publishMarker(turtlesim_pose);
+		  broadcastPose(turtlesim_pose,robot_name);
+		  
+		  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+		  vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
+		  
+		  turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
+		  turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
+		  turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
+		  
+		  b_level-=0.01;
+		  ros::spinOnce();
+		  rate.sleep(); 
+	    }while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
+	}
+	
+// 	deleteMarker(goal_pose, task_id_marker);
+
     }
 
     
@@ -421,7 +422,6 @@ int main(int argc, char **argv)
 	    robot.b_level -= robot.wait_a*0.1;
 	    robot.taska = true;
 	    robot.publishStatus(); 
-// 	    robot.deleteMarker(robot.path_a.back(), robot.taska_id_marker);
 
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
@@ -429,9 +429,9 @@ int main(int argc, char **argv)
 	    robot.b_level -= robot.wait_b*0.1;
 	    robot.taskb = true;
 	    robot.publishStatus(); 
-// 	    robot.deleteMarker(robot.taskb_pose, robot.taskb_id_marker);
  
 	    robot.assignment = false;
+// 	    robot.task_name = "";
 	}
 	
 	else if(robot.in_recharge && ros::ok())

@@ -26,6 +26,7 @@
 #include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
 #include "task_assign/glpk_in.h"
+#include "yaml-cpp/yaml.h"
 
 
 inline const char * const BoolToString(bool b)
@@ -270,7 +271,10 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     for(auto elem : tasks)
     {
 	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
-	taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
+	if(elem.id1 == elem.id2) //il task è un rech. point
+	    taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
+	else
+	    taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
     }
   
 
@@ -308,8 +312,11 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    
 	    it=excl_task_nodes.find(tasks[j].id1);
 	    excl_task_nodes.erase(it);
-	    it=excl_task_nodes.find(tasks[j].id2);
-	    excl_task_nodes.erase(it);
+	    if(tasks[j].id1 != tasks[j].id2)
+	    {
+		it=excl_task_nodes.find(tasks[j].id2);
+		excl_task_nodes.erase(it);
+	    }
 	    delNode(excl_task_nodes);
 	    
 	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
@@ -351,12 +358,6 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    
 	    
 	    // seconda parte del task
-	    
-// 	    it=excl_task_nodes.find(tasks[j].id2);
-// 	    excl_task_nodes.erase(it);
-// 	    delNode(excl_task_nodes);
-// 	    
-// 	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test2(Mappa,len);
 	    
 	    dist = 0;
 	    dijkstra_test.run(taska_goal_nodes.at(j), taskb_goal_nodes.at(j));
@@ -867,7 +868,10 @@ Assign MinPath(task_assign::rt r_t)
     
     rob = SmartDigraph::nodeFromId(r_t.robot.id);
     taska = SmartDigraph::nodeFromId(r_t.task.id1);
-    taskb = SmartDigraph::nodeFromId(r_t.task.id2);
+    if(r_t.task.id1 == r_t.task.id2) //il task è un rech. point
+	taskb = SmartDigraph::nodeFromId(r_t.task.id1);
+    else
+	taskb = SmartDigraph::nodeFromId(r_t.task.id2);
     
 
     // prima parte del task
@@ -875,8 +879,11 @@ Assign MinPath(task_assign::rt r_t)
     // task_a di r_t
     it=excl_task_nodes.find(r_t.task.id1);
     excl_task_nodes.erase(it);
-    it=excl_task_nodes.find(r_t.task.id2);
-    excl_task_nodes.erase(it);
+    if(r_t.task.id1 != r_t.task.id2) 
+    {
+	it=excl_task_nodes.find(r_t.task.id2);
+	excl_task_nodes.erase(it);
+    }
     delNode(excl_task_nodes);
     
     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
@@ -1153,6 +1160,91 @@ void publishMarker(task_assign::waypoint p, int id_marker)
 
 
 
+// Function con cui carico i punti di ricarico dal file yaml al vettore recharge_points
+void RechPoints()
+{
+    task_assign::task newTask;
+    
+    // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
+    YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/rech_points_config.yaml");
+    const YAML::Node& node_test1 = node_conf["RECH_POINTS"];
+
+    for (std::size_t i = 0; i < node_test1.size(); i++) 
+    {
+	const YAML::Node& node_test2 = node_test1[i];
+	newTask.name = node_test2["name"].as<std::string>();
+// 	std::cout << "Name: " << node_test2["name"].as<std::string>() << std::endl;
+	newTask.ar_time = node_test2["arrt"].as<double>();
+// 	std::cout << "Arrival time: " << node_test2["arrt"].as<double>() << std::endl;
+	
+	const YAML::Node& node_test3 = node_test2["tasks"];
+	for (std::size_t i = 0; i < node_test3.size(); i++) 
+	{
+	    const YAML::Node& node_test4 = node_test3[i];
+	    if(i==0)
+	    {
+		newTask.id1 = node_test4["id"].as<double>();
+		newTask.wait1 = node_test4["wait"].as<double>();
+	    }
+	    else if(i==1)
+	    {
+		newTask.id2 = node_test4["id"].as<double>();
+		newTask.wait2 = node_test4["wait"].as<double>();
+	    }
+	    
+// 	    std::cout << "Id"<< i+1 << ": " << node_test4["id"].as<double>() << std::endl;
+// 	    std::cout << "Wait: " << node_test4["wait"].as<double>() << std::endl;
+	    
+	    const YAML::Node& node_pos = node_test4["position"];
+	    for (std::size_t j = 0; j < node_pos.size(); j++) 
+	    {
+		if(i==0)
+		{
+		    if(j==0)
+		    {
+			newTask.x1 = node_pos[j].as<double>();
+// 			std::cout << "x: " << node_pos[j].as<double>() << std::endl;
+		    }
+		    else  if(j==1)
+		    {
+			newTask.y1 = node_pos[j].as<double>();
+// 			std::cout << "y: " << node_pos[j].as<double>() << std::endl;
+		    }
+		    else  if(j==2)
+		    {
+			newTask.theta1 = node_pos[j].as<double>();
+// 			std::cout << "theta: " << node_pos[j].as<double>() << std::endl;
+		    }
+		}
+		else if(i==1)
+		{
+		    if(j==0)
+		    {
+			newTask.x2 = node_pos[j].as<double>();
+// 			std::cout << "x: " << node_pos[j].as<double>() << std::endl;
+		    }
+		    else  if(j==1)
+		    {
+			newTask.y2 = node_pos[j].as<double>();
+// 			std::cout << "y: " << node_pos[j].as<double>() << std::endl;
+		    }
+		    else  if(j==2)
+		    {
+			newTask.theta2 = node_pos[j].as<double>();
+// 			std::cout << "theta: " << node_pos[j].as<double>() << std::endl;
+		    }
+		}
+	    }
+	}
+	
+	recharge_points.push_back(newTask);	
+    }
+}
+
+
+
+
+
 
 
 
@@ -1180,11 +1272,15 @@ int main(int argc, char **argv)
     sleep(1);
 
     
+    // Carico i recharge points in recharge_points e poi metto i nodi del grafo corrispondenti in excl_task_nodes
+    RechPoints();   
+    for(auto elem : recharge_points)
+    {
+	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+    }
     
     
     // Carica il grafo dal file .lgf, e lo mette nel grafo orientato Mappa (var globale)
-
-
     try
     {
 	digraphReader(Mappa, "/home/letizia/catkin_ws/src/task_assign/config/griglia.gml.lgf")

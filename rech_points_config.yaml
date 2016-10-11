@@ -1,0 +1,41 @@
+RECH_POINTS:
+  - name: rech1
+    arrt: 0
+    status: true
+    tasks:
+      - id: 96
+        wait: 0
+        position: [0, 32, -1.5]
+      - id: 96
+        wait: 0
+        position: [0, 32, -1.5]
+  - name: rech2
+    arrt: 0
+    status: true
+    tasks:
+      - id: 54
+        wait: 0
+        position: [24, 16, -1.5]
+      - id: 54
+        wait: 0
+        position: [24, 16, -1.5]
+  - name: rech3
+    arrt: 0
+    status: true
+    tasks:
+      - id: 11
+        wait: 0
+        position: [44, 0, -1.5]
+      - id: 11
+        wait: 0
+        position: [44, 0, -1.5]
+  - name: rech4
+    arrt: 0
+    status: true
+    tasks:
+      - id: 0
+        wait: 0
+        position: [0, 0, -1.5]
+      - id: 0
+        wait: 0
+        position: [0, 0, -1.5]

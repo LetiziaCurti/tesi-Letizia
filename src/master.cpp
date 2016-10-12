@@ -45,21 +45,18 @@ ros::Subscriber reass_sub;
 
 ros::Publisher rt_pub;
 ros::Publisher rech_pub;
-// ros::Subscriber rob_ass_sub;
-// ros::Subscriber rob_rech_sub;
-// ros::Subscriber rob_info_sub;
-// ros::Subscriber rech_info_sub;
-// ros::Subscriber task_ass_sub;
+
 
 vector<task_assign::task> task_to_assign;    	//T: vettore dei task da assegnare che cambia nel tempo (di dim m(k))
 vector<task_assign::robot> robot_to_assign;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
-vector<task_assign::info> tex_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
+
 vector<task_assign::robot> robots_in_recharge;  //R: vettore dei robot che devono essere caricati
+vector<task_assign::task> recharge_points;   	// è la lista di tutti i punti di ricarica liberi
+
 vector<task_assign::info> rech_info_vect;
 vector<task_assign::info> rech_info0_vect;
-
-vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica presenti nello scenario, va passata dall'esterno
+vector<task_assign::info> tex_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
+vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
 
 vector<task_assign::rt> r_t_ass;
 vector<task_assign::rt> r_rech_ass;
@@ -76,6 +73,7 @@ void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 	task_to_assign = msg->task_to_ass;
 	robot_to_assign = msg->rob_to_ass;
 	robots_in_recharge = msg->rob_in_rech;
+	recharge_points = msg->rech_points;
 	tex_info_vect = msg->rob_info;
 	rech_info_vect = msg->rech_rob_info;
 	

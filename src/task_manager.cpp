@@ -17,7 +17,7 @@ ros::Publisher new_task_pub;
 ros::Publisher marker_pub;
 
 vector<task_assign::task> new_task_vect;
-map<double, task_assign::task> map_task;
+map<double, vector<task_assign::task>> map_task;
 
 vector<task_assign::task> executed_task;		
 
@@ -40,18 +40,18 @@ vector<float> gen3rand()
     r = rand()%100 + 1;
     rgb.push_back(r);
     
-    g = r;
-    b = g;
+//     g = r;
+//     b = g;
 
-    while(g == r)
-    {
+//     while(g == r)
+//     {
 	g = rand()%100 + 1;
-    }
+//     }
     rgb.push_back(g);
-    while(b == g)
-    {
+//     while(b == g)
+//     {
 	b = rand()%100 + 1;
-    }
+//     }
     rgb.push_back(b);
     
     return rgb;
@@ -94,9 +94,9 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01f;
-    marker.color.g = rgb[1]*0.01f;
-    marker.color.b = rgb[2]*0.01f;
+    marker.color.r = rgb[0]*0.01;
+    marker.color.g = rgb[1]*0.01;
+    marker.color.b = rgb[2]*0.01;
     marker.color.a = 1;
 
     marker.lifetime = ros::Duration();
@@ -135,9 +135,9 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01f;
-    marker.color.g = rgb[1]*0.01f;
-    marker.color.b = rgb[2]*0.01f;
+    marker.color.r = rgb[0]*0.01;
+    marker.color.g = rgb[1]*0.01;
+    marker.color.b = rgb[2]*0.01;
     marker.color.a = 0.2;
 
     marker.lifetime = ros::Duration();
@@ -195,9 +195,9 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01f;
-    marker.color.g = rgb[1]*0.01f;
-    marker.color.b = rgb[2]*0.01f;
+    marker.color.r = rgb[0]*0.01;
+    marker.color.g = rgb[1]*0.01;
+    marker.color.b = rgb[2]*0.01;
     marker.color.a = 1;
 
     marker.lifetime = ros::Duration();
@@ -236,9 +236,9 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01f;
-    marker.color.g = rgb[1]*0.01f;
-    marker.color.b = rgb[2]*0.01f;
+    marker.color.r = rgb[0]*0.01;
+    marker.color.g = rgb[1]*0.01;
+    marker.color.b = rgb[2]*0.01;
     marker.color.a = 0.2;
 
     marker.lifetime = ros::Duration();
@@ -265,6 +265,7 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
 void CreateNewTask()
 {
     task_assign::task newTask;
+    bool inmap(false);
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
     YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/tasks_config.yaml");
@@ -337,8 +338,29 @@ void CreateNewTask()
 		}
 	    }
 	}
+// 	inmap = false;
+// 	for(auto elem : map_task)
+// 	{
+// 	    if(elem.first==newTask.ar_time)
+// 	    {
+// 		map_task[newTask.ar_time].push_back(newTask);
+// 		inmap = true;
+// 		break;
+// 	    }
+// 	}
+// 	if(!inmap)
+// 	    map_task[newTask.ar_time] = newTask;
 	
-	map_task[newTask.ar_time] = newTask;	
+	map_task[newTask.ar_time].push_back(newTask);
+    }
+    
+    for(auto el : map_task)
+    {
+      std::cout << "task con a_time " << el.first << " :" << std::endl;
+	for(auto elem : el.second)
+	{
+	    std::cout << elem.name << std::endl;
+	}
     }
 }
 
@@ -456,37 +478,41 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     double prec_at(0.0);
     double pre_prec_at(0.0);
-    double current_at;
-    current_at = map_task.begin()->first;
-    map<double, task_assign::task>::iterator current_it;
-    current_it = map_task.begin();
+    double current_at = map_task.begin()->first;
+//     map<double, vector<task_assign::task>>::iterator current_it;
+//     current_it = map_task.begin();
+    map<double, vector<task_assign::task>>::iterator it = map_task.begin();
     
-    while(ros::ok() && map_task.size()>markers.size())
+    while(it!=map_task.end() && ros::ok())
     {
       	ros::spinOnce();
 	VectMarker(markers);
 	
-	map<double, task_assign::task>::iterator it = current_it;
-	while(it!=map_task.end() && ros::ok())
-	{
+// 	map<double, vector<task_assign::task>>::iterator it = current_it;
+// 	if(ros::ok())
+// 	{
 	    VectMarker(markers);
 	    
-	    if(it->first == current_at)
-	    {
-		new_task_vect.push_back(it->second);
-		perm.push_back(it->second);
-	    }
-	    else
-	    {	     
+// 	    if(it->first == current_at)
+// 	    {
+	    	for(auto elem : it->second)
+		{
+		    if(ros::ok())
+			new_task_vect.push_back(elem);	  
+		}
+// 		new_task_vect.push_back(it->second);
+// 		perm.push_back(it->second);
+// 	    }
+// 	    else
+// 	    {	     
 		pre_prec_at = prec_at;
 		prec_at = current_at;
-		current_at = it->first;
-		current_it = it;
-		break;
-	    }  
-	    ++it;
+// 		++current_it;
+// 		break;
+// 	    }  
+// 	    ++it;
 	    ros::spinOnce();
-	}
+// 	}
 	
 	
 	int i = prec_at-pre_prec_at;
@@ -498,23 +524,26 @@ int main(int argc, char **argv)
 	    ros::spinOnce();
 	}
 	
-	rgb = gen3rand();
 	MyMarker mark;
-	for(auto elem : perm)
+	for(auto elem : it->second)
 	{
 	    if(ros::ok())
 	    {
+	      	rgb = gen3rand();
 		mark.task = elem;
 		mark.rgb = rgb;
 		markers.push_back(mark);
 	    }	  
 	}
-	perm.clear();
+// 	perm.clear();
 	    
 	// verifico se alcuni task precedentemente arrivati sono stati completati
 	VectMarker(markers);
 	publishVectTask();
 // 	new_task_vect.clear();
+	
+	++it;
+	current_at = it->first;
 
 	ros::spinOnce();
 	rate.sleep();

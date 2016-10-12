@@ -62,6 +62,7 @@ bool new_assign(false);
 bool new_in_rech(false);
 bool new_task(false);
 bool pub_master_in(false);
+bool completed(false);
 
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
@@ -79,8 +80,6 @@ vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-
 vector<task_assign::info> rt_info_vect;
 vector<task_assign::info> rech_info_vect;
 
-
-//TODO carica il vettore recharge_points iniziale da un file yaml
 vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica LIBERI presenti nello scenario
 vector<task_assign::task> recharge_points_busy; 
 
@@ -157,6 +156,20 @@ void insertNode(map<int,SmartDigraph::Node> excl_nodes)
 
 
 
+int searchNode(float x, float y)
+{
+    int id_node;
+    for (SmartDigraph::NodeIt n(Mappa); n != INVALID; ++n)
+    {
+	if(coord_x[n]==x && coord_y[n]==y && ros::ok())
+	{
+	    id_node = id[n];
+	    break;
+	}
+    }
+    
+    return id_node;
+}
 
 
 
@@ -453,6 +466,14 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 		break;
 	    }
 	}
+	for(auto newel : completed_tasks)
+	{
+	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+	    {
+		new_task = false;
+		break;
+	    }
+	}
 	
 	if(new_task)
 	{
@@ -680,6 +701,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	{
 	    ROS_INFO_STREAM("il robot " << msg->name << " è in posizione "<<floor(msg->x+0.5)<<" - "<<floor(msg->y+0.5));
 	    ROS_INFO_STREAM("il robot " << msg->name << " ha livello di batteria "<<msg->b_level);
+	    bool new_compl = true;
 	    // cerco il task corrispondente al robot
 	    for(auto ass : Catalogo_Ass)
 	    {
@@ -690,8 +712,21 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    {
 			ROS_INFO_STREAM("il task " << ass.task.name << " è stato completato");
 			
-			completed_tasks.push_back(ass.task);
-			publishExecTask();
+			for(auto newel : completed_tasks)
+			{
+			    if(newel.id1 == ass.task.id1 && newel.id2 == ass.task.id2)
+			    {
+				new_compl = false;
+				break;
+			    }
+			}
+			if(new_compl)
+			{
+			    completed_tasks.push_back(ass.task);
+			    completed = true;
+			}
+			new_compl = true;
+// 			publishExecTask();
 			// aggiorno la mappa dei nodi esclusi
 			it=excl_task_nodes.find(ass.task.id1);
 			excl_task_nodes.erase(it);
@@ -844,9 +879,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 Assign MinPath(task_assign::rt r_t)
 {
     Assign ass;   
-//     SmartDigraph::ArcMap<double> len(Map);
-//     SmartDigraph::NodeMap<float> coord_x(Map);
-//     SmartDigraph::NodeMap<float> coord_y(Map);
     SmartDigraph::Node rob;
     SmartDigraph::Node taska;
     SmartDigraph::Node taskb;
@@ -866,7 +898,7 @@ Assign MinPath(task_assign::rt r_t)
     ass.path_tot.id_a = r_t.task.id1;
     ass.path_tot.id_b = r_t.task.id2;
     
-    rob = SmartDigraph::nodeFromId(r_t.robot.id);
+    rob = SmartDigraph::nodeFromId(searchNode( r_t.robot.x, r_t.robot.y));
     taska = SmartDigraph::nodeFromId(r_t.task.id1);
     if(r_t.task.id1 == r_t.task.id2) //il task è un rech. point
 	taskb = SmartDigraph::nodeFromId(r_t.task.id1);
@@ -920,13 +952,6 @@ Assign MinPath(task_assign::rt r_t)
     
     
     // seconda parte del task
-    
-    // rimetto gli archi entranti e uscenti di taskb a len originaria (tolgo 1000)
-//     it=excl_task_nodes.find(r_t.task.id2);
-//     excl_task_nodes.erase(it);
-//     delNode(excl_task_nodes);
-    
-//     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test2(Mappa,len);
 
     dijkstra_test.run(taska, taskb);
     // se il task non coincide col robot
@@ -981,6 +1006,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	for(auto rt : msg->rt_vect)
 	{
 	    ROS_INFO_STREAM("il motion planner ha ricevuto dal master la coppia r-t "<< rt.robot.name << " - " << rt.task.name);
+	    ROS_INFO_STREAM("il robot ha coordinate: "<< rt.robot.x << " - " << rt.robot.y);
 	    ROS_INFO_STREAM("il task ha coordinate:	taska "<< rt.task.x1 << " - " << rt.task.y1<<"	taskb: "<< rt.task.x2 << " - " << rt.task.y2);
 		    
 	    //vedo se è già nel catalogo
@@ -1253,6 +1279,8 @@ void RechPoints()
 
 
 
+    
+    
 
 
 
@@ -1323,16 +1351,15 @@ int main(int argc, char **argv)
     }
     
 
-    
 
     
     ros::Rate rate(10);
     while (ros::ok()) 
     {
 	ros::spinOnce();
-	while(!pub_master_in && !new_assign && !new_in_rech && ros::ok())
+	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
 	{
-	    publishAssign();
+// 	    publishAssign();
 	    ros::spinOnce();
 	    rate.sleep();	  
 	}
@@ -1352,7 +1379,12 @@ int main(int argc, char **argv)
 	{
 	    publishRecharge();
 	    new_in_rech = false;
-	}	    
+	}	
+	if(completed && ros::ok())
+	{
+	    publishExecTask();
+	    completed = false;
+	}
 
 	ros::spinOnce();
 	rate.sleep();

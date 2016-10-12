@@ -479,41 +479,24 @@ int main(int argc, char **argv)
     double prec_at(0.0);
     double pre_prec_at(0.0);
     double current_at = map_task.begin()->first;
-//     map<double, vector<task_assign::task>>::iterator current_it;
-//     current_it = map_task.begin();
-    map<double, vector<task_assign::task>>::iterator it = map_task.begin();
-    
+
+    map<double, vector<task_assign::task>>::iterator it = map_task.begin();  
     while(it!=map_task.end() && ros::ok())
     {
       	ros::spinOnce();
 	VectMarker(markers);
-	
-// 	map<double, vector<task_assign::task>>::iterator it = current_it;
-// 	if(ros::ok())
-// 	{
-	    VectMarker(markers);
-	    
-// 	    if(it->first == current_at)
-// 	    {
-	    	for(auto elem : it->second)
-		{
-		    if(ros::ok())
-			new_task_vect.push_back(elem);	  
-		}
-// 		new_task_vect.push_back(it->second);
-// 		perm.push_back(it->second);
-// 	    }
-// 	    else
-// 	    {	     
-		pre_prec_at = prec_at;
-		prec_at = current_at;
-// 		++current_it;
-// 		break;
-// 	    }  
-// 	    ++it;
-	    ros::spinOnce();
-// 	}
-	
+
+	VectMarker(markers);
+
+	for(auto elem : it->second)
+	{
+	    if(ros::ok())
+		new_task_vect.push_back(elem);	  
+	}
+
+	pre_prec_at = prec_at;
+	prec_at = current_at;
+	ros::spinOnce();	
 	
 	int i = prec_at-pre_prec_at;
 	while(i>0 && ros::ok())
@@ -535,12 +518,10 @@ int main(int argc, char **argv)
 		markers.push_back(mark);
 	    }	  
 	}
-// 	perm.clear();
 	    
 	// verifico se alcuni task precedentemente arrivati sono stati completati
 	VectMarker(markers);
 	publishVectTask();
-// 	new_task_vect.clear();
 	
 	++it;
 	current_at = it->first;

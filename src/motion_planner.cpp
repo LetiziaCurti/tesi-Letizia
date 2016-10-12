@@ -66,13 +66,16 @@ bool completed(false);
 
 
 vector<task_assign::robot> available_robots;    	//R: vettore dei robot per l'assegnazione che cambia nel tempo (di dim n(k))
-vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot disponibili all'assegnazione di punti di ricarica
 vector<task_assign::robot> robots_in_execution;    	//vettore dei robot che stanno eseguendo dei task
-vector<task_assign::robot> robots_in_exec_rech;    	//vettore dei robot che stanno andando a ricaricarsi
-
 vector<task_assign::task> tasks_to_assign;    		//T: vettore dei task da assegnare che cambia nel tempo di dimensione m(k)
 vector<task_assign::task> tasks_in_execution;		//vettore dei task già in esecuzione
 vector<task_assign::task> completed_tasks;		//vettore dei task completati che viene inviato al task_manager
+
+vector<task_assign::robot> robots_in_recharge;    	//vettore dei robot disponibili all'assegnazione di punti di ricarica
+vector<task_assign::robot> robots_in_exec_rech;    	//vettore dei robot che stanno andando a ricaricarsi
+vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica LIBERI presenti nello scenario
+vector<task_assign::task> recharge_points_busy; 
+
 
 vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
 vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
@@ -80,21 +83,7 @@ vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-
 vector<task_assign::info> rt_info_vect;
 vector<task_assign::info> rech_info_vect;
 
-vector<task_assign::task> recharge_points;   		// è la lista di tutti i punti di ricarica LIBERI presenti nello scenario
-vector<task_assign::task> recharge_points_busy; 
 
-
-
-//simulo una mappa
-struct mappa
-{
-    pair<double,double> start;
-    pair<double,double> end;
-    vector<pair<double,double>> wpoints;
-};
-
-vector<mappa> GlobMap;   				// la mappa globale è un vettore di strutture mappa, ognuna rappresenta il path 
-							// per andare da un robot ad un task, va passata dall'esterno
 
 SmartDigraph Mappa; 
 SmartDigraph::NodeMap<float> coord_x(Mappa);
@@ -278,7 +267,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     // metti nei vettori i nodi corrispondenti
     for(auto elem : robots)
     {
-	rob_start_nodes.push_back(SmartDigraph::nodeFromId(elem.id));
+	rob_start_nodes.push_back(SmartDigraph::nodeFromId(searchNode(elem.x, elem.y)));
     }
     
     for(auto elem : tasks)
@@ -296,9 +285,6 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
     //posizioni di robot e task). il percorso consiste in una sequenza di nodi che viene memorizzata in un vettore, che 
     //poi viene ribaltato per avere la sequenza di wp che il robot deve percorrere per arrivare al task0
-//     SmartDigraph::ArcMap<double> len(Mappa);
-//     SmartDigraph::NodeMap<float> coord_x(Mappa);
-//     SmartDigraph::NodeMap<float> coord_y(Mappa);
     vector<task_assign::waypoint> path;
     vector<SmartDigraph::Node> path_node;
     SmartDigraph::Arc arc;
@@ -424,9 +410,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    if(!in)
 		info_vect.push_back(info);
 	    
-	    in = false;
-	    
-// 	    tex.push_back(info);
+	    in = false;	    
 	    
 	    insertNode(excl_task_nodes);
 	    n = SmartDigraph::nodeFromId(tasks[j].id1);
@@ -518,6 +502,7 @@ void publishMasterIn()
     msg.rob_to_ass = available_robots;
     msg.task_to_ass = tasks_to_assign;
     msg.rob_in_rech = robots_in_recharge;
+    msg.rech_points = recharge_points;
     msg.rob_info = rt_info_vect;
     msg.rech_rob_info = rech_info_vect;
     
@@ -538,6 +523,11 @@ void publishMasterIn()
 	ROS_INFO_STREAM(elem.name << "\n");
     }
     ROS_INFO_STREAM("Robot da ricaricare: \n");
+    for(auto elem : robots_in_recharge)
+    {
+	ROS_INFO_STREAM(elem.name << "\n");
+    }
+    ROS_INFO_STREAM("Punti di ricarica liberi: \n");
     for(auto elem : robots_in_recharge)
     {
 	ROS_INFO_STREAM(elem.name << "\n");
@@ -777,8 +767,17 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    rt_info_vect = CalcTex(rt_info_vect, robots_in_execution, tasks_in_execution, Mappa, 1);
 			    
 			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
-			    tex0 = i_rob.t_ex0;
-			    tex = i_rob.t_ex;
+			    for(auto elem : rt_info_vect)
+			    {
+				if(elem.r_name == ass.rob.name && elem.t_name == ass.task.name && ros::ok())
+				{
+				    tex0 = elem.t_ex0;
+				    tex = elem.t_ex;
+				    break;
+				}
+			    }
+// 			    tex0 = i_rob.t_ex0;
+// 			    tex = i_rob.t_ex;
 			    
 			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
 			    {
@@ -802,6 +801,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    // vedo se il robot si è ricaricato
 		    if(msg->b_level == msg->b_level0)
 		    {
+			ROS_INFO_STREAM("il task " << ass.task.name << " si è ricaricato");
+			
 			robots_in_recharge = deleteRob(msg->name, robots_in_recharge);
 			Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
 			
@@ -1006,7 +1007,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	for(auto rt : msg->rt_vect)
 	{
 	    ROS_INFO_STREAM("il motion planner ha ricevuto dal master la coppia r-t "<< rt.robot.name << " - " << rt.task.name);
-	    ROS_INFO_STREAM("il robot ha coordinate: "<< rt.robot.x << " - " << rt.robot.y);
+	    ROS_INFO_STREAM("il robot ha coordinate: "<< rt.robot.x << " - " << rt.robot.y << " con id: " <<  searchNode(rt.robot.x, rt.robot.y));
 	    ROS_INFO_STREAM("il task ha coordinate:	taska "<< rt.task.x1 << " - " << rt.task.y1<<"	taskb: "<< rt.task.x2 << " - " << rt.task.y2);
 		    
 	    //vedo se è già nel catalogo
@@ -1028,9 +1029,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		
 		tasks_in_execution.push_back(rt.task);
 		tasks_to_assign = deleteTask(rt.task.name, tasks_to_assign);
-		
-		
-// 		ass = MapToCatal(GlobMap, rt, 1);
+				
 		ass = MinPath(rt);
 		assignments_vect.push_back(ass.path_tot);
 
@@ -1079,7 +1078,6 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 		recharge_points_busy.push_back(rt.task);
 		recharge_points = deleteTask(rt.task.name, tasks_to_assign);
 		
-// 		ass = MapToCatal(GlobMap, rt, 0);
 		ass = MinPath(rt);
 		robRech_vect.push_back(ass.path_tot);
 		

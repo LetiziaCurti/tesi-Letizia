@@ -62,9 +62,10 @@ public:
     vector<task_assign::waypoint> path_b;
     
     bool taska, taskb;
+    float r, g, b;
     
 
-    Robot(ros::NodeHandle& node, string name, int id, task_assign::waypoint pos, double b_l0) 
+    Robot(ros::NodeHandle& node, string name, int id, task_assign::waypoint pos, double b_l0, float red, float gr, float bl) 
     {
 	robot_name = name;
 	id_marker = id;
@@ -78,6 +79,10 @@ public:
 	turtlesim_pose.x = pos.x;
 	turtlesim_pose.y = pos.y;
 	turtlesim_pose.theta = pos.theta;
+	
+	r = red;
+	g = gr;
+	b = bl;
 	
 
 	// Publish and subscribe to team status messages
@@ -156,12 +161,12 @@ public:
 	{
 	    //check: deve essere arrivato qualcosa
 	    if(elem.t_name!="" && elem.r_name!="")
-	    {
-		ROS_INFO_STREAM(robot_name << " is listening its recharge point from motion_planner");	    
+	    {    
 		// se devo andare in ricarica metto in_recharge a true così smetto di ascoltare
 		// altri messaggi finché non ho finito di ricaricarmi
-		if(elem.r_name==robot_name)
+		if(elem.r_name==robot_name && elem.t_name!=task_name)
 		{
+		    ROS_INFO_STREAM(robot_name << " is listening its recharge point from motion_planner");	
 		    in_recharge = true;
 		    task_name = elem.t_name;
 		    taska_id_marker = elem.id_a;
@@ -174,6 +179,11 @@ public:
 		    taska_pose.y = wp.y;
 		    taska_pose.theta = wp.theta;
 		    wait_a = wp.wait;
+		    
+		    for(auto wp : path_a)
+		    {
+			ROS_INFO_STREAM("coordinate dei wp per il rech. point: "<< wp.x <<" - " << wp.y);
+		    }
 		    
 		    break;
 		}
@@ -199,9 +209,9 @@ public:
 	
 	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
 	{
-	    status_msg.x = turtlesim_pose.x;
-	    status_msg.y = turtlesim_pose.y;
-	    status_msg.theta = turtlesim_pose.theta;
+	    status_msg.x = floor(turtlesim_pose.x+0.5);
+	    status_msg.y = floor(turtlesim_pose.y+0.5);
+	    status_msg.theta = floor(turtlesim_pose.theta+0.5);
 	}
 
 	// Wait for the publisher to connect to subscribers
@@ -210,7 +220,7 @@ public:
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its position \n");
-	ROS_INFO_STREAM("x: " << floor(status_msg.x+0.5) << " y: " << floor(status_msg.y+0.5) << "\n");
+	ROS_INFO_STREAM("x: " << status_msg.x << " y: " << status_msg.y << "\n");
     }
     
     
@@ -242,9 +252,6 @@ public:
 		  rate.sleep(); 
 	    }while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
 	}
-	
-// 	deleteMarker(goal_pose, task_id_marker);
-
     }
 
     
@@ -282,9 +289,9 @@ public:
 	marker.scale.z = 1.5;
 
 	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = 1.0f;
-	marker.color.g = 0.0f;
-	marker.color.b = 0.0f;
+	marker.color.r = r;
+	marker.color.g = g;
+	marker.color.b = b;
 	marker.color.a = 0.7;
 
 	marker.lifetime = ros::Duration();
@@ -294,62 +301,6 @@ public:
 	{
 	  if (!ros::ok())
 	  {
-	    break;
-	  }
-	  ROS_WARN_ONCE("Please create a subscriber to the marker");
-	  sleep(1);
-	}
-	marker_pub.publish(marker);
-    }
- 
- 
-
-    void deleteMarker(task_assign::waypoint task_pose, int t_id)
-    {
-	visualization_msgs::Marker marker;
-	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
-	marker.header.frame_id = "world";
-	marker.header.stamp = ros::Time::now();
-
-	// Set the namespace and id for this marker.  This serves to create a unique ID
-	// Any marker sent with the same namespace and id will overwrite the old one
-	marker.ns = "task_node";
-	marker.id = t_id;
-
-	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-	marker.type = visualization_msgs::Marker::CYLINDER;
-
-	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-	marker.action = visualization_msgs::Marker::DELETE;
-
-	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-	marker.pose.position.x = task_pose.x;
-	marker.pose.position.y = task_pose.y;
-	marker.pose.position.z = 0;
-	marker.pose.orientation.x = 0.0;
-	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = task_pose.theta;
-	marker.pose.orientation.w = 1.0;
-
-	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 1.0;
-	marker.scale.y = 1.0;
-	marker.scale.z = 1.0;
-
-	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = 1.0f;
-	marker.color.g = 1.0f;
-	marker.color.b = 0.0f;
-	marker.color.a = 0.7;
-
-	marker.lifetime = ros::Duration();
-
-	// Publish the marker
-	while (marker_pub.getNumSubscribers() < 1)
-	{
-	  if (!ros::ok())
-	  {
-// 	    return 0;
 	    break;
 	  }
 	  ROS_WARN_ONCE("Please create a subscriber to the marker");
@@ -358,7 +309,8 @@ public:
 	marker_pub.publish(marker);
     }
     
-        
+     
+     
     // Function con cui viene data al robot la posizione passata in argomento, che viene poi inviata a tf
     void broadcastPose(task_assign::waypoint posa, std::string name)
     {
@@ -394,7 +346,10 @@ int main(int argc, char **argv)
     pose.y = atof(argv[4]);
     pose.theta = atof(argv[5]);
     double b_level0 = atof(argv[6]);
-    Robot robot(node, name, id, pose, b_level0);
+    float r = atof(argv[7]);
+    float g = atof(argv[8]);
+    float b = atof(argv[9]);
+    Robot robot(node, name, id, pose, b_level0, r, g, b);
 
     sleep(1); 
 
@@ -431,7 +386,6 @@ int main(int argc, char **argv)
 	    robot.publishStatus(); 
  
 	    robot.assignment = false;
-// 	    robot.task_name = "";
 	}
 	
 	else if(robot.in_recharge && ros::ok())

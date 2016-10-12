@@ -105,6 +105,13 @@ vector<Assign> Catalogo_Ass;				//struttura che tiene in memoria tutti gli assig
 vector<Assign> Catalogo_Rech;				//struttura che tiene in memoria tutti gli assignment robot - p.to di ric.
 
 
+// struct Safety
+// {
+//     task_assign::task new_task;
+//     task_assign::task old_task;
+// };
+
+
 
 
 
@@ -549,10 +556,12 @@ void publishMasterIn()
 
 void ReAssFunc(task_assign::robot msg, Assign ass)
 {
-    ROS_INFO_STREAM("Sto facendo reassignment");
+    ROS_INFO_STREAM(msg.name << " sta facendo reassignment");
     // se sono lontana da taska e non ho ancora eseguito taska
     if(!msg.taska && getDistance(msg.x, msg.y, ass.task.x1, ass.task.y1) > SEC_DIST)
     {
+	ROS_INFO_STREAM(msg.name << " non riesce ad arrivare alla prima parte di " << ass.task.name);
+	
 	robots_in_execution = deleteRob(msg.name, robots_in_execution);
 	robots_in_recharge.push_back(msg);
 	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
@@ -562,18 +571,27 @@ void ReAssFunc(task_assign::robot msg, Assign ass)
 	rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 	rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 	
-// 	publishMasterIn();
 	pub_master_in = true;
     }
     // se ho eseguito taska e ora sono lontana sia da taska sia da taskb
-    // TODO intervieni con il modulo di salvataggio 
     else if(msg.taska && getDistance(msg.x, msg.y, ass.task.x2, ass.task.y2) > SEC_DIST)
     {
-// 	robots_in_execution = deleteRob(msg->name, robots_in_execution);
-// 	robots_in_recharge.push_back(*msg);
-// 	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
-// 	tasks_to_assign.push_back(ass.task);
-// 	Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
+	ROS_INFO_STREAM(msg.name << " non riesce ad arrivare alla seconda parte di " << ass.task.name);
+	task_assign::task safe_task;
+	
+	robots_in_execution = deleteRob(msg.name, robots_in_execution);
+	robots_in_recharge.push_back(msg);
+	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
+	
+	// creo un nuovo "task di salvataggio" in cui la prima parte è arrivare alla posizione del robot in difficoltà 
+	// e la seconda parte è arrivare alla seconda parte del robot in difficoltà
+	safe_task = ass.task;
+	safe_task.x1 = msg.x;
+	safe_task.y1 = msg.y;
+	safe_task.id1 = searchNode(msg.x, msg.y);
+	
+	tasks_to_assign.push_back(safe_task);
     } 			 
 }
 
@@ -674,6 +692,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    if(msg->b_level <= BATTERY_THR)
 	    {
 		    robots_in_recharge.push_back(*msg);
+		    ROS_INFO_STREAM("il robot " << msg->name << " viene messo in robots_in_recharge");
 		    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 		    available_robots = deleteRob(msg->name, available_robots);
 	    }
@@ -736,6 +755,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    else
 			    {
 				robots_in_recharge.push_back(*msg);
+				ROS_INFO_STREAM("il robot " << msg->name << " viene messo in robots_in_recharge");
 				rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 				if(recharge_points.size()>0)
 				{

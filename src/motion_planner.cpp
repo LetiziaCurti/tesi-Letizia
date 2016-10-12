@@ -579,7 +579,6 @@ void ReAssFunc(task_assign::robot msg, Assign ass)
 
 
 double tex0, tex;
-task_assign::info i_rob;
 
 // Legge "status_rob_topic" 
 void StatusCallback(const task_assign::robot::ConstPtr& msg)
@@ -645,7 +644,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    }
 	}
 	
-   
+	// il robot è appena arrivato e è carico
 	if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level > BATTERY_THR)
 	{
 	    available_robots.push_back(*msg);
@@ -657,7 +656,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 // 		publishMasterIn();
 // 	    }
 	}
-	
+	// il robot è appena arrivato e è scarico
 	else if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
 	{
 	    robots_in_recharge.push_back(*msg);
@@ -669,7 +668,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 // 		publishMasterIn();
 // 	    }
 	}
-	
+	// il robot è libero
 	else if(available)
 	{	    	    
 	    if(msg->b_level <= BATTERY_THR)
@@ -681,12 +680,12 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    else
 		rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);	      
 	}
-	
+	// il robot deve essere caricato (sta aspettando che gli assegnino un rech. point)
 	else if(avail_rech)
 	{	    	    
 	   rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);      
 	}
-	
+	// il robot è in esecuzione
 	else if(in_execution)
 	{
 	    ROS_INFO_STREAM("il robot " << msg->name << " è in posizione "<<floor(msg->x+0.5)<<" - "<<floor(msg->y+0.5));
@@ -699,9 +698,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		{
 		    // vedo se il robot è arrivato al task
 		    if(floor(msg->x+0.5) == ass.task.x2 && floor(msg->y+0.5) == ass.task.y2)
-		    {
-			ROS_INFO_STREAM("il task " << ass.task.name << " è stato completato");
-			
+		    {			
 			for(auto newel : completed_tasks)
 			{
 			    if(newel.id1 == ass.task.id1 && newel.id2 == ass.task.id2)
@@ -712,41 +709,42 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			}
 			if(new_compl)
 			{
+			    ROS_INFO_STREAM("il task " << ass.task.name << " è stato completato");
 			    completed_tasks.push_back(ass.task);
 			    completed = true;
-			}
-			new_compl = true;
-// 			publishExecTask();
-			// aggiorno la mappa dei nodi esclusi
-			it=excl_task_nodes.find(ass.task.id1);
-			excl_task_nodes.erase(it);
-			it=excl_task_nodes.find(ass.task.id2);
-			excl_task_nodes.erase(it);
-	    
-			tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
-			robots_in_execution = deleteRob(msg->name, robots_in_execution);
-			Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
-			
-			if(msg->b_level > BATTERY_THR)
-			{
-			    available_robots.push_back(*msg);
-			    rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
-			    if(tasks_to_assign.size()>0)
+			    
+			    // aggiorno la mappa dei nodi esclusi
+			    it=excl_task_nodes.find(ass.task.id1);
+			    excl_task_nodes.erase(it);
+			    it=excl_task_nodes.find(ass.task.id2);
+			    excl_task_nodes.erase(it);
+		
+			    tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+			    robots_in_execution = deleteRob(msg->name, robots_in_execution);
+			    Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
+			    
+			    if(msg->b_level > BATTERY_THR)
 			    {
-// 				publishMasterIn();
-				pub_master_in = true;
+				available_robots.push_back(*msg);
+				rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+				if(tasks_to_assign.size()>0)
+				{
+    // 				publishMasterIn();
+				    pub_master_in = true;
+				}
+			    }
+			    else
+			    {
+				robots_in_recharge.push_back(*msg);
+				rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+				if(recharge_points.size()>0)
+				{
+    // 				publishMasterIn();
+				    pub_master_in = true;				
+				}			    
 			    }
 			}
-			else
-			{
-			    robots_in_recharge.push_back(*msg);
-			    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
-			    if(recharge_points.size()>0)
-			    {
-// 				publishMasterIn();
-				pub_master_in = true;				
-			    }			    
-			}
+			new_compl = true;
 		    }
 		    // se il robot sta eseguendo il task e non ha ancora finito
 		    else
@@ -766,7 +764,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			{				
 			    rt_info_vect = CalcTex(rt_info_vect, robots_in_execution, tasks_in_execution, Mappa, 1);
 			    
-			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
+			    // cerca in rt_info_vect la coppia che sta in ass, e prendi tex0 e tex
 			    for(auto elem : rt_info_vect)
 			    {
 				if(elem.r_name == ass.rob.name && elem.t_name == ass.task.name && ros::ok())
@@ -776,9 +774,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 				    break;
 				}
 			    }
-// 			    tex0 = i_rob.t_ex0;
-// 			    tex = i_rob.t_ex;
-			    
+			    // verifica della condizione di fattibilità dell'assignment
 			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
 			    {
 				ReAssFunc(*msg,ass);
@@ -790,9 +786,10 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		}
 	    }
 	}
-	
+	// il robot si sta ricaricando oppure sta andando in un punto di ricarica
 	else if(in_charge)
 	{	    
+	    bool new_compl = true;
 	    // cerco il p.to di ric. corrispondente al robot
 	    for(auto ass : Catalogo_Rech)
 	    {
@@ -801,47 +798,71 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    // vedo se il robot si è ricaricato
 		    if(msg->b_level == msg->b_level0)
 		    {
-			ROS_INFO_STREAM("il task " << ass.task.name << " si è ricaricato");
-			
-			robots_in_recharge = deleteRob(msg->name, robots_in_recharge);
-			Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
-			
-			available_robots.push_back(*msg);
-			rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
-			if(tasks_to_assign.size()>0)
+			for(auto newel : recharge_points)
 			{
-// 			    publishMasterIn();
-			    pub_master_in = true;			  
-			}
-		    }
-		    // se il robot sta andando nel punto di ricarica e non ha batteria, faccio reassignment
-		    else if(!msg->taska)
-		    {	    
-			// verifica sul livello di batteria
-			if(msg->b_level <= BATTERY_THR)
-			{
-			    // se la distanza dal task è inferiore alla soglia SEC_DIST, ce lo faccio arrivare e poi 
-			    // lo manderò in carica
-			    // (quindi non faccio nulla)
-			  
-			    //altrimenti faccio reassignment
-			    ReAssFunc(*msg,ass);
-			}
-			// verifica sull'errore tra tempi di esecuzione				
-			else
-			{				
-			    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 1);
-			    
-			    //TODO cerca in rt_info_vect la coppia che sta in ass, mettila in i_rob e prendi tex0 e tex
-			    tex0 = i_rob.t_ex0;
-			    tex = i_rob.t_ex;
-			    
-			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
+			    if(newel.id1 == ass.task.id1)
 			    {
-				ReAssFunc(*msg,ass);
+				new_compl = false;
+				break;
 			    }
 			}
+			if(new_compl)
+			{
+			    ROS_INFO_STREAM("il task " << ass.task.name << " si è ricaricato");
+			    
+			    recharge_points_busy = deleteTask(ass.task.name, recharge_points_busy);
+			    robots_in_exec_rech = deleteRob(msg->name, robots_in_exec_rech);
+			    Catalogo_Rech = deleteAss(msg->name, Catalogo_Rech);
+			    
+			    available_robots.push_back(*msg);
+			    recharge_points.push_back(ass.task);
+			    rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+			    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+			    if(tasks_to_assign.size()>0)
+			    {
+    // 			    publishMasterIn();
+				pub_master_in = true;			  
+			    }
+			}
+			new_compl = true;
 		    }
+		    // PER ORA non consideriamo la possibilità che il robot non riesca a raggiungere i punti di ricarica
+		    // (ad es. se si scarica del tutto)
+// 		    // se il robot sta andando nel punto di ricarica e non ha batteria, faccio reassignment
+// 		    else if(!msg->taska)
+// 		    {	    
+// 			// verifica sul livello di batteria
+// 			if(msg->b_level <= BATTERY_THR)
+// 			{
+// 			    // se la distanza dal task è inferiore alla soglia SEC_DIST, ce lo faccio arrivare e poi 
+// 			    // lo manderò in carica
+// 			    // (quindi non faccio nulla)
+// 			  
+// 			    //altrimenti faccio reassignment
+// 			    ReAssFunc(*msg,ass);
+// 			}
+// 			// verifica sull'errore tra tempi di esecuzione				
+// 			else
+// 			{				
+// 			    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 1);
+// 			    
+// 			    // cerca in rech_info_vect la coppia che sta in ass, e prendi tex0 e tex
+// 			    for(auto elem : rech_info_vect)
+// 			    {
+// 				if(elem.r_name == ass.rob.name && elem.t_name == ass.task.name && ros::ok())
+// 				{
+// 				    tex0 = elem.t_ex0;
+// 				    tex = elem.t_ex;
+// 				    break;
+// 				}
+// 			    }
+// 			    
+// 			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
+// 			    {
+// 				ReAssFunc(*msg,ass);
+// 			    }
+// 			}
+// 		    }
 		    
 		    break;		    
 		}
@@ -1058,6 +1079,10 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	for(auto rt : msg->rt_vect)
 	{
 	    ROS_INFO_STREAM("il motion planner ha ricevuto dal master la coppia r-rech.point "<< rt.robot.name << " - " << rt.task.name);
+	    ROS_INFO_STREAM("il robot ha coordinate: "<< rt.robot.x << " - " << rt.robot.y << " con id: " <<  searchNode(rt.robot.x, rt.robot.y));
+	    ROS_INFO_STREAM("il rech.point ha coordinate: "<< rt.task.x1 << " - " << rt.task.y1);
+
+	    
 	    //vedo se è già nel catalogo
 	    for(auto elem : Catalogo_Rech)
 	    {
@@ -1124,6 +1149,11 @@ void publishRecharge()
     
     sleep(1);
     recharge_pub.publish(msg);
+    
+    for(auto elem : msg.assign_vect)
+    {
+	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned rech. point " << elem.t_name);
+    }
 }
 
 

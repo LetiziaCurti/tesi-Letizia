@@ -37,7 +37,7 @@ vector<float> gen3rand()
 {
     vector<float> rgb;
     float r,g,b;
-    r = rand()%100 + 1;
+    r = rand()%1000 + 1;
     rgb.push_back(r);
     
 //     g = r;
@@ -45,12 +45,12 @@ vector<float> gen3rand()
 
 //     while(g == r)
 //     {
-	g = rand()%100 + 1;
+	g = rand()%1000 + 1;
 //     }
     rgb.push_back(g);
 //     while(b == g)
 //     {
-	b = rand()%100 + 1;
+	b = rand()%1000 + 1;
 //     }
     rgb.push_back(b);
     
@@ -94,9 +94,9 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01;
-    marker.color.g = rgb[1]*0.01;
-    marker.color.b = rgb[2]*0.01;
+    marker.color.r = rgb[0]*0.001;
+    marker.color.g = rgb[1]*0.001;
+    marker.color.b = rgb[2]*0.001;
     marker.color.a = 1;
 
     marker.lifetime = ros::Duration();
@@ -135,9 +135,9 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01;
-    marker.color.g = rgb[1]*0.01;
-    marker.color.b = rgb[2]*0.01;
+    marker.color.r = rgb[0]*0.001;
+    marker.color.g = rgb[1]*0.001;
+    marker.color.b = rgb[2]*0.001;
     marker.color.a = 0.2;
 
     marker.lifetime = ros::Duration();
@@ -195,9 +195,9 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01;
-    marker.color.g = rgb[1]*0.01;
-    marker.color.b = rgb[2]*0.01;
+    marker.color.r = rgb[0]*0.001;
+    marker.color.g = rgb[1]*0.001;
+    marker.color.b = rgb[2]*0.001;
     marker.color.a = 1;
 
     marker.lifetime = ros::Duration();
@@ -236,9 +236,9 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.01;
-    marker.color.g = rgb[1]*0.01;
-    marker.color.b = rgb[2]*0.01;
+    marker.color.r = rgb[0]*0.001;
+    marker.color.g = rgb[1]*0.001;
+    marker.color.b = rgb[2]*0.001;
     marker.color.a = 0.2;
 
     marker.lifetime = ros::Duration();

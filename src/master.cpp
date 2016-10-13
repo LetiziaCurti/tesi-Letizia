@@ -54,9 +54,7 @@ vector<task_assign::robot> robots_in_recharge;  //R: vettore dei robot che devon
 vector<task_assign::task> recharge_points;   	// è la lista di tutti i punti di ricarica liberi
 
 vector<task_assign::info> rech_info_vect;
-vector<task_assign::info> rech_info0_vect;
 vector<task_assign::info> tex_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
-vector<task_assign::info> tex0_info_vect;	//vettore dei tempi di esecuzione di ciascun robot rispetto a tutti i task
 
 vector<task_assign::rt> r_t_ass;
 vector<task_assign::rt> r_rech_ass;
@@ -140,7 +138,7 @@ void publishRech(vector<vector<int>> S)
 
 
 // Function che calcola la Utility Function
-vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::robot> r_ass, vector<task_assign::info> ex_t, vector<task_assign::info> ex_t_0, string s)
+vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::robot> r_ass, vector<task_assign::info> ex_t, string s)
 {
     vector<double> UF;
     double P(0);
@@ -170,31 +168,27 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 		C = b_lev;
 		P = 1/position;
 	    }
-	
-
-	    for(auto ex0 : ex_t_0)
+	    for(auto ex : ex_t)
 	    {
-		if(task.name == ex0.t_name && robot.name == ex0.r_name)
+		if(task.name == ex.t_name && robot.name == ex.r_name)
 		{
-		    t_ex_0 = ex0.t_ex;
+		    if(ex.t_ex0!=0)
+			t_ex_0 = ex.t_ex0;
+		    else
+			t_ex_0 = ex.t_ex;
+
 		    P += 1/t_ex_0;
 // 		    C -= t_ex_0;
-		}
-		break;
-	    }
-// 	    for(auto ex : ex_t)
-// 	    {
-// 		if(task.name == ex.t_name && robot.name == ex.r_name)
-// 		{
-// 		    t_ex = ex.t_ex;
 // 		    C += t_ex;
-// 		}
-// 		break;
-// 	    }
+		    break;
+		}
+	    }
 	    
-	    U = P-C;
+	    U = (P-C)*100;
 	    if(U<=0)
-		U=0;
+		U=0;	    
+	    
+	    ROS_INFO_STREAM("U.F. per " << robot.name << " - " << task.name << ": " << P << "-" << C << "=" << U);    
 	    
 	    UF.push_back(U);
 	}
@@ -375,7 +369,7 @@ vector<double> calcUFunProva(int n, int m)
     vector<double> U;
     
     // -f33
-    if(n==3 & m==3)
+    if(n==3 && m==3)
     {
 	U.push_back(0.1715);
 	U.push_back(0.6361);
@@ -389,18 +383,24 @@ vector<double> calcUFunProva(int n, int m)
     }
 
     // -f23
-    else if(n==2 & m==3)
+    else if(n==2 && m==3)
     {
-	U.push_back(0.1715);
+// 	U.push_back(0.1715);
+// 	U.push_back(0.6361);
+// 	U.push_back(0.1833);
+// 	U.push_back(0.3000);
+// 	U.push_back(0.6461);
+// 	U.push_back(0.1242);
+      	U.push_back(0.6361);
 	U.push_back(0.6361);
-	U.push_back(0.1833);
-	U.push_back(0.3000);
-	U.push_back(0.6461);
-	U.push_back(0.1242);
+	U.push_back(0.6361);
+	U.push_back(0.6361);
+	U.push_back(0.6361);
+	U.push_back(0.6361);
     }
     
     // -f32
-    else if(n==3 & m==2)
+    else if(n==3 && m==2)
     {
 	U.push_back(0.1715);
 	U.push_back(0.6361);
@@ -467,6 +467,13 @@ int main(int argc, char **argv)
     int m(0);
     int r(0);
     int s(0);
+    
+//     n=2;
+//     m=3;
+//     vector<vector<int>> S(n+m+1, vector<int> (n*m,0)); 
+//     U = calcUFunProva(n,m);
+//     S = TASolver(n, m, U);
+//     printMatrix(S);
 
     ros::Rate rate(10);
     while (ros::ok()) 
@@ -486,11 +493,12 @@ int main(int argc, char **argv)
 		
 		vector<vector<int>> S(n+m+1, vector<int> (n*m,0)); 
 		
-		U = calcUFun(task_to_assign, robot_to_assign, tex_info_vect, tex0_info_vect, "assignment");
+		U = calcUFun(task_to_assign, robot_to_assign, tex_info_vect, "assignment");
 		S = TASolver(n, m, U);
 		printMatrix(S);
 		
 		publishRT(S);	
+				
 		ROS_INFO_STREAM("Il master ha calcolato l'assignment di " << robot_to_assign.size() << " robot per " 
 		<< task_to_assign.size() << " task" << "\n");
 	    }
@@ -502,13 +510,13 @@ int main(int argc, char **argv)
 
 		vector<vector<int>> S(r+s+1, vector<int> (r*s,0)); 
 		
-		U = calcUFun(recharge_points, robots_in_recharge, rech_info_vect, rech_info0_vect, "recharge");
+		U = calcUFun(recharge_points, robots_in_recharge, rech_info_vect, "recharge");
 		S = TASolver(r, s, U);
 		printMatrix(S);
 		
 		publishRech(S);
 		ROS_INFO_STREAM("Il master ha calcolato l'assignment di " << robot_to_assign.size() << 
-		" robot per i punti di ircarica" << "\n");
+		" robot per i punti di ricarica" << "\n");
 	    }
 	    
 	    do_reassign = false;

@@ -250,10 +250,23 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 
 
+double CalcPath(vector<task_assign::waypoint> wpoints)
+{
+    double dist(0);
+    
+    for(int i=0; i<wpoints.size()-1; i++)
+    {
+	dist += getDistance(wpoints[i].x,wpoints[i].y,wpoints[i+1].x,wpoints[i+1].y);
+    }
+    
+    return dist;
+}
+
+
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
-vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
+vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph &maps, int op)
 {
     // vettore delle info in uscita
     vector<task_assign::info> out;
@@ -266,18 +279,18 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     vector<SmartDigraph::Node> taskb_goal_nodes;
     
     // metti nei vettori i nodi corrispondenti
-    ROS_INFO_STREAM("rob start ids: ");
+//     ROS_INFO_STREAM("rob start ids: ");
     for(auto elem : robots)
     {
 	rob_start_nodes.push_back(SmartDigraph::nodeFromId(searchNode(elem.x, elem.y)));
-	ROS_INFO_STREAM(searchNode(elem.x, elem.y));	
+// 	ROS_INFO_STREAM(searchNode(elem.x, elem.y));	
     }
     
-    ROS_INFO_STREAM("taska end ids: ");
+//     ROS_INFO_STREAM("taska end ids: ");
     for(auto elem : tasks)
     {
 	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
-	ROS_INFO_STREAM(elem.id1);	
+// 	ROS_INFO_STREAM(elem.id1);	
 	
 	if(elem.id1 != elem.id2) //il task non è un rech. point
 	    taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
@@ -345,14 +358,16 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 		reverse(path.begin(),path.end());
 		reverse(path_node.begin(),path_node.end());
 		
-		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato		
-		for(int k=0; k<path_node.size()-1; k++)
-		{
-		    arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
-		    dist += len[arc];
-		}
-		
-		time_a = 1/VELOCITY*dist;
+// 		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato		
+// 		for(int k=0; k<path_node.size()-1; k++)
+// 		{
+// 		    arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
+// 		    dist += len[arc];
+// 		}
+		dist = CalcPath(path);
+// 		ROS_INFO_STREAM("Distanza tra " << robots[i].name << " - " << tasks[j].name << " : " << dist);
+		time_a = dist/VELOCITY;
+// 		ROS_INFO_STREAM("time_a tra " << robots[i].name << " - " << tasks[j].name << " : " << time_a);
 	    }
 	    else
 	    {
@@ -388,14 +403,16 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 		    reverse(path.begin(),path.end());
 		    reverse(path_node.begin(),path_node.end());
 		    
-		    // il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
-		    for(int k=0; k<path_node.size()-1; k++)
-		    {
-			arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
-			dist += len[arc];
-		    }	
-		    
-		    time_b = 1/VELOCITY*dist;
+// 		    // il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
+// 		    for(int k=0; k<path_node.size()-1; k++)
+// 		    {
+// 			arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
+// 			dist += len[arc];
+// 		    }
+		    dist = CalcPath(path);	
+// 		    ROS_INFO_STREAM("Distanza tra " << robots[i].name << " - " << tasks[j].name << " : " << dist);
+		    time_b = dist/VELOCITY;
+// 		    ROS_INFO_STREAM("time_b tra " << robots[i].name << " - " << tasks[j].name << " : " << time_b);
 		}
 		else
 		{
@@ -440,6 +457,196 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     
     return out;
 }
+
+
+
+// // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
+// // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
+// vector<task_assign::info> CalcTexRec(vector<task_assign::info> info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
+// {
+//     // vettore delle info in uscita
+//     vector<task_assign::info> out;
+//     out = info_vect;
+// 		
+// 	
+//     // creo i vettori dei nodi corrispondenti alle posizioni dei robots e dei tasks
+//     vector<SmartDigraph::Node> rob_start_nodes;
+//     vector<SmartDigraph::Node> taska_goal_nodes;
+//     
+//     // metti nei vettori i nodi corrispondenti
+//     ROS_INFO_STREAM("rob start ids: ");
+//     for(auto elem : robots)
+//     {
+// 	rob_start_nodes.push_back(SmartDigraph::nodeFromId(searchNode(elem.x, elem.y)));
+// 	ROS_INFO_STREAM(searchNode(elem.x, elem.y));	
+//     }
+//     
+//     ROS_INFO_STREAM("taska end ids: ");
+//     for(auto elem : tasks)
+//     {
+// 	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
+// 	ROS_INFO_STREAM(elem.id1);	
+//     }
+//   
+// 
+//     
+//     
+//     //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
+//     //posizioni di robot e task). il percorso consiste in una sequenza di nodi che viene memorizzata in un vettore, che 
+//     //poi viene ribaltato per avere la sequenza di wp che il robot deve percorrere per arrivare al task0
+//     vector<task_assign::waypoint> path;
+//     vector<SmartDigraph::Node> path_node;
+//     SmartDigraph::Arc arc;
+//     double time_a(0);
+//     double time_b(0);
+//     double dist(0);
+//     
+//     map<int, SmartDigraph::Node>::iterator it;
+//     SmartDigraph::Node n;
+//  
+//     
+//     
+//    
+//     
+//     for(int i=0; i<robots.size(); i++)
+//     {
+// 	for(int j=0; j<tasks.size(); j++)
+// 	{
+// 	    task_assign::info info;
+// 	    
+// 	    info.r_name = robots[i].name;
+// 	    info.t_name = tasks[j].name;
+// 	    dist = 0;
+// 	    	    	    	    
+// 	    it=excl_task_nodes.find(tasks[j].id1);
+// 	    excl_task_nodes.erase(it);
+// 	    if(tasks[j].id1 != tasks[j].id2)
+// 	    {
+// 		it=excl_task_nodes.find(tasks[j].id2);
+// 		excl_task_nodes.erase(it);
+// 	    }
+// 	    delNode(excl_task_nodes);
+// 	    
+// 	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
+// 	    
+// 	    // prima parte del task	    
+// 	    
+// 	    dijkstra_test.run(rob_start_nodes.at(i), taska_goal_nodes.at(j));
+// 	    // se il task non coincide col robot
+// 	    if (dijkstra_test.dist(taska_goal_nodes.at(j)) > 0)
+// 	    { 
+// 		// ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
+// 		// arrivare al successivo
+// 		// memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
+// 		// i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
+// 		for (SmartDigraph::Node v = taska_goal_nodes.at(j); v != rob_start_nodes.at(i); v = dijkstra_test.predNode(v))
+// 		{
+// 		    task_assign::waypoint tmp;
+// 		    tmp.y = coord_y[v];
+// 		    tmp.x = coord_x[v];
+// 		    path.push_back(tmp);
+// 		    path_node.push_back(v);
+// 		}
+// 		reverse(path.begin(),path.end());
+// 		reverse(path_node.begin(),path_node.end());
+// 		
+// 		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato		
+// 		for(int k=0; k<path_node.size()-1; k++)
+// 		{
+// 		    arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
+// 		    dist += len[arc];
+// 		}
+// 		
+// 	if(elem.id1 != elem.id2) //il task non è un rech. point
+// 	    taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
+// 		time_a = 1/VELOCITY*dist;
+// 	    }
+// 	    else
+// 	    {
+// 		time_a = 0.01;
+// 	    }
+// 	    
+// 	    path.clear();
+// 	    path_node.clear();
+// 	    
+// 	    
+// 	    
+// 	    // seconda parte del task, la faccio solo se il task non è un rech. point
+// 	    
+// 	    if(tasks[j].id1 != tasks[j].id2) //il task non è un rech. point
+// 	    {
+// 		dist = 0;
+// 		dijkstra_test.run(taska_goal_nodes.at(j), taskb_goal_nodes.at(j));
+// 		// se il task non coincide col robot
+// 		if (dijkstra_test.dist(taskb_goal_nodes.at(j)) > 0)
+// 		{ 
+// 		    // ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
+// 		    // arrivare al successivo
+// 		    // memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
+// 		    // i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
+// 		    for (SmartDigraph::Node v = taskb_goal_nodes.at(j); v != taska_goal_nodes.at(j); v = dijkstra_test.predNode(v))
+// 		    {
+// 			task_assign::waypoint tmp;
+// 			tmp.y = coord_y[v];
+// 			tmp.x = coord_x[v];
+// 			path.push_back(tmp);
+// 			path_node.push_back(v);
+// 		    }
+// 		    reverse(path.begin(),path.end());
+// 		    reverse(path_node.begin(),path_node.end());
+// 		    
+// 		    // il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
+// 		    for(int k=0; k<path_node.size()-1; k++)
+// 		    {
+// 			arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
+// 			dist += len[arc];
+// 		    }	
+// 		    
+// 		    time_b = 1/VELOCITY*dist;
+// 		}
+// 		else
+// 		{
+// 		    time_b = 0.01;
+// 		}
+// 	    }
+// 	    // il task è un rech. point
+// 	    else
+// 	    {
+// 		time_b = 0;
+// 	    }
+// 
+// 	    // if op=0 carico le info in tex0
+// 	    if(!op)
+// 		info.t_ex0 = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
+// 	    // else carico le info in tex
+// 	    else
+// 		info.t_ex = time_a + tasks[j].wait1 + time_b + tasks[j].wait2;
+// 	    
+// 	    bool in = false;
+// 	    for(auto elem : out)
+// 	    {
+// 		if(elem.r_name == robots[i].name && elem.t_name == tasks[j].name)
+// 		{
+// 		      elem.t_ex0 = info.t_ex0;
+// 		      elem.t_ex = info.t_ex;
+// 		      in = true;
+// 		      break;
+// 		}
+// 	    }
+// 	    if(!in)
+// 		out.push_back(info);
+// 	    
+// 	    in = false;	    
+// 	    
+// 	    insertNode(excl_task_nodes);
+// 	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
+// 	    if(tasks[j].id1 != tasks[j].id2)
+// 		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
+// 	}
+//     }
+//     
+//     return out;
+// }
 
 
 
@@ -548,20 +755,20 @@ void publishMasterIn()
     ROS_INFO_STREAM("Punti di ricarica liberi:");
     for(auto elem : recharge_points)
     {
-	ROS_INFO_STREAM(elem.name << "position: " << elem.x1 << " - " << elem.y1 << " id: " << elem.id1);
+	ROS_INFO_STREAM(elem.name);
     }
-    ROS_INFO_STREAM("tempi di esec. robot-task:");
-    for(auto elem : rt_info_vect)
-    {
-	ROS_INFO_STREAM("rob: " << elem.r_name << " - task: " << elem.t_name);
-	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
-    }
-    ROS_INFO_STREAM("tempi di esec. robot-punto di ric.:");
-    for(auto elem : rech_info_vect)
-    {
-	ROS_INFO_STREAM("rob: " << elem.r_name << " - punto di ricarica: " << elem.t_name);
-	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
-    }
+//     ROS_INFO_STREAM("tempi di esec. robot-task:");
+//     for(auto elem : rt_info_vect)
+//     {
+// 	ROS_INFO_STREAM("rob: " << elem.r_name << " - task: " << elem.t_name);
+// 	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
+//     }
+//     ROS_INFO_STREAM("tempi di esec. robot-punto di ric.:");
+//     for(auto elem : rech_info_vect)
+//     {
+// 	ROS_INFO_STREAM("rob: " << elem.r_name << " - punto di ricarica: " << elem.t_name);
+// 	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
+//     }
 
 }
 
@@ -605,6 +812,11 @@ void ReAssFunc(task_assign::robot msg, Assign ass)
 	safe_task.id1 = searchNode(msg.x, msg.y);
 	
 	tasks_to_assign.push_back(safe_task);
+	
+	rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+	rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+	
+	pub_master_in = true;
     } 			 
 }
 
@@ -721,7 +933,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	else if(in_execution)
 	{
 
-	    ROS_INFO_STREAM("il robot " << msg->name << " è in posizione "<<floor(msg->x+0.5)<<" - "<<floor(msg->y+0.5));
+	    ROS_INFO_STREAM("il robot " << msg->name << " e' in posizione "<<floor(msg->x+0.5)<<" - "<<floor(msg->y+0.5));
 	    ROS_INFO_STREAM("il robot " << msg->name << " ha livello di batteria "<<msg->b_level);
 	    bool new_compl = true;
 	    // cerco il task corrispondente al robot
@@ -742,7 +954,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			}
 			if(new_compl)
 			{
-			    ROS_INFO_STREAM("il task " << ass.task.name << " è stato completato");
+			    ROS_INFO_STREAM("il task " << ass.task.name << " e' stato completato");
 			    completed_tasks.push_back(ass.task);
 			    completed = true;
 			    
@@ -842,7 +1054,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			}
 			if(new_compl)
 			{
-			    ROS_INFO_STREAM("il task " << ass.task.name << " si è ricaricato");
+			    ROS_INFO_STREAM("il task " << ass.task.name << " si e' ricaricato");
 			    
 			    recharge_points_busy = deleteTask(ass.task.name, recharge_points_busy);
 			    robots_in_exec_rech = deleteRob(msg->name, robots_in_exec_rech);

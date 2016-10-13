@@ -535,19 +535,21 @@ void publishMasterIn()
 	ROS_INFO_STREAM(elem.name << "\n");
     }
     ROS_INFO_STREAM("Punti di ricarica liberi: \n");
-    for(auto elem : robots_in_recharge)
+    for(auto elem : recharge_points)
     {
 	ROS_INFO_STREAM(elem.name << "\n");
     }
     ROS_INFO_STREAM("tempi di esec. robot-task: \n");
     for(auto elem : rt_info_vect)
     {
-	ROS_INFO_STREAM("rob: " << elem.r_name << "task: " << elem.t_name);
+	ROS_INFO_STREAM("rob: " << elem.r_name << " - task: " << elem.t_name);
+	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
     }
     ROS_INFO_STREAM("tempi di esec. robot-punto di ric.: \n");
     for(auto elem : rech_info_vect)
     {
-	ROS_INFO_STREAM("rob: " << elem.r_name << "punto di ricarica: " << elem.t_name);
+	ROS_INFO_STREAM("rob: " << elem.r_name << " - punto di ricarica: " << elem.t_name);
+	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
     }
 
 }
@@ -707,6 +709,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	// il robot è in esecuzione
 	else if(in_execution)
 	{
+
 	    ROS_INFO_STREAM("il robot " << msg->name << " è in posizione "<<floor(msg->x+0.5)<<" - "<<floor(msg->y+0.5));
 	    ROS_INFO_STREAM("il robot " << msg->name << " ha livello di batteria "<<msg->b_level);
 	    bool new_compl = true;
@@ -794,11 +797,11 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 				    break;
 				}
 			    }
-			    // verifica della condizione di fattibilità dell'assignment
-			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
-			    {
-				ReAssFunc(*msg,ass);
-			    }
+// 			    // verifica della condizione di fattibilità dell'assignment
+// 			    if(tex-tex0 < 0 || tex-tex0 >= 1/tex0 + 1/ass.task.ar_time - 1/msg->b_level)
+// 			    {
+// 				ReAssFunc(*msg,ass);
+// 			    }
 			}
 		    }
 		    

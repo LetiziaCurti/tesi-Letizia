@@ -138,10 +138,10 @@ public:
 		    taskb_pose.theta = wp.theta;
 		    wait_b = wp.wait;
 		    
-		    for(auto wp : path_a)
-		    {
-			ROS_INFO_STREAM("coordinate dei wp per taska: "<< wp.x <<" - " << wp.y);
-		    }
+// 		    for(auto wp : path_a)
+// 		    {
+// 			ROS_INFO_STREAM("coordinate dei wp per taska: "<< wp.x <<" - " << wp.y);
+// 		    }
 		    		    
 		    break;		  
 		}
@@ -219,8 +219,9 @@ public:
 	status_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
-	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its position \n");
-	ROS_INFO_STREAM("x: " << status_msg.x << " y: " << status_msg.y << "\n");
+	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its position");
+	ROS_INFO_STREAM("x: " << status_msg.x << " y: " << status_msg.y);
+	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its battery level " << status_msg.b_level);
     }
     
     

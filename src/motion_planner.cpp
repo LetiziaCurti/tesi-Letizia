@@ -253,7 +253,7 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 // Function che calcola il tempo necessario a ciascun robot per raggiungere tutti i task
 // se i=0 calcolo i percorsi nell'istante "iniziale", se i=1 calcolo t_ex negli altri istanti
-vector<task_assign::info> CalcTex(vector<task_assign::info> &info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
+vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<task_assign::robot> robots, vector<task_assign::task> tasks, SmartDigraph& maps, int op)
 {
     // vettore delle info in uscita
     vector<task_assign::info> out;
@@ -266,14 +266,19 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> &info_vect, vector<t
     vector<SmartDigraph::Node> taskb_goal_nodes;
     
     // metti nei vettori i nodi corrispondenti
+    ROS_INFO_STREAM("rob start ids: ");
     for(auto elem : robots)
     {
 	rob_start_nodes.push_back(SmartDigraph::nodeFromId(searchNode(elem.x, elem.y)));
+	ROS_INFO_STREAM(searchNode(elem.x, elem.y));	
     }
     
+    ROS_INFO_STREAM("taska end ids: ");
     for(auto elem : tasks)
     {
 	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
+	ROS_INFO_STREAM(elem.id1);	
+	
 	if(elem.id1 != elem.id2) //il task non è un rech. point
 	    taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
     }
@@ -525,33 +530,33 @@ void publishMasterIn()
     reass_pub.publish(msg);
 
     ROS_INFO_STREAM("The motion_planner is publishing to the master: \n");
-    ROS_INFO_STREAM("Robot disponibili: \n");
+    ROS_INFO_STREAM("Robot disponibili:");
     for(auto elem : available_robots)
     {
-	ROS_INFO_STREAM(elem.name << "\n");
+	ROS_INFO_STREAM(elem.name);
     }
-    ROS_INFO_STREAM("Task da assegnare: \n");
+    ROS_INFO_STREAM("Task da assegnare:");
     for(auto elem : tasks_to_assign)
     {
-	ROS_INFO_STREAM(elem.name << "\n");
+	ROS_INFO_STREAM(elem.name);
     }
-    ROS_INFO_STREAM("Robot da ricaricare: \n");
+    ROS_INFO_STREAM("Robot da ricaricare:");
     for(auto elem : robots_in_recharge)
     {
-	ROS_INFO_STREAM(elem.name << "\n");
+	ROS_INFO_STREAM(elem.name);
     }
-    ROS_INFO_STREAM("Punti di ricarica liberi: \n");
+    ROS_INFO_STREAM("Punti di ricarica liberi:");
     for(auto elem : recharge_points)
     {
-	ROS_INFO_STREAM(elem.name << "\n");
+	ROS_INFO_STREAM(elem.name << "position: " << elem.x1 << " - " << elem.y1 << " id: " << elem.id1);
     }
-    ROS_INFO_STREAM("tempi di esec. robot-task: \n");
+    ROS_INFO_STREAM("tempi di esec. robot-task:");
     for(auto elem : rt_info_vect)
     {
 	ROS_INFO_STREAM("rob: " << elem.r_name << " - task: " << elem.t_name);
 	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
     }
-    ROS_INFO_STREAM("tempi di esec. robot-punto di ric.: \n");
+    ROS_INFO_STREAM("tempi di esec. robot-punto di ric.:");
     for(auto elem : rech_info_vect)
     {
 	ROS_INFO_STREAM("rob: " << elem.r_name << " - punto di ricarica: " << elem.t_name);
@@ -1134,7 +1139,7 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 		robots_in_recharge = deleteRob(rt.robot.name, robots_in_recharge);
 		
 		recharge_points_busy.push_back(rt.task);
-		recharge_points = deleteTask(rt.task.name, tasks_to_assign);
+		recharge_points = deleteTask(rt.task.name, recharge_points);
 		
 		ass = MinPath(rt);
 		robRech_vect.push_back(ass.path_tot);

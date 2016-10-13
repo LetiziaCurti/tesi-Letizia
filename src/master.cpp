@@ -161,7 +161,7 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 	    {
 		C = 1/b_lev;
 		ar_t = task.ar_time;
-		P = 1/ar_t;
+		P = 0.06 + 1/ar_t;
 	    }
 	    else if(s=="recharge")
 	    {
@@ -184,11 +184,11 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 		}
 	    }
 	    
-	    U = (P-C)*100;
+	    U = P*100-C*100;
 	    if(U<=0)
 		U=0;	    
 	    
-	    ROS_INFO_STREAM("U.F. per " << robot.name << " - " << task.name << ": " << P << "-" << C << "=" << U);    
+	    ROS_INFO_STREAM("U.F. per " << robot.name << " - " << task.name << ": " << P*100 << "-" << C*100 << "=" << U);    
 	    
 	    UF.push_back(U);
 	}
@@ -447,11 +447,6 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "master");
     ros::NodeHandle node;
     
-//     rob_ass_sub = node.subscribe("rob_assign_topic", 20, &RobToAssCallback);
-//     rob_rech_sub = node.subscribe("rob_recharge_topic", 20, &RobInRechCallback);
-//     rob_info_sub = node.subscribe("rob_info_topic", 20, &RobInfoCallback);
-//     rech_info_sub = node.subscribe("rech_info_topic", 20, &RechInfoCallback);
-//     task_ass_sub = node.subscribe("task_assign_topic", 20, &TaskToAssCallback);
     
     rt_pub = node.advertise<task_assign::rt_vect>("rt_topic", 10);
     rech_pub = node.advertise<task_assign::rt_vect>("rech_topic", 10);
@@ -530,70 +525,6 @@ int main(int argc, char **argv)
 	rate.sleep();
 	
     }
-
-// 	if(robot_to_assign.size() != n || task_to_assign.size() != m)
-// 	{
-// 	    ROS_INFO_STREAM("Robot vect size " << robot_to_assign.size() << "\n");
-// 	    ROS_INFO_STREAM("Task vect size " << task_to_assign.size() << "\n");
-// 	    
-// 	    n = robot_to_assign.size();
-// 	    m = task_to_assign.size();
-// 		
-// 	    if(n>0 && m>0)
-// 	    {
-// 		vector<vector<int>> S(n+m+1, vector<int> (n*m,0)); 
-// 		
-// 		U = calcUFun(task_to_assign, robot_to_assign, tex_info_vect, tex0_info_vect, "assignment");
-// 		S = TASolver(n, m, U);
-// 		printMatrix(S);
-// 		
-// 		publishSol(S,1);
-// 	    }
-// 	    else if(n==0)
-// 		ROS_INFO_STREAM("There aren't any available robots \n");
-// 	    else if(m==0)
-// 		ROS_INFO_STREAM("There aren't any tasks to execute \n");
-// 		
-// 	}
-// 	else
-// 	{
-// 	    sleep(1);
-// 	    ROS_INFO_STREAM("There aren't neither tasks to execute nor available robots  \n");
-// 	}
-// 	
-// 	
-// 	if(robots_in_recharge.size() != r || recharge_points.size() != s)
-// 	{
-// 	    ROS_INFO_STREAM("Robot vect size " << robot_to_assign.size() << "\n");
-// 	    ROS_INFO_STREAM("Task vect size " << task_to_assign.size() << "\n");
-// 	    
-// 	    r = robots_in_recharge.size();
-// 	    s = recharge_points.size();
-// 		
-// 	    if(r>0 && s>0)
-// 	    {
-// 		vector<vector<int>> S(r+s+1, vector<int> (r*s,0)); 
-// 		
-// 		U = calcUFun(recharge_points, robots_in_recharge, rech_info_vect, rech_info0_vect, "recharge");
-// 		S = TASolver(r, s, U);
-// 		printMatrix(S);
-// 		
-// 		publishSol(S,0);
-// 	    }
-// 	    else if(r==0)
-// 		ROS_INFO_STREAM("There aren't any robots in recharge \n");
-// 	    else if(s==0)
-// 		ROS_INFO_STREAM("There aren't any recharge points \n");
-// 		
-// 	}
-// 	else
-// 	{
-// 	    sleep(1);
-// 	    ROS_INFO_STREAM("There aren't robots in recharge  \n");
-// 	}
-
     
-
-
     return 0;
 }

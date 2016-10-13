@@ -82,6 +82,7 @@ TASK:
   - name: task9
     arrt: 45
     status: true
+    tasks:
       - id: 27
         wait: 3
         position: [4, 8, -1.5]

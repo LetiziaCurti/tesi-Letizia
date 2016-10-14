@@ -252,6 +252,8 @@ public:
 		  ros::spinOnce();
 		  rate.sleep(); 
 	    }while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
+	    
+	    publishStatus();
 	}
     }
 
@@ -384,9 +386,11 @@ int main(int argc, char **argv)
 	    sleep(robot.wait_b);
 	    robot.b_level -= robot.wait_b*0.1;
 	    robot.taskb = true;
-	    robot.publishStatus(); 
- 
 	    robot.assignment = false;
+	    
+	    robot.publishStatus(); 
+	    
+	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	}
 	
 	else if(robot.in_recharge && ros::ok())
@@ -399,9 +403,10 @@ int main(int argc, char **argv)
 	    
 	    sleep(RECHARGE_DURATION);
 	    robot.b_level = b_level0;
-	    robot.publishStatus(); 
-	    
 	    robot.in_recharge = false;
+	    robot.publishStatus(); 
+	       
+	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI È RICARICATO IN " << robot.task_name);
 	}
 	
 	robot.broadcastPose(robot.turtlesim_pose, name);

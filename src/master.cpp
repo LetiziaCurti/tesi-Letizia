@@ -87,6 +87,8 @@ void publishRT(vector<vector<int>> S)
     task_assign::rt_vect vect_msg;
     task_assign::rt msg;
     
+    bool there_is_1(false);
+    
     for(int i=0; i<robot_to_assign.size(); i++)
     {
 	for(int j=0; j<task_to_assign.size(); j++)
@@ -96,12 +98,17 @@ void publishRT(vector<vector<int>> S)
 		msg.robot = robot_to_assign[i];
 		msg.task = task_to_assign[j];
 		vect_msg.rt_vect.push_back(msg);
+		
+		there_is_1 = true;
 	    }
 	}
     }
     
-    sleep(1);
-    rt_pub.publish(vect_msg);
+    if(there_is_1)
+    {
+	sleep(1);
+	rt_pub.publish(vect_msg);
+    }
     
 //     for(auto elem : rt_pub)
 //     {
@@ -117,6 +124,8 @@ void publishRech(vector<vector<int>> S)
     task_assign::rt_vect vect_msg;
     task_assign::rt msg;
     
+    bool there_is_1(false);
+    
     for(int i=0; i<robots_in_recharge.size(); i++)
     {
 	for(int j=0; j<recharge_points.size(); j++)
@@ -126,12 +135,17 @@ void publishRech(vector<vector<int>> S)
 		msg.robot = robots_in_recharge[i];
 		msg.task = recharge_points[j];
 		vect_msg.rt_vect.push_back(msg);
+		
+		there_is_1 = true;
 	    }
 	}
     }
     
-    sleep(1);
-    rech_pub.publish(vect_msg);
+    if(there_is_1)
+    {
+	sleep(1);
+	rech_pub.publish(vect_msg);
+    }
 }
 
 

@@ -350,7 +350,7 @@ void CreateNewTask()
 // 	}
 // 	if(!inmap)
 // 	    map_task[newTask.ar_time] = newTask;
-	
+
 	map_task[newTask.ar_time].push_back(newTask);
     }
     

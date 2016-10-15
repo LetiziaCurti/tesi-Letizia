@@ -774,7 +774,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 				rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 				if(tasks_to_assign.size()>0)
 				{
-    // 				publishMasterIn();
 				    pub_master_in = true;
 				}
 			    }
@@ -785,7 +784,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 				rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 				if(recharge_points.size()>0)
 				{
-    // 				publishMasterIn();
 				    pub_master_in = true;				
 				}			    
 			    }
@@ -854,7 +852,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			}
 			if(new_compl)
 			{
-			    ROS_INFO_STREAM("il task " << ass.task.name << " si e' ricaricato");
+			    ROS_INFO_STREAM("il robot " << ass.rob.name << " ha finito di ricaricarsi in " << ass.task.name);
 			    
 			    recharge_points_busy = deleteTask(ass.task.name, recharge_points_busy);
 			    robots_in_exec_rech = deleteRob(msg->name, robots_in_exec_rech);
@@ -866,7 +864,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 			    if(tasks_to_assign.size()>0)
 			    {
-    // 			    publishMasterIn();
 				pub_master_in = true;			  
 			    }
 			}
@@ -920,17 +917,14 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	{
 	    rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
 	    as = true;
-// 	    publishMasterIn();
 	}
 	if(recharge_points.size()>0 && robots_in_recharge.size()>0)
 	{
 	    rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
 	    as = true;
-// 	    publishMasterIn();
 	}
 	if(as)
-	    pub_master_in = true;	  
-// 	    publishMasterIn();
+	    pub_master_in = true;
     }
     // se il robot è rotto
     else
@@ -1439,7 +1433,6 @@ int main(int argc, char **argv)
 	ros::spinOnce();
 	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
 	{
-// 	    publishAssign();
 	    ros::spinOnce();
 	    rate.sleep();	  
 	}
@@ -1449,8 +1442,14 @@ int main(int argc, char **argv)
 	    publishMasterIn();
 	    pub_master_in = false;
 	}
+// 	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
+// 	{
+// 	    ros::spinOnce();
+// 	    rate.sleep();	  
+// 	}
 	if(new_assign && ros::ok())
 	{
+	    sleep(1);
 	    publishAssign();
 	    new_assign = false;
 	}
@@ -1462,6 +1461,7 @@ int main(int argc, char **argv)
 	}	
 	if(completed && ros::ok())
 	{
+	    sleep(1);
 	    publishExecTask();
 	    completed = false;
 	}

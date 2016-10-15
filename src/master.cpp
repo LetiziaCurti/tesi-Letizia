@@ -107,14 +107,9 @@ void publishRT(vector<vector<int>> S)
     
     if(there_is_1)
     {
-	sleep(1);
+// 	sleep(1);
 	rt_pub.publish(vect_msg);
     }
-    
-//     for(auto elem : rt_pub)
-//     {
-// 	ROS_INFO_STREAM("The motion_planner is publishing to the task_manager the completed task: "<< elem.name);
-//     }
 }
 
 
@@ -144,7 +139,7 @@ void publishRech(vector<vector<int>> S)
     
     if(there_is_1)
     {
-	sleep(1);
+// 	sleep(1);
 	rech_pub.publish(vect_msg);
     }
 }
@@ -493,10 +488,10 @@ int main(int argc, char **argv)
 	    ros::spinOnce();
 	    rate.sleep();
 	}
-	while(do_reassign && ros::ok())
+	if(do_reassign && ros::ok())
 	{  
 	    // se il master deve fare assignment robot-task
-	    if(robot_to_assign.size()>0)
+	    if(robot_to_assign.size()>0 && task_to_assign.size()>0)
 	    {
 		n = robot_to_assign.size();
 		m = task_to_assign.size();
@@ -513,7 +508,7 @@ int main(int argc, char **argv)
 		<< task_to_assign.size() << " task" << "\n");
 	    }
 	    
-	    if(robots_in_recharge.size()>0)
+	    if(robots_in_recharge.size()>0 && recharge_points.size()>0)
 	    {
 		r = robots_in_recharge.size();
 		s = recharge_points.size();
@@ -526,15 +521,11 @@ int main(int argc, char **argv)
 		
 		publishRech(S);
 		ROS_INFO_STREAM("Il master ha calcolato l'assignment di " << robots_in_recharge.size() << 
-		" robot per i punti di ricarica" << "\n");
+		" robot per " << recharge_points.size() << " punti di ricarica" << "\n");
 	    }
 	    
 	    do_reassign = false;
 	}
-	
-// 	robot_to_assign.clear();
-// 	task_to_assign.clear();
-// 	robots_in_recharge.clear();
 	
 	ros::spinOnce();
 	rate.sleep();

@@ -57,7 +57,7 @@ ros::Publisher reass_pub;
 #define VELOCITY 10
 #define BATTERY_THR_1 10
 #define BATTERY_THR_2 15
-#define SEC_DIST 1.5
+#define SEC_DIST 4
 
 bool new_assign(false);
 bool new_in_rech(false);
@@ -328,11 +328,13 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    dist = 0;
 	    	    	    	    
 	    it=excl_task_nodes.find(tasks[j].id1);
-	    excl_task_nodes.erase(it);
+	    if(it != excl_task_nodes.end())
+		excl_task_nodes.erase(it);
 	    if(tasks[j].id1 != tasks[j].id2)
 	    {
 		it=excl_task_nodes.find(tasks[j].id2);
-		excl_task_nodes.erase(it);
+		if(it != excl_task_nodes.end())
+		    excl_task_nodes.erase(it);
 	    }
 	    delNode(excl_task_nodes);
 	    
@@ -472,7 +474,8 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	// vedo se elem sta già in task_to_assign
 	for(auto newel : tasks_to_assign)
 	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+	    if(newel.name == elem.name)
 	    {
 		new_task = false;
 		break;
@@ -480,7 +483,8 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	for(auto newel : tasks_in_execution)
 	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+	    if(newel.name == elem.name)
 	    {
 		new_task = false;
 		break;
@@ -488,7 +492,8 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	for(auto newel : completed_tasks)
 	{
-	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
+	    if(newel.name == elem.name)
 	    {
 		new_task = false;
 		break;
@@ -746,7 +751,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    {			
 			for(auto newel : completed_tasks)
 			{
-			    if(newel.id1 == ass.task.id1 && newel.id2 == ass.task.id2)
+// 			    if(newel.id1 == ass.task.id1 && newel.id2 == ass.task.id2)
+			    if(newel.name == ass.task.name)
 			    {
 				new_compl = false;
 				break;
@@ -760,9 +766,11 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    
 			    // aggiorno la mappa dei nodi esclusi
 			    it=excl_task_nodes.find(ass.task.id1);
-			    excl_task_nodes.erase(it);
+			    if(it != excl_task_nodes.end())
+				excl_task_nodes.erase(it);
 			    it=excl_task_nodes.find(ass.task.id2);
-			    excl_task_nodes.erase(it);
+			    if(it != excl_task_nodes.end())
+				excl_task_nodes.erase(it);
 		
 			    tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 			    robots_in_execution = deleteRob(msg->name, robots_in_execution);
@@ -844,7 +852,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    {
 			for(auto newel : recharge_points)
 			{
-			    if(newel.id1 == ass.task.id1)
+// 			    if(newel.id1 == ass.task.id1)
+			    if(newel.name == ass.task.name)
 			    {
 				new_compl = false;
 				break;
@@ -967,11 +976,13 @@ Assign MinPath(task_assign::rt r_t)
     
 
     it=excl_task_nodes.find(r_t.task.id1);
-    excl_task_nodes.erase(it);
+    if(it != excl_task_nodes.end())
+	excl_task_nodes.erase(it);
     if(r_t.task.id1 != r_t.task.id2) 
     {
 	it=excl_task_nodes.find(r_t.task.id2);
-	excl_task_nodes.erase(it);
+	if(it != excl_task_nodes.end())
+	    excl_task_nodes.erase(it);
     }
     delNode(excl_task_nodes);
     

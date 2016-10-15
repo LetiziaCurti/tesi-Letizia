@@ -66,7 +66,8 @@ bool do_reassign(false);
 // Legge su "glpk_in_topic" i vettori delle info che vanno in ingresso all'alg. di assignment MA solo se reassign è a true
 void InCallback(const task_assign::glpk_in::ConstPtr& msg)
 {
-    if(msg->reassign && msg->task_to_ass.size()>0 && msg->rob_to_ass.size()>0)
+//     if(msg->reassign && msg->task_to_ass.size()>0 && msg->rob_to_ass.size()>0)
+    if(msg->reassign)
     {
 	task_to_assign = msg->task_to_ass;
 	robot_to_assign = msg->rob_to_ass;
@@ -162,7 +163,7 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
     double ar_t(0);
     double t_ex_0(0);
     double t_ex(0);
-    int position(1);
+    int position = r_ass.size();
     
     
     for(auto robot : r_ass)
@@ -179,8 +180,8 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 	    }
 	    else if(s=="recharge")
 	    {
-		C = b_lev;
-		P = 1/position;
+		C = b_lev*0.1;
+		P = position;
 	    }
 	    for(auto ex : ex_t)
 	    {
@@ -207,7 +208,7 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 	    UF.push_back(U);
 	}
 	
-	position++;
+	position--;
     }
     
     return UF;
@@ -524,7 +525,7 @@ int main(int argc, char **argv)
 		printMatrix(S);
 		
 		publishRech(S);
-		ROS_INFO_STREAM("Il master ha calcolato l'assignment di " << robot_to_assign.size() << 
+		ROS_INFO_STREAM("Il master ha calcolato l'assignment di " << robots_in_recharge.size() << 
 		" robot per i punti di ricarica" << "\n");
 	    }
 	    

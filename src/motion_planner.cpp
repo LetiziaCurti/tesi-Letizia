@@ -55,7 +55,8 @@ ros::Publisher marker_pub;
 ros::Publisher reass_pub;
 
 #define VELOCITY 10
-#define BATTERY_THR 10
+#define BATTERY_THR_1 10
+#define BATTERY_THR_2 15
 #define SEC_DIST 1.5
 
 bool new_assign(false);
@@ -697,33 +698,21 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	}
 	
 	// il robot è appena arrivato e è carico
-	if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level > BATTERY_THR)
+	if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level > BATTERY_THR_2)
 	{
 	    available_robots.push_back(*msg);
 	    ROS_INFO_STREAM("il robot " << msg->name << " viene messo in available_robots");
-// 	    CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
-// 	    
-// 	    if(tasks_to_assign.size()>0)
-// 	    {
-// 		publishMasterIn();
-// 	    }
 	}
 	// il robot è appena arrivato e è scarico
-	else if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level <= BATTERY_THR)
+	else if(!available && !avail_rech && !in_execution && !in_charge && msg->b_level <= BATTERY_THR_2)
 	{
 	    robots_in_recharge.push_back(*msg);
 	    ROS_INFO_STREAM("il robot " << msg->name << " viene messo in robots_in_recharge");
-// 	    CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
-// 	    
-// 	    if(recharge_points.size()>0)
-// 	    {
-// 		publishMasterIn();
-// 	    }
 	}
 	// il robot è libero
 	else if(available)
 	{	    	    
-	    if(msg->b_level <= BATTERY_THR)
+	    if(msg->b_level <= BATTERY_THR_2)
 	    {
 		    robots_in_recharge.push_back(*msg);
 		    ROS_INFO_STREAM("il robot " << msg->name << " viene messo in robots_in_recharge");
@@ -779,7 +768,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    robots_in_execution = deleteRob(msg->name, robots_in_execution);
 			    Catalogo_Ass = deleteAss(msg->name, Catalogo_Ass);
 			    
-			    if(msg->b_level > BATTERY_THR)
+			    if(msg->b_level > BATTERY_THR_2)
 			    {
 				available_robots.push_back(*msg);
 				rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
@@ -807,7 +796,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    else
 		    {	    
 			// verifica sul livello di batteria
-			if(msg->b_level <= BATTERY_THR)
+			if(msg->b_level <= BATTERY_THR_1)
 			{
 			    // se la distanza dal task è inferiore alla soglia SEC_DIST, ce lo faccio arrivare e poi 
 			    // lo manderò in carica
@@ -883,7 +872,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			}
 			new_compl = true;
 		    }
-		    // PER ORA non consideriamo la possibilità che il robot non riesca a raggiungere i punti di ricarica
+		    // PER ORA NON consideriamo la possibilità che il robot non riesca a raggiungere i punti di ricarica
 		    // (ad es. se si scarica del tutto)
 // 		    // se il robot sta andando nel punto di ricarica e non ha batteria, faccio reassignment
 // 		    else if(!msg->taska)
@@ -1462,12 +1451,12 @@ int main(int argc, char **argv)
 	}
 	if(new_assign && ros::ok())
 	{
-// 	    sleep(1);
 	    publishAssign();
 	    new_assign = false;
 	}
 	if(new_in_rech && ros::ok())
 	{
+	    sleep(1);
 	    publishRecharge();
 	    new_in_rech = false;
 	}	
@@ -1479,12 +1468,7 @@ int main(int argc, char **argv)
 
 	ros::spinOnce();
 	rate.sleep();
-    }		
-
-if(!ros::ok())
-{
-  publishMasterIn();
-}
+    }
 
     return 0;
 }

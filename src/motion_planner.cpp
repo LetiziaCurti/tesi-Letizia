@@ -271,10 +271,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 {
     // vettore delle info in uscita
     vector<task_assign::info> out;
-    out = info_vect;  
-    
-    map<int, SmartDigraph::Node>::iterator it;
-    SmartDigraph::Node n;
+    out = info_vect;
 		
 	
     // creo i vettori dei nodi corrispondenti alle posizioni dei robots e dei tasks
@@ -283,23 +280,24 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     vector<SmartDigraph::Node> taskb_goal_nodes;
     
     // metti nei vettori i nodi corrispondenti
+//     ROS_INFO_STREAM("rob start ids: ");
     for(auto elem : robots)
     {
 	rob_start_nodes.push_back(SmartDigraph::nodeFromId(searchNode(elem.x, elem.y)));
+// 	ROS_INFO_STREAM(searchNode(elem.x, elem.y));	
     }
     
+//     ROS_INFO_STREAM("taska end ids: ");
     for(auto elem : tasks)
     {
 	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
-	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+// 	ROS_INFO_STREAM(elem.id1);	
 	
 	if(elem.id1 != elem.id2) //il task non è un rech. point
-	{
 	    taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
-	    excl_task_nodes[elem.id2] = SmartDigraph::nodeFromId(elem.id2);
-	}
     }
   
+
     
     
     //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
@@ -311,7 +309,13 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     double time_a(0);
     double time_b(0);
     double dist(0);
-
+    
+    map<int, SmartDigraph::Node>::iterator it;
+    SmartDigraph::Node n;
+ 
+    
+    
+   
     
     for(int i=0; i<robots.size(); i++)
     {
@@ -356,7 +360,13 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 		}
 		reverse(path.begin(),path.end());
 		reverse(path_node.begin(),path_node.end());
-
+		
+// 		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato		
+// 		for(int k=0; k<path_node.size()-1; k++)
+// 		{
+// 		    arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
+// 		    dist += len[arc];
+// 		}
 		dist = CalcPath(path);
 // 		ROS_INFO_STREAM("Distanza tra " << robots[i].name << " - " << tasks[j].name << " : " << dist);
 		time_a = dist/VELOCITY;
@@ -395,7 +405,13 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 		    }
 		    reverse(path.begin(),path.end());
 		    reverse(path_node.begin(),path_node.end());
-
+		    
+// 		    // il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato
+// 		    for(int k=0; k<path_node.size()-1; k++)
+// 		    {
+// 			arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
+// 			dist += len[arc];
+// 		    }
 		    dist = CalcPath(path);	
 // 		    ROS_INFO_STREAM("Distanza tra " << robots[i].name << " - " << tasks[j].name << " : " << dist);
 		    time_b = dist/VELOCITY;
@@ -439,21 +455,6 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
 	    if(tasks[j].id1 != tasks[j].id2)
 		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
-	}
-    }
-    
-    // elimina da excl_task_nodes tutti i nodi tranne quelli dei punti di ricarica
-    for(auto elem : tasks)
-    {
-	if(elem.id1 != elem.id2) //il task non è un rech. point
-	{
-	    it=excl_task_nodes.find(elem.id1);
-	    if(it != excl_task_nodes.end())
-		excl_task_nodes.erase(it);	
-
-	    it=excl_task_nodes.find(elem.id2);
-	    if(it != excl_task_nodes.end())
-		excl_task_nodes.erase(it);
 	}
     }
     
@@ -763,13 +764,13 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    completed_tasks.push_back(ass.task);
 			    completed = true;
 			    
-// 			    // aggiorno la mappa dei nodi esclusi
-// 			    it=excl_task_nodes.find(ass.task.id1);
-// 			    if(it != excl_task_nodes.end())
-// 				excl_task_nodes.erase(it);
-// 			    it=excl_task_nodes.find(ass.task.id2);
-// 			    if(it != excl_task_nodes.end())
-// 				excl_task_nodes.erase(it);
+			    // aggiorno la mappa dei nodi esclusi
+			    it=excl_task_nodes.find(ass.task.id1);
+			    if(it != excl_task_nodes.end())
+				excl_task_nodes.erase(it);
+			    it=excl_task_nodes.find(ass.task.id2);
+			    if(it != excl_task_nodes.end())
+				excl_task_nodes.erase(it);
 		
 			    tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 			    robots_in_execution = deleteRob(msg->name, robots_in_execution);
@@ -1079,20 +1080,6 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
     
     if(msg->rt_vect.size() > 0)
     {	
-	map<int, SmartDigraph::Node>::iterator it;
-	SmartDigraph::Node n;
-
-	for(auto elem : msg->rt_vect)
-	{
-	    excl_task_nodes[elem.task.id1] = SmartDigraph::nodeFromId(elem.task.id1);
-	    
-	    if(elem.task.id1 != elem.task.id2) //il task non è un rech. point
-	    {
-		excl_task_nodes[elem.task.id2] = SmartDigraph::nodeFromId(elem.task.id2);
-	    }
-	}
-      
-      
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -1130,21 +1117,6 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    }
 	    
 	    add = true;
-	}
-	
-	// elimina da excl_task_nodes tutti i nodi tranne quelli dei punti di ricarica
-	for(auto elem : msg->rt_vect)
-	{
-	    if(elem.task.id1 != elem.task.id2) //il task non è un rech. point
-	    {
-		it=excl_task_nodes.find(elem.task.id1);
-		if(it != excl_task_nodes.end())
-		    excl_task_nodes.erase(it);	
-
-		it=excl_task_nodes.find(elem.task.id2);
-		if(it != excl_task_nodes.end())
-		    excl_task_nodes.erase(it);
-	    }
 	}
     }
 }
@@ -1506,4 +1478,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

@@ -115,7 +115,7 @@ public:
 		// altri messaggi finché non ho finito il task
 		if(elem.r_name==robot_name && elem.t_name!=task_name)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its assignment from motion_planner");
+		    ROS_INFO_STREAM(robot_name << " is listening its assignment "<< elem.t_name <<" from motion_planner");
 		    
 		    assignment = true;
 		    task_name = elem.t_name;
@@ -166,7 +166,7 @@ public:
 		// altri messaggi finché non ho finito di ricaricarmi
 		if(elem.r_name==robot_name && elem.t_name!=task_name)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its recharge point from motion_planner");
+		    ROS_INFO_STREAM(robot_name << " is listening its recharge point "<< elem.t_name <<" from motion_planner");
 		    
 		    in_recharge = true;
 		    task_name = elem.t_name;
@@ -181,10 +181,10 @@ public:
 		    taska_pose.theta = wp.theta;
 		    wait_a = wp.wait;
 		    
-// 		    for(auto wp : path_a)
-// 		    {
-// 			ROS_INFO_STREAM("coordinate dei wp per il rech. point: "<< wp.x <<" - " << wp.y);
-// 		    }
+		    for(auto wp : path_a)
+		    {
+			ROS_INFO_STREAM("coordinate dei wp per il rech. point: "<< wp.x <<" - " << wp.y);
+		    }
 		    
 		    break;
 		}
@@ -379,7 +379,7 @@ int main(int argc, char **argv)
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
 	    sleep(robot.wait_a);
-	    robot.b_level -= robot.wait_a*0.1;
+	    robot.b_level -= robot.wait_a;
 	    robot.taska = true;
 	    robot.publishStatus(); 
 
@@ -388,7 +388,7 @@ int main(int argc, char **argv)
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
-	    robot.b_level -= robot.wait_b*0.1;
+	    robot.b_level -= robot.wait_b;
 	    robot.taskb = true;
 	    robot.assignment = false;	    
 	    robot.publishStatus();  
@@ -402,7 +402,7 @@ int main(int argc, char **argv)
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);	    
 	    sleep(RECHARGE_DURATION);
-	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI È RICARICATO IN " << robot.task_name);
+	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI E' RICARICATO IN " << robot.task_name);
 	    
 	    robot.b_level = b_level0;
 	    robot.taska = true;

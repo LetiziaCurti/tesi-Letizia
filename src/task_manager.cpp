@@ -268,7 +268,7 @@ void CreateNewTask()
     bool inmap(false);
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
-    YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/tasks_config2.yaml");
+    YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/tasks_config.yaml");
     const YAML::Node& node_test1 = node_conf["TASK"];
 
     for (std::size_t i = 0; i < node_test1.size(); i++) 

@@ -21,7 +21,7 @@
 #include "task_assign/rech_vect.h"
 
 
-#define DISTANCE_TOLERANCE 0.01
+#define DISTANCE_TOLERANCE 0.1
 #define RECHARGE_DURATION 10
 
 using namespace std;
@@ -237,6 +237,7 @@ public:
 	for(auto goal_pose : wps)
 	{
 	    ros::Rate rate(10);
+	    ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
 	    do{
 		  publishMarker(turtlesim_pose);
 		  broadcastPose(turtlesim_pose,robot_name);
@@ -384,13 +385,12 @@ int main(int argc, char **argv)
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
 	    sleep(robot.wait_b);
+	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
+	    
 	    robot.b_level -= robot.wait_b*0.1;
 	    robot.taskb = true;
-	    robot.assignment = false;
-	    
-	    robot.publishStatus(); 
-	    
-	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
+	    robot.assignment = false;	    
+	    robot.publishStatus();  
 	}
 	
 	else if(robot.in_recharge && ros::ok())
@@ -408,6 +408,9 @@ int main(int argc, char **argv)
 	       
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI È RICARICATO IN " << robot.task_name);
 	}
+	
+	robot.taska = false;
+	robot.taskb = false;
 	
 	robot.broadcastPose(robot.turtlesim_pose, name);
 	ros::spinOnce(); 

@@ -92,7 +92,7 @@ SmartDigraph::NodeMap<float> coord_y(Mappa);
 SmartDigraph::NodeMap<int> id(Mappa);
 SmartDigraph::NodeMap<dim2::Point<float> > coords(Mappa);
 SmartDigraph::ArcMap<double> len(Mappa);
-map<int, vector<SmartDigraph::Node>> excl_task_nodes;
+map<int, SmartDigraph::Node> excl_task_nodes;
 
 
 struct Assign
@@ -111,16 +111,16 @@ vector<Assign> Catalogo_Rech;				//struttura che tiene in memoria tutti gli assi
 
 
 
-void delNode(map<int,vector<SmartDigraph::Node>> excl_nodes)
+void delNode(map<int,SmartDigraph::Node> excl_nodes)
 {
     for(auto elem : excl_nodes)
     {
-	for (SmartDigraph::OutArcIt a(Mappa, elem.second.front()); a != INVALID; ++a)
+	for (SmartDigraph::OutArcIt a(Mappa, elem.second); a != INVALID; ++a)
 	{
 	    len[a]+=10000;
 	}
 	
-	for (SmartDigraph::InArcIt a(Mappa, elem.second.front()); a != INVALID; ++a)
+	for (SmartDigraph::InArcIt a(Mappa, elem.second); a != INVALID; ++a)
 	{
 	    len[a]+=10000;
 	}
@@ -129,16 +129,16 @@ void delNode(map<int,vector<SmartDigraph::Node>> excl_nodes)
 
 
 
-void insertNode(map<int,vector<SmartDigraph::Node>> excl_nodes)
+void insertNode(map<int,SmartDigraph::Node> excl_nodes)
 {
     for(auto elem : excl_nodes)
     {
-	for (SmartDigraph::OutArcIt a(Mappa, elem.second.front()); a != INVALID; ++a)
+	for (SmartDigraph::OutArcIt a(Mappa, elem.second); a != INVALID; ++a)
 	{
 	    len[a]-=10000;
 	}
 	
-	for (SmartDigraph::InArcIt a(Mappa, elem.second.front()); a != INVALID; ++a)
+	for (SmartDigraph::InArcIt a(Mappa, elem.second); a != INVALID; ++a)
 	{
 	    len[a]-=10000;
 	}
@@ -310,10 +310,8 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     double time_b(0);
     double dist(0);
     
-    map<int,vector<SmartDigraph::Node>>::iterator it;
+    map<int, SmartDigraph::Node>::iterator it;
     SmartDigraph::Node n;
-    
-    vector<SmartDigraph::Node> temp;
  
     
     
@@ -454,15 +452,9 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    in = false;	    
 	    
 	    insertNode(excl_task_nodes);
-	    temp.push_back(SmartDigraph::nodeFromId(tasks[j].id1));
-	    excl_task_nodes[tasks[j].id1] = temp;
-	    temp.clear();
+	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
 	    if(tasks[j].id1 != tasks[j].id2)
-	    {
-		temp.push_back(SmartDigraph::nodeFromId(tasks[j].id2));
-		excl_task_nodes[tasks[j].id2] = temp;
-		temp.clear();
-	    }
+		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
 	}
     }
     
@@ -476,7 +468,6 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 {
     bool new_task(true);
     SmartDigraph::Node n;
-    vector<SmartDigraph::Node> temp;
     
     for(auto elem : msg->task_vect)
     {
@@ -514,12 +505,10 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	    tasks_to_assign.push_back(elem);
 	    ROS_INFO_STREAM("The motion_planner is storing the task to assign: "<< elem.name);
 	    // metti nel vettore excl_task_nodes i nodi corrispondenti ai nuovi task
-	    temp.push_back(SmartDigraph::nodeFromId(elem.id1));
-	    excl_task_nodes[elem.id1] = temp;
-	    temp.clear();
-	    temp.push_back(SmartDigraph::nodeFromId(elem.id2));
-	    excl_task_nodes[elem.id2] = temp;
-	    temp.clear();
+	    n = SmartDigraph::nodeFromId(elem.id1);
+	    excl_task_nodes[elem.id1] = n;
+	    n = SmartDigraph::nodeFromId(elem.id2);
+	    excl_task_nodes[elem.id2] = n;
 	}
 	
 	new_task = true;
@@ -656,7 +645,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
     bool in_execution(false);
     bool available(false);
     bool avail_rech(false);
-    map<int, vector<SmartDigraph::Node>>::iterator it;
+    map<int, SmartDigraph::Node>::iterator it;
     
     if(msg->status)
     {	
@@ -776,18 +765,31 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    completed = true;
 			    
 			    // aggiorno la mappa dei nodi esclusi
-			    it=excl_task_nodes.find(ass.task.id1);
-			    if(it != excl_task_nodes.end())
+			    int in(0);
+			    for(auto el : tasks_to_assign)
 			    {
-				// non elimino del tutto il nodo, ma solo un'istanza del nodo legata al task che ho eseguito
-// 				excl_task_nodes.erase(it);
-				it->second.pop_back();
+				if(ass.task.id1 == el.id1)
+				{
+				    in = 1;
+				    break;
+				}
 			    }
-			    it=excl_task_nodes.find(ass.task.id2);
-			    if(it != excl_task_nodes.end())
+			    for(auto el : tasks_in_execution)
 			    {
-// 				excl_task_nodes.erase(it);
-				it->second.pop_back();
+				if(ass.task.id1 == el.id1)
+				{
+				    in = 1;
+				    break;
+				}
+			    }
+			    if(!in)
+			    {
+				it=excl_task_nodes.find(ass.task.id1);
+				if(it != excl_task_nodes.end())
+				    excl_task_nodes.erase(it);
+				it=excl_task_nodes.find(ass.task.id2);
+				if(it != excl_task_nodes.end())
+				    excl_task_nodes.erase(it);
 			    }
 		
 			    tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
@@ -975,9 +977,8 @@ Assign MinPath(task_assign::rt r_t)
     vector<task_assign::waypoint> path;
     vector<SmartDigraph::Node> path_node;
     
-    map<int, vector<SmartDigraph::Node>>::iterator it;
+    map<int, SmartDigraph::Node>::iterator it;
     SmartDigraph::Node n;
-    vector<SmartDigraph::Node> temp;
   
   
     ass.rob = r_t.robot;
@@ -1080,12 +1081,9 @@ Assign MinPath(task_assign::rt r_t)
     
     
     insertNode(excl_task_nodes);
-    temp.push_back(SmartDigraph::nodeFromId(r_t.task.id1));
-    excl_task_nodes[r_t.task.id1] = temp;
-    temp.clear();
-    temp.push_back(SmartDigraph::nodeFromId(r_t.task.id2));
-    excl_task_nodes[r_t.task.id2] = temp;
-    temp.clear();
+    excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+    if(r_t.task.id1 != r_t.task.id2) 
+	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
 	    
     return ass;
 }
@@ -1418,12 +1416,9 @@ int main(int argc, char **argv)
     
     // Carico i recharge points in recharge_points e poi metto i nodi del grafo corrispondenti in excl_task_nodes
     RechPoints();   
-    vector<SmartDigraph::Node> temp;
     for(auto elem : recharge_points)
     {
-	temp.push_back(SmartDigraph::nodeFromId(elem.id1));
-	excl_task_nodes[elem.id1] = temp;
-	temp.clear();
+	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
     }
     
     

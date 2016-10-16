@@ -40,18 +40,10 @@ vector<float> gen3rand()
     r = rand()%1000 + 1;
     rgb.push_back(r);
     
-//     g = r;
-//     b = g;
-
-//     while(g == r)
-//     {
-	g = rand()%1000 + 1;
-//     }
+    g = rand()%1000 + 1;
     rgb.push_back(g);
-//     while(b == g)
-//     {
-	b = rand()%1000 + 1;
-//     }
+
+    b = rand()%1000 + 1;
     rgb.push_back(b);
     
     return rgb;
@@ -262,13 +254,13 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
 
 
 // Function con cui caricare "manualmente" i nuovi tasks, li metto in new_task_vect
-void CreateNewTask()
+void CreateNewTask(string file)
 {
     task_assign::task newTask;
     bool inmap(false);
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
-    YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/tasks_config.yaml");
+    YAML::Node node_conf = YAML::LoadFile(file);
     const YAML::Node& node_test1 = node_conf["TASK"];
 
     for (std::size_t i = 0; i < node_test1.size(); i++) 
@@ -462,7 +454,8 @@ int main(int argc, char **argv)
     // Initialize the node
     ros::init(argc, argv, "temp");
     ros::NodeHandle node;
-    
+    string file = std::string(argv[1]);
+	
     new_task_pub = node.advertise<task_assign::vect_task>("new_task_topic", 10);
     exec_task_sub = node.subscribe("task_exec_topic", 20, &ExecCallback);
     
@@ -471,7 +464,7 @@ int main(int argc, char **argv)
     sleep(1);
     
     // carico i task dal file yaml e li metto nella mappa map_task, in cui vengono ordinati dal primo che arriva all'ultimo
-    CreateNewTask();
+    CreateNewTask(file);
     
     vector<float> rgb;
     vector<task_assign::task> perm;

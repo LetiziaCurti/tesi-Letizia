@@ -82,8 +82,7 @@ vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare
 vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
 
 vector<task_assign::info> rt_info_vect;
-vector<task_assign::info> rech_info_vect;
-
+vector<task_assign::info> rech_info_vect; 
 
 
 SmartDigraph Mappa; 
@@ -93,6 +92,7 @@ SmartDigraph::NodeMap<int> id(Mappa);
 SmartDigraph::NodeMap<dim2::Point<float> > coords(Mappa);
 SmartDigraph::ArcMap<double> len(Mappa);
 map<int, SmartDigraph::Node> excl_task_nodes;
+map<int, SmartDigraph::Node> excl_obs_nodes;
 
 
 struct Assign
@@ -164,17 +164,6 @@ int searchNode(float x, float y)
 
 
 
-//TODO obstacle_node manda al motion planner gli id dei nodi che sono diventati ostacoli --> in corrispondenza
-//dei "nodi ostacolo", vanno settati i pesi degli archi incidenti ad un numero elevatissimo
-
-// Legge "obstacles_topic" 
-void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
-{
-
-}
-
-
-
 // Function che elimina il robot con il nome passato in argomento dal vettore di robot passato in argomento
 vector<task_assign::robot> deleteRob(string name, vector<task_assign::robot> vect)
 {
@@ -227,6 +216,29 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
     return vect;
 }
 
+
+
+// Legge gli ostacoli da "obstacles_topic" 
+void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
+{
+    if(msg->task_vect.size()>0)
+    {
+	map<int,SmartDigraph::Node>::iterator it;
+	
+	for(auto elem : msg->task_vect)
+	{
+	    // vedo se elem sta già in excl_obs_nodes
+	    it = excl_obs_nodes.find(elem.id1);
+	    if(it == excl_obs_nodes.end())
+	    {
+		ROS_INFO_STREAM("The motion_planner is storing the obstacle: "<< elem.name);
+		excl_obs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+	    }
+	}
+	
+	delNode(excl_obs_nodes);
+    } 
+}
 
 
 
@@ -336,9 +348,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    temp.clear();
 	    temp[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
 	    if(tasks[j].id1 != tasks[j].id2)
-	    {
 		temp[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
-	    }
 	    insertNode(temp);
 
 	    
@@ -969,6 +979,8 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	}
 	if(as)
 	    pub_master_in = true;
+	
+	insertNode(excl_task_nodes);
     }
     // se il robot è rotto
     else
@@ -1024,9 +1036,7 @@ Assign MinPath(task_assign::rt r_t)
     temp.clear();
     temp[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
     if(r_t.task.id1 != r_t.task.id2)
-    {
 	temp[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
-    }
     insertNode(temp);
     
     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
@@ -1124,6 +1134,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
     
     if(msg->rt_vect.size() > 0)
     {	
+	delNode(excl_task_nodes);
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -1162,6 +1173,8 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    
 	    add = true;
 	}
+	
+	insertNode(excl_task_nodes);
     }
 }
 
@@ -1175,6 +1188,7 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
     
     if(msg->rt_vect.size() > 0)
     {	
+	delNode(excl_task_nodes);
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -1213,6 +1227,8 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    
 	    add = true;
 	}
+	
+	insertNode(excl_task_nodes);
     }
 }
 
@@ -1440,11 +1456,6 @@ int main(int argc, char **argv)
     
     // Carico i recharge points in recharge_points e poi metto i nodi del grafo corrispondenti in excl_task_nodes
     RechPoints();   
-    for(auto elem : recharge_points)
-    {
-	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
-    }
-    
     
     // Carica il grafo dal file .lgf, e lo mette nel grafo orientato Mappa (var globale)
     try
@@ -1480,7 +1491,14 @@ int main(int argc, char **argv)
     }
     
 
-
+    for(auto elem : recharge_points)
+    {
+	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+    }
+//     delNode(excl_task_nodes);
+//     excl_task_nodes.clear();
+    
+    
     
     ros::Rate rate(10);
     while (ros::ok()) 

@@ -280,18 +280,14 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     vector<SmartDigraph::Node> taskb_goal_nodes;
     
     // metti nei vettori i nodi corrispondenti
-//     ROS_INFO_STREAM("rob start ids: ");
     for(auto elem : robots)
     {
 	rob_start_nodes.push_back(SmartDigraph::nodeFromId(searchNode(elem.x, elem.y)));
-// 	ROS_INFO_STREAM(searchNode(elem.x, elem.y));	
     }
     
-//     ROS_INFO_STREAM("taska end ids: ");
     for(auto elem : tasks)
     {
-	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));
-// 	ROS_INFO_STREAM(elem.id1);	
+	taska_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id1));	
 	
 	if(elem.id1 != elem.id2) //il task non è un rech. point
 	    taskb_goal_nodes.push_back(SmartDigraph::nodeFromId(elem.id2));
@@ -312,7 +308,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     
     map<int, SmartDigraph::Node>::iterator it;
     SmartDigraph::Node n;
- 
+    map<int, SmartDigraph::Node> temp;
     
     
    
@@ -327,16 +323,24 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    info.t_name = tasks[j].name;
 	    dist = 0;
 	    	    	    	    
-	    it=excl_task_nodes.find(tasks[j].id1);
-	    if(it != excl_task_nodes.end())
-		excl_task_nodes.erase(it);
+// 	    it=excl_task_nodes.find(tasks[j].id1);
+// 	    if(it != excl_task_nodes.end())
+// 		excl_task_nodes.erase(it);
+// 	    if(tasks[j].id1 != tasks[j].id2)
+// 	    {
+// 		it=excl_task_nodes.find(tasks[j].id2);
+// 		if(it != excl_task_nodes.end())
+// 		    excl_task_nodes.erase(it);
+// 	    }
+// 	    delNode(excl_task_nodes);
+	    temp.clear();
+	    temp[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
 	    if(tasks[j].id1 != tasks[j].id2)
 	    {
-		it=excl_task_nodes.find(tasks[j].id2);
-		if(it != excl_task_nodes.end())
-		    excl_task_nodes.erase(it);
+		temp[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
 	    }
-	    delNode(excl_task_nodes);
+	    insertNode(temp);
+
 	    
 	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
 	    
@@ -451,10 +455,11 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    
 	    in = false;	    
 	    
-	    insertNode(excl_task_nodes);
-	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
-	    if(tasks[j].id1 != tasks[j].id2)
-		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
+// 	    insertNode(excl_task_nodes);
+// 	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
+// 	    if(tasks[j].id1 != tasks[j].id2)
+// 		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
+	    delNode(temp);
 	}
     }
     
@@ -505,10 +510,10 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	    tasks_to_assign.push_back(elem);
 	    ROS_INFO_STREAM("The motion_planner is storing the task to assign: "<< elem.name);
 	    // metti nel vettore excl_task_nodes i nodi corrispondenti ai nuovi task
-	    n = SmartDigraph::nodeFromId(elem.id1);
-	    excl_task_nodes[elem.id1] = n;
-	    n = SmartDigraph::nodeFromId(elem.id2);
-	    excl_task_nodes[elem.id2] = n;
+// 	    n = SmartDigraph::nodeFromId(elem.id1);
+// 	    excl_task_nodes[elem.id1] = n;
+// 	    n = SmartDigraph::nodeFromId(elem.id2);
+// 	    excl_task_nodes[elem.id2] = n;
 	}
 	
 	new_task = true;
@@ -646,9 +651,19 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
     bool available(false);
     bool avail_rech(false);
     map<int, SmartDigraph::Node>::iterator it;
+    SmartDigraph::Node n;
     
     if(msg->status)
     {	
+	for(auto task : tasks_to_assign)
+	{
+	    n = SmartDigraph::nodeFromId(task.id1);
+	    excl_task_nodes[task.id1] = n;
+	    n = SmartDigraph::nodeFromId(task.id2);
+	    excl_task_nodes[task.id2] = n;
+	}
+	delNode(excl_task_nodes);
+      
 	ROS_INFO_STREAM("il motion planner sta ascoltando il robot " << msg->name);
 	
 	// vedo se il robot è già in uno dei vettori
@@ -978,6 +993,7 @@ Assign MinPath(task_assign::rt r_t)
     vector<SmartDigraph::Node> path_node;
     
     map<int, SmartDigraph::Node>::iterator it;
+    map<int, SmartDigraph::Node> temp;
     SmartDigraph::Node n;
   
   
@@ -995,16 +1011,23 @@ Assign MinPath(task_assign::rt r_t)
 	taskb = SmartDigraph::nodeFromId(r_t.task.id2);
     
 
-    it=excl_task_nodes.find(r_t.task.id1);
-    if(it != excl_task_nodes.end())
-	excl_task_nodes.erase(it);
-    if(r_t.task.id1 != r_t.task.id2) 
+//     it=excl_task_nodes.find(r_t.task.id1);
+//     if(it != excl_task_nodes.end())
+// 	excl_task_nodes.erase(it);
+//     if(r_t.task.id1 != r_t.task.id2) 
+//     {
+// 	it=excl_task_nodes.find(r_t.task.id2);
+// 	if(it != excl_task_nodes.end())
+// 	    excl_task_nodes.erase(it);
+//     }
+//     delNode(excl_task_nodes);
+    temp.clear();
+    temp[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+    if(r_t.task.id1 != r_t.task.id2)
     {
-	it=excl_task_nodes.find(r_t.task.id2);
-	if(it != excl_task_nodes.end())
-	    excl_task_nodes.erase(it);
+	temp[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
     }
-    delNode(excl_task_nodes);
+    insertNode(temp);
     
     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
     
@@ -1080,10 +1103,11 @@ Assign MinPath(task_assign::rt r_t)
     }
     
     
-    insertNode(excl_task_nodes);
-    excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
-    if(r_t.task.id1 != r_t.task.id2) 
-	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
+//     insertNode(excl_task_nodes);
+//     excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+//     if(r_t.task.id1 != r_t.task.id2) 
+// 	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
+    delNode(temp);
 	    
     return ass;
 }

@@ -198,6 +198,7 @@ public:
     void publishStatus() 
     {
 	task_assign::robot status_msg; 
+	broadcastPose(turtlesim_pose,robot_name);
 
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.name = robot_name;
@@ -237,25 +238,81 @@ public:
 	
 	for(auto goal_pose : wps)
 	{
-	    ros::Rate rate(10);
-	    ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
-	    do{
-		  publishMarker(turtlesim_pose);
-		  broadcastPose(turtlesim_pose,robot_name);
-		  
-		  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
-		  vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
-		  
-		  turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
-		  turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
-		  turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
-		  
-		  b_level-=0.01;
-		  ros::spinOnce();
-		  rate.sleep(); 
-	    }while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
-	    
-	    publishStatus();
+	    if(ros::ok())
+	    {
+		ros::Rate rate(30);
+		ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
+		do{
+		      publishMarker(turtlesim_pose);
+		      broadcastPose(turtlesim_pose,robot_name);
+		      
+		      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+		      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
+		      
+		      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
+		      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
+		      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
+		      
+		      b_level-=0.01;
+		      ros::spinOnce();
+		      
+	visualization_msgs::Marker marker;
+	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "robot_node";
+	marker.id = id_marker;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = visualization_msgs::Marker::SPHERE;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = turtlesim_pose.x;
+	marker.pose.position.y =turtlesim_pose.y;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = turtlesim_pose.theta;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 1.5;
+	marker.scale.y = 1.5;
+	marker.scale.z = 1.5;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = r;
+	marker.color.g = g;
+	marker.color.b = b;
+	marker.color.a = 0.7;
+
+	marker.lifetime = ros::Duration(rate.sleep());
+
+	// Publish the marker
+	while (marker_pub.getNumSubscribers() < 1)
+	{
+	  if (!ros::ok())
+	  {
+	    break;
+	  }
+	  ROS_WARN_ONCE("Please create a subscriber to the marker");
+	  sleep(1);
+	}
+	marker_pub.publish(marker);
+		      
+// 		      rate.sleep();
+		      
+		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
+		
+		publishStatus();
+		broadcastPose(turtlesim_pose,robot_name);
+	    }
 	}
     }
 

@@ -628,42 +628,42 @@ void ReAssFunc(task_assign::robot msg, Assign ass)
     if(!msg.taska && getDistance(msg.x, msg.y, ass.task.x1, ass.task.y1) > SEC_DIST)
     {
 	ROS_INFO_STREAM(msg.name << " non riesce ad arrivare alla prima parte di " << ass.task.name);
-// 	
-// 	robots_in_execution = deleteRob(msg.name, robots_in_execution);
-// 	robots_in_recharge.push_back(msg);
-// 	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
-// 	tasks_to_assign.push_back(ass.task);
-// 	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
-// 	
-// 	rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
-// 	rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
-// 	
-// 	pub_master_in = true;
+	
+	robots_in_execution = deleteRob(msg.name, robots_in_execution);
+	robots_in_recharge.push_back(msg);
+	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+	tasks_to_assign.push_back(ass.task);
+	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
+	
+	rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+	rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+	
+	pub_master_in = true;
     }
     // se ho eseguito taska e ora sono lontana sia da taska sia da taskb
     else if(msg.taska && getDistance(msg.x, msg.y, ass.task.x2, ass.task.y2) > SEC_DIST)
     {
 	ROS_INFO_STREAM(msg.name << " non riesce ad arrivare alla seconda parte di " << ass.task.name);
-// 	task_assign::task safe_task;
-// 	
-// 	robots_in_execution = deleteRob(msg.name, robots_in_execution);
+	task_assign::task safe_task;
+	
+	robots_in_execution = deleteRob(msg.name, robots_in_execution);
 // 	robots_in_recharge.push_back(msg);
-// 	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
-// 	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
-// 	
-// 	// creo un nuovo "task di salvataggio" in cui la prima parte è arrivare alla posizione del robot in difficoltà 
-// 	// e la seconda parte è arrivare alla seconda parte del robot in difficoltà
-// 	safe_task = ass.task;
-// 	safe_task.x1 = msg.x;
-// 	safe_task.y1 = msg.y;
-// 	safe_task.id1 = searchNode(msg.x, msg.y);
-// 	
-// 	tasks_to_assign.push_back(safe_task);
-// 	
-// 	rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
-// 	rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
-// 	
-// 	pub_master_in = true;
+	tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
+	Catalogo_Ass = deleteAss(msg.name, Catalogo_Ass);
+	
+	// creo un nuovo "task di salvataggio" in cui la prima parte è arrivare alla posizione del robot in difficoltà 
+	// e la seconda parte è arrivare alla seconda parte del robot in difficoltà
+	safe_task = ass.task;
+	safe_task.x1 = msg.x;
+	safe_task.y1 = msg.y;
+	safe_task.id1 = searchNode(msg.x, msg.y);
+	
+	tasks_to_assign.push_back(safe_task);
+	
+	rt_info_vect = CalcTex(rt_info_vect, available_robots, tasks_to_assign, Mappa, 0);
+	rech_info_vect = CalcTex(rech_info_vect, robots_in_recharge, recharge_points, Mappa, 0);
+	
+	pub_master_in = true;
     } 			 
 }
 
@@ -1520,30 +1520,30 @@ int main(int argc, char **argv)
     while (ros::ok()) 
     {
 	ros::spinOnce();
-      tryAgain:
+//       tryAgain:
 	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
 	{
 	    ros::spinOnce();
 	    rate.sleep();	  
 	}
-	if(obstacles.size() != n)
-	{
-	    n = obstacles.size();
-	    pub_master_in = false;
-	    goto tryAgain;
-	}
+// 	if(obstacles.size() != n)
+// 	{
+// 	    n = obstacles.size();
+// 	    pub_master_in = false;
+// 	    goto tryAgain;
+// 	}
 	if(pub_master_in && ros::ok())
 	{
 	    sleep(1);
 	    publishMasterIn();
 	    pub_master_in = false;
 	}
-	if(obstacles.size() != n)
-	{
-	    n = obstacles.size();
-	    pub_master_in = false;
-	    goto tryAgain;
-	}
+// 	if(obstacles.size() != n)
+// 	{
+// 	    n = obstacles.size();
+// 	    pub_master_in = false;
+// 	    goto tryAgain;
+// 	}
 	if(new_assign && ros::ok())
 	{
 	    sleep(1);

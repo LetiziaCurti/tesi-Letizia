@@ -512,7 +512,6 @@ int main(int argc, char **argv)
 	    }	  
 	}
 	    
-	// verifico se alcuni task precedentemente arrivati sono stati completati
 	VectMarker(markers);
 	publishVectTask();
 	

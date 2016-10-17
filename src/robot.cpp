@@ -64,6 +64,8 @@ double getDistance(double x1, double y1, double x2, double y2)
   return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
 }
 
+#define BATTERY_THR 10
+
 
 class Robot
 {
@@ -282,57 +284,61 @@ public:
 		      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
 		      
 		      b_level-=0.01;
-		      ros::spinOnce();
+		      if(b_level<BATTERY_THR)
+			  return;
 		      
-// 	visualization_msgs::Marker marker;
-// 	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
-// 	marker.header.frame_id = "world";
-// 	marker.header.stamp = ros::Time::now();
-// 
-// 	// Set the namespace and id for this marker.  This serves to create a unique ID
-// 	// Any marker sent with the same namespace and id will overwrite the old one
-// 	marker.ns = "robot_node";
-// 	marker.id = id_marker;
-// 
-// 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-// 	marker.type = visualization_msgs::Marker::SPHERE;
-// 
-// 	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-// 	marker.action = visualization_msgs::Marker::ADD;
-// 
-// 	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-// 	marker.pose.position.x = turtlesim_pose.x;
-// 	marker.pose.position.y =turtlesim_pose.y;
-// 	marker.pose.position.z = 0;
-// 	marker.pose.orientation.x = 0.0;
-// 	marker.pose.orientation.y = 0.0;
-// 	marker.pose.orientation.z = turtlesim_pose.theta;
-// 	marker.pose.orientation.w = 1.0;
-// 
-// 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-// 	marker.scale.x = 1.5;
-// 	marker.scale.y = 1.5;
-// 	marker.scale.z = 1.5;
-// 
-// 	// Set the color -- be sure to set alpha to something non-zero!
-// 	marker.color.r = r;
-// 	marker.color.g = g;
-// 	marker.color.b = b;
-// 	marker.color.a = 0.7;
-// 
-// 	marker.lifetime = ros::Duration(rate.sleep());
-// 
-// 	// Publish the marker
-// 	while (marker_pub.getNumSubscribers() < 1)
-// 	{
-// 	  if (!ros::ok())
-// 	  {
-// 	    break;
-// 	  }
-// 	  ROS_WARN_ONCE("Please create a subscriber to the marker");
-// 	  sleep(1);
-// 	}
-// 	marker_pub.publish(marker);
+	visualization_msgs::Marker marker;
+	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "robot_node";
+	marker.id = id_marker;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+	marker.mesh_resource = "package://task_assign/config/Taxi.stl";
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = turtlesim_pose.x;
+	marker.pose.position.y =turtlesim_pose.y;
+	marker.pose.position.z = 0;
+	quaternion Quat;
+	Quat = EulToQuat(0.0,turtlesim_pose.theta+1.57,1.57);
+	marker.pose.orientation.x = Quat.x;
+	marker.pose.orientation.y = Quat.y;
+	marker.pose.orientation.z = Quat.z;
+	marker.pose.orientation.w = Quat.w;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 0.1;
+	marker.scale.y = 0.1;
+	marker.scale.z = 0.05;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = r;
+	marker.color.g = g;
+	marker.color.b = b;
+	marker.color.a = 1;
+
+	marker.lifetime = ros::Duration(rate.sleep());
+
+	// Publish the marker
+	while (marker_pub.getNumSubscribers() < 1)
+	{
+	  if (!ros::ok())
+	  {
+	    break;
+	  }
+	  ROS_WARN_ONCE("Please create a subscriber to the marker");
+	  sleep(1);
+	}
+	marker_pub.publish(marker);
 		      
 		      rate.sleep();
 		      
@@ -469,6 +475,8 @@ int main(int argc, char **argv)
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a;
+	    if(robot.b_level<BATTERY_THR)
+		return 0;
 	    robot.taska = true;
 	    robot.publishStatus(); 
 
@@ -478,6 +486,8 @@ int main(int argc, char **argv)
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
 	    robot.b_level -= robot.wait_b;
+	    if(robot.b_level<BATTERY_THR)
+		return 0;
 	    robot.taskb = true;
 	    robot.assignment = false;	    
 	    robot.publishStatus();  

@@ -84,6 +84,8 @@ vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-
 vector<task_assign::info> rt_info_vect;
 vector<task_assign::info> rech_info_vect; 
 
+vector<task_assign::task> obstacles;
+
 
 SmartDigraph Mappa; 
 SmartDigraph::NodeMap<float> coord_x(Mappa);
@@ -227,15 +229,29 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 	
 	for(auto elem : msg->task_vect)
 	{
-	    // vedo se elem sta già in excl_obs_nodes
+	    // vedo se elem sta già in obstacles
 	    it = excl_obs_nodes.find(elem.id1);
 	    if(it == excl_obs_nodes.end())
 	    {
 		ROS_INFO_STREAM("The motion_planner is storing the obstacle: "<< elem.name);
+		obstacles.push_back(elem);
 		excl_obs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
 	    }
 	}
 	
+// 	map<int,SmartDigraph::Node>::iterator it;
+// 	
+// 	for(auto elem : msg->task_vect)
+// 	{
+// 	    // vedo se elem sta già in excl_obs_nodes
+// 	    it = excl_obs_nodes.find(elem.id1);
+// 	    if(it == excl_obs_nodes.end())
+// 	    {
+// 		ROS_INFO_STREAM("The motion_planner is storing the obstacle: "<< elem.name);
+// 		excl_obs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+// 	    }
+// 	}
+// 	
 	delNode(excl_obs_nodes);
     } 
 }
@@ -335,21 +351,21 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    info.t_name = tasks[j].name;
 	    dist = 0;
 	    	    	    	    
-// 	    it=excl_task_nodes.find(tasks[j].id1);
-// 	    if(it != excl_task_nodes.end())
-// 		excl_task_nodes.erase(it);
-// 	    if(tasks[j].id1 != tasks[j].id2)
-// 	    {
-// 		it=excl_task_nodes.find(tasks[j].id2);
-// 		if(it != excl_task_nodes.end())
-// 		    excl_task_nodes.erase(it);
-// 	    }
-// 	    delNode(excl_task_nodes);
-	    temp.clear();
-	    temp[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
+	    it=excl_task_nodes.find(tasks[j].id1);
+	    if(it != excl_task_nodes.end())
+		excl_task_nodes.erase(it);
 	    if(tasks[j].id1 != tasks[j].id2)
-		temp[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
-	    insertNode(temp);
+	    {
+		it=excl_task_nodes.find(tasks[j].id2);
+		if(it != excl_task_nodes.end())
+		    excl_task_nodes.erase(it);
+	    }
+	    delNode(excl_task_nodes);
+// 	    temp.clear();
+// 	    temp[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
+// 	    if(tasks[j].id1 != tasks[j].id2)
+// 		temp[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
+// 	    insertNode(temp);
 
 	    
 	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
@@ -465,11 +481,11 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    
 	    in = false;	    
 	    
-// 	    insertNode(excl_task_nodes);
-// 	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
-// 	    if(tasks[j].id1 != tasks[j].id2)
-// 		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
-	    delNode(temp);
+	    insertNode(excl_task_nodes);
+	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
+	    if(tasks[j].id1 != tasks[j].id2)
+		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
+// 	    delNode(temp);
 	}
     }
     
@@ -520,10 +536,10 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	    tasks_to_assign.push_back(elem);
 	    ROS_INFO_STREAM("The motion_planner is storing the task to assign: "<< elem.name);
 	    // metti nel vettore excl_task_nodes i nodi corrispondenti ai nuovi task
-// 	    n = SmartDigraph::nodeFromId(elem.id1);
-// 	    excl_task_nodes[elem.id1] = n;
-// 	    n = SmartDigraph::nodeFromId(elem.id2);
-// 	    excl_task_nodes[elem.id2] = n;
+	    n = SmartDigraph::nodeFromId(elem.id1);
+	    excl_task_nodes[elem.id1] = n;
+	    n = SmartDigraph::nodeFromId(elem.id2);
+	    excl_task_nodes[elem.id2] = n;
 	}
 	
 	new_task = true;
@@ -665,14 +681,14 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
     
     if(msg->status)
     {	
-	for(auto task : tasks_to_assign)
-	{
-	    n = SmartDigraph::nodeFromId(task.id1);
-	    excl_task_nodes[task.id1] = n;
-	    n = SmartDigraph::nodeFromId(task.id2);
-	    excl_task_nodes[task.id2] = n;
-	}
-	delNode(excl_task_nodes);
+// 	for(auto task : tasks_to_assign)
+// 	{
+// 	    n = SmartDigraph::nodeFromId(task.id1);
+// 	    excl_task_nodes[task.id1] = n;
+// 	    n = SmartDigraph::nodeFromId(task.id2);
+// 	    excl_task_nodes[task.id2] = n;
+// 	}
+// 	delNode(excl_task_nodes);
       
 	ROS_INFO_STREAM("il motion planner sta ascoltando il robot " << msg->name);
 	
@@ -776,7 +792,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 		    {			
 			for(auto newel : completed_tasks)
 			{
-// 			    if(newel.id1 == ass.task.id1 && newel.id2 == ass.task.id2)
 			    if(newel.name == ass.task.name)
 			    {
 				new_compl = false;
@@ -980,7 +995,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	if(as)
 	    pub_master_in = true;
 	
-	insertNode(excl_task_nodes);
+// 	insertNode(excl_task_nodes);
     }
     // se il robot è rotto
     else
@@ -1023,21 +1038,21 @@ Assign MinPath(task_assign::rt r_t)
 	taskb = SmartDigraph::nodeFromId(r_t.task.id2);
     
 
-//     it=excl_task_nodes.find(r_t.task.id1);
-//     if(it != excl_task_nodes.end())
-// 	excl_task_nodes.erase(it);
-//     if(r_t.task.id1 != r_t.task.id2) 
-//     {
-// 	it=excl_task_nodes.find(r_t.task.id2);
-// 	if(it != excl_task_nodes.end())
-// 	    excl_task_nodes.erase(it);
-//     }
-//     delNode(excl_task_nodes);
-    temp.clear();
-    temp[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
-    if(r_t.task.id1 != r_t.task.id2)
-	temp[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
-    insertNode(temp);
+    it=excl_task_nodes.find(r_t.task.id1);
+    if(it != excl_task_nodes.end())
+	excl_task_nodes.erase(it);
+    if(r_t.task.id1 != r_t.task.id2) 
+    {
+	it=excl_task_nodes.find(r_t.task.id2);
+	if(it != excl_task_nodes.end())
+	    excl_task_nodes.erase(it);
+    }
+    delNode(excl_task_nodes);
+//     temp.clear();
+//     temp[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+//     if(r_t.task.id1 != r_t.task.id2)
+// 	temp[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
+//     insertNode(temp);
     
     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
     
@@ -1113,11 +1128,11 @@ Assign MinPath(task_assign::rt r_t)
     }
     
     
-//     insertNode(excl_task_nodes);
-//     excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
-//     if(r_t.task.id1 != r_t.task.id2) 
-// 	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
-    delNode(temp);
+    insertNode(excl_task_nodes);
+    excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+    if(r_t.task.id1 != r_t.task.id2) 
+	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
+//     delNode(temp);
 	    
     return ass;
 }
@@ -1134,7 +1149,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
     
     if(msg->rt_vect.size() > 0)
     {	
-	delNode(excl_task_nodes);
+// 	delNode(excl_task_nodes);
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -1174,7 +1189,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    add = true;
 	}
 	
-	insertNode(excl_task_nodes);
+// 	insertNode(excl_task_nodes);
     }
 }
 
@@ -1188,7 +1203,7 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
     
     if(msg->rt_vect.size() > 0)
     {	
-	delNode(excl_task_nodes);
+// 	delNode(excl_task_nodes);
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -1228,7 +1243,7 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    add = true;
 	}
 	
-	insertNode(excl_task_nodes);
+// 	insertNode(excl_task_nodes);
     }
 }
 
@@ -1518,12 +1533,66 @@ int main(int argc, char **argv)
 	if(new_assign && ros::ok())
 	{
 	    sleep(1);
+// 	    if(obstacles.size()>0)
+// 	    {
+// 		task_assign::rt rt;
+// 		struct Assign ass;
+// 		bool in(false);
+// 		for(auto elem : assignments_vect)
+// 		{
+// 		    in = false;
+// 		    for(auto t : tasks_to_assign)
+// 		    {
+// 			for(auto r : available_robots)
+// 			{
+// 			    if(elem.t_name == t.name && elem.r_name == r.name)
+// 			    {
+// 				rt.robot = r;
+// 				rt.task = t;
+// 				ass = MinPath(rt);
+// 				elem = ass.path_tot;
+// 				in = true;
+// 				break;
+// 			    }
+// 			}
+// 			if(in)
+// 			    break;			  
+// 		    }
+// 		}
+// 	    }
 	    publishAssign();
 	    new_assign = false;
 	}
 	if(new_in_rech && ros::ok())
 	{
 	    sleep(1);
+// 	    if(obstacles.size()>0)
+// 	    {
+// 		task_assign::rt rt;
+// 		struct Assign ass;
+// 		bool in(false);
+// 		for(auto elem : robRech_vect)
+// 		{
+// 		    in = false;
+// 		    for(auto t : recharge_points)
+// 		    {
+// 			for(auto r : robots_in_recharge)
+// 			{
+// 			    if(elem.t_name == t.name && elem.r_name == r.name)
+// 			    {
+// 				rt.robot = r;
+// 				rt.task = t;
+// 				ass = MinPath(rt);
+// 				elem = ass.path_tot;
+// 				in = true;
+// 				break;
+// 			    }
+// 			}
+// 			if(in)
+// 			    break;			  
+// 		    }
+// 		}
+// 	    }
 	    publishRecharge();
 	    new_in_rech = false;
 	}	

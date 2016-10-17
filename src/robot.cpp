@@ -5,6 +5,7 @@
 // Dopodiché si muove per raggiungere con moveGoal il task.
 // Infine pubblica su "assignment_topic" che è tornato libero
 
+#include <cmath>
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"  
@@ -25,6 +26,33 @@
 #define RECHARGE_DURATION 10
 
 using namespace std;
+
+struct quaternion
+{
+    double x;
+    double y;
+    double z;
+    double w;
+};
+
+quaternion EulToQuat(double y, double z, double x) 
+{
+    quaternion Quat;
+    // Assuming the angles are in radians.
+    double c1 = cos(y);
+    double s1 = sin(y);
+    double c2 = cos(z);
+    double s2 = sin(z);
+    double c3 = cos(x);
+    double s3 = sin(x);
+    Quat.w = sqrt(1.0 + c1 * c2 + c1*c3 - s1 * s2 * s3 + c2*c3) / 2.0;
+    double w4 = (4.0 * Quat.w);
+    Quat.x = (c2 * s3 + c1 * s3 + s1 * s2 * c3) / w4 ;
+    Quat.y = (s1 * c2 + s1 * c3 + c1 * s2 * s3) / w4 ;
+    Quat.z = (-s1 * s3 + c1 * s2 * c3 +s2) / w4 ;
+    
+    return Quat;
+}
 
 inline const char * const BoolToString(bool b)
 {
@@ -256,57 +284,57 @@ public:
 		      b_level-=0.01;
 		      ros::spinOnce();
 		      
-	visualization_msgs::Marker marker;
-	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
-	marker.header.frame_id = "world";
-	marker.header.stamp = ros::Time::now();
-
-	// Set the namespace and id for this marker.  This serves to create a unique ID
-	// Any marker sent with the same namespace and id will overwrite the old one
-	marker.ns = "robot_node";
-	marker.id = id_marker;
-
-	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-	marker.type = visualization_msgs::Marker::SPHERE;
-
-	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-	marker.action = visualization_msgs::Marker::ADD;
-
-	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-	marker.pose.position.x = turtlesim_pose.x;
-	marker.pose.position.y =turtlesim_pose.y;
-	marker.pose.position.z = 0;
-	marker.pose.orientation.x = 0.0;
-	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = turtlesim_pose.theta;
-	marker.pose.orientation.w = 1.0;
-
-	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 1.5;
-	marker.scale.y = 1.5;
-	marker.scale.z = 1.5;
-
-	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = r;
-	marker.color.g = g;
-	marker.color.b = b;
-	marker.color.a = 0.7;
-
-	marker.lifetime = ros::Duration(rate.sleep());
-
-	// Publish the marker
-	while (marker_pub.getNumSubscribers() < 1)
-	{
-	  if (!ros::ok())
-	  {
-	    break;
-	  }
-	  ROS_WARN_ONCE("Please create a subscriber to the marker");
-	  sleep(1);
-	}
-	marker_pub.publish(marker);
+// 	visualization_msgs::Marker marker;
+// 	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
+// 	marker.header.frame_id = "world";
+// 	marker.header.stamp = ros::Time::now();
+// 
+// 	// Set the namespace and id for this marker.  This serves to create a unique ID
+// 	// Any marker sent with the same namespace and id will overwrite the old one
+// 	marker.ns = "robot_node";
+// 	marker.id = id_marker;
+// 
+// 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+// 	marker.type = visualization_msgs::Marker::SPHERE;
+// 
+// 	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+// 	marker.action = visualization_msgs::Marker::ADD;
+// 
+// 	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+// 	marker.pose.position.x = turtlesim_pose.x;
+// 	marker.pose.position.y =turtlesim_pose.y;
+// 	marker.pose.position.z = 0;
+// 	marker.pose.orientation.x = 0.0;
+// 	marker.pose.orientation.y = 0.0;
+// 	marker.pose.orientation.z = turtlesim_pose.theta;
+// 	marker.pose.orientation.w = 1.0;
+// 
+// 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+// 	marker.scale.x = 1.5;
+// 	marker.scale.y = 1.5;
+// 	marker.scale.z = 1.5;
+// 
+// 	// Set the color -- be sure to set alpha to something non-zero!
+// 	marker.color.r = r;
+// 	marker.color.g = g;
+// 	marker.color.b = b;
+// 	marker.color.a = 0.7;
+// 
+// 	marker.lifetime = ros::Duration(rate.sleep());
+// 
+// 	// Publish the marker
+// 	while (marker_pub.getNumSubscribers() < 1)
+// 	{
+// 	  if (!ros::ok())
+// 	  {
+// 	    break;
+// 	  }
+// 	  ROS_WARN_ONCE("Please create a subscriber to the marker");
+// 	  sleep(1);
+// 	}
+// 	marker_pub.publish(marker);
 		      
-// 		      rate.sleep();
+		      rate.sleep();
 		      
 		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
 		
@@ -331,7 +359,9 @@ public:
 	marker.id = id_marker;
 
 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-	marker.type = visualization_msgs::Marker::SPHERE;
+// 	marker.type = visualization_msgs::Marker::SPHERE;
+	marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+	marker.mesh_resource = "package://task_assign/config/Toy Taxi.dae";
 
 	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
 	marker.action = visualization_msgs::Marker::ADD;
@@ -340,15 +370,17 @@ public:
 	marker.pose.position.x = p.x;
 	marker.pose.position.y = p.y;
 	marker.pose.position.z = 0;
-	marker.pose.orientation.x = 0.0;
-	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = p.theta;
-	marker.pose.orientation.w = 1.0;
+	quaternion Quat;
+	Quat = EulToQuat(0.0,p.theta+1.57,1.57);
+	marker.pose.orientation.x = Quat.x;
+	marker.pose.orientation.y = Quat.y;
+	marker.pose.orientation.z = Quat.z;
+	marker.pose.orientation.w = Quat.w;
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 1.5;
-	marker.scale.y = 1.5;
-	marker.scale.z = 1.5;
+	marker.scale.x = 0.01;
+	marker.scale.y = 0.01;
+	marker.scale.z = 0.01;
 
 	// Set the color -- be sure to set alpha to something non-zero!
 	marker.color.r = r;

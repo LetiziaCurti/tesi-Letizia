@@ -1512,17 +1512,25 @@ int main(int argc, char **argv)
     }
 //     delNode(excl_task_nodes);
 //     excl_task_nodes.clear();
-    
-    
+
+    int n = obstacles.size();
+
     
     ros::Rate rate(10);
     while (ros::ok()) 
     {
 	ros::spinOnce();
+      tryAgain:
 	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
 	{
 	    ros::spinOnce();
 	    rate.sleep();	  
+	}
+	if(obstacles.size() != n)
+	{
+	    n = obstacles.size();
+	    pub_master_in = false;
+	    goto tryAgain;
 	}
 	if(pub_master_in && ros::ok())
 	{
@@ -1530,69 +1538,21 @@ int main(int argc, char **argv)
 	    publishMasterIn();
 	    pub_master_in = false;
 	}
+	if(obstacles.size() != n)
+	{
+	    n = obstacles.size();
+	    pub_master_in = false;
+	    goto tryAgain;
+	}
 	if(new_assign && ros::ok())
 	{
 	    sleep(1);
-// 	    if(obstacles.size()>0)
-// 	    {
-// 		task_assign::rt rt;
-// 		struct Assign ass;
-// 		bool in(false);
-// 		for(auto elem : assignments_vect)
-// 		{
-// 		    in = false;
-// 		    for(auto t : tasks_to_assign)
-// 		    {
-// 			for(auto r : available_robots)
-// 			{
-// 			    if(elem.t_name == t.name && elem.r_name == r.name)
-// 			    {
-// 				rt.robot = r;
-// 				rt.task = t;
-// 				ass = MinPath(rt);
-// 				elem = ass.path_tot;
-// 				in = true;
-// 				break;
-// 			    }
-// 			}
-// 			if(in)
-// 			    break;			  
-// 		    }
-// 		}
-// 	    }
 	    publishAssign();
 	    new_assign = false;
 	}
 	if(new_in_rech && ros::ok())
 	{
 	    sleep(1);
-// 	    if(obstacles.size()>0)
-// 	    {
-// 		task_assign::rt rt;
-// 		struct Assign ass;
-// 		bool in(false);
-// 		for(auto elem : robRech_vect)
-// 		{
-// 		    in = false;
-// 		    for(auto t : recharge_points)
-// 		    {
-// 			for(auto r : robots_in_recharge)
-// 			{
-// 			    if(elem.t_name == t.name && elem.r_name == r.name)
-// 			    {
-// 				rt.robot = r;
-// 				rt.task = t;
-// 				ass = MinPath(rt);
-// 				elem = ass.path_tot;
-// 				in = true;
-// 				break;
-// 			    }
-// 			}
-// 			if(in)
-// 			    break;			  
-// 		    }
-// 		}
-// 	    }
 	    publishRecharge();
 	    new_in_rech = false;
 	}	

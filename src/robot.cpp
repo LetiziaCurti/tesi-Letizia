@@ -361,7 +361,7 @@ public:
 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
 // 	marker.type = visualization_msgs::Marker::SPHERE;
 	marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-	marker.mesh_resource = "package://task_assign/config/Toy Taxi.dae";
+	marker.mesh_resource = "package://task_assign/config/Taxi.stl";
 
 	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
 	marker.action = visualization_msgs::Marker::ADD;
@@ -378,15 +378,15 @@ public:
 	marker.pose.orientation.w = Quat.w;
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 0.01;
-	marker.scale.y = 0.01;
-	marker.scale.z = 0.01;
+	marker.scale.x = 0.1;
+	marker.scale.y = 0.1;
+	marker.scale.z = 0.05;
 
 	// Set the color -- be sure to set alpha to something non-zero!
 	marker.color.r = r;
 	marker.color.g = g;
 	marker.color.b = b;
-	marker.color.a = 0.7;
+	marker.color.a = 1;
 
 	marker.lifetime = ros::Duration();
 

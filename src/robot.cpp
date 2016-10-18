@@ -183,12 +183,12 @@ public:
 		
 		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
 		// altri messaggi finché non ho finito il task
-		if(elem.r_name==robot_name && elem.t_name!=task_name)
+		if(elem.r_name.name==robot_name && elem.t_name.name!=task_name)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its assignment "<< elem.t_name <<" from motion_planner");
+		    ROS_INFO_STREAM(robot_name << " is listening its assignment "<< elem.t_name.name <<" from motion_planner");
 		    
 		    assignment = true;
-		    task_name = elem.t_name;
+		    task_name = elem.t_name.name;
 		    taska_id_marker = elem.id_a;
 		    taskb_id_marker = elem.id_b;
 		    
@@ -232,9 +232,9 @@ public:
 		
 		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
 		// altri messaggi finché non ho finito il task
-		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
+		if(elem.r_name.name==robot_name && elem.t_name.name==task_name && elem.stop)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name.name <<" from motion_planner");		    
 		    re_assignment = true;
 		    path_a = elem.path_a;
 		    path_b = elem.path_b;
@@ -255,16 +255,16 @@ public:
 	for(auto elem : msg->assign_vect)
 	{
 	    //check: deve essere arrivato qualcosa
-	    if(elem.t_name!="" && elem.r_name!="")
+	    if(elem.t_name.name!="" && elem.r_name.name!="")
 	    {    
 		// se devo andare in ricarica metto in_recharge a true così smetto di ascoltare
 		// altri messaggi finché non ho finito di ricaricarmi
-		if(elem.r_name==robot_name && elem.t_name!=task_name)
+		if(elem.r_name.name==robot_name && elem.t_name.name!=task_name)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its recharge point "<< elem.t_name <<" from motion_planner");
+		    ROS_INFO_STREAM(robot_name << " is listening its recharge point "<< elem.t_name.name <<" from motion_planner");
 		    
 		    in_recharge = true;
-		    task_name = elem.t_name;
+		    task_name = elem.t_name.name;
 		    taska_id_marker = elem.id_a;
 		    
 		    // i punti di ricarica sono task che hanno solo la prima parte (taska)
@@ -276,10 +276,10 @@ public:
 		    taska_pose.theta = wp.theta;
 		    wait_a = wp.wait;
 		    
-		    for(auto wp : path_a)
-		    {
-			ROS_INFO_STREAM("coordinate dei wp per il rech. point: "<< wp.x <<" - " << wp.y);
-		    }
+// 		    for(auto wp : path_a)
+// 		    {
+// 			ROS_INFO_STREAM("coordinate dei wp per il rech. point: "<< wp.x <<" - " << wp.y);
+// 		    }
 		    
 		    break;
 		}
@@ -301,9 +301,9 @@ public:
 		
 		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
 		// altri messaggi finché non ho finito il task
-		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
+		if(elem.r_name.name==robot_name && elem.t_name.name==task_name && elem.stop)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name.name <<" from motion_planner");		    
 		    re_in_recharge = true;
 		    path_a = elem.path_a;
 		    break;

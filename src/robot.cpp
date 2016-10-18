@@ -79,6 +79,8 @@ public:
     ros::Subscriber assignment_sub;
     ros::Subscriber recharge_sub;
     ros::Subscriber reassignment_sub;
+    ros::Subscriber re_recharge_sub;
+    
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
     
@@ -87,6 +89,7 @@ public:
     bool assignment = false;
     bool re_assignment = false;
     bool in_recharge = false;
+    bool re_in_recharge = false;
     string task_name;
     int taska_id_marker, taskb_id_marker;
     double wait_a, wait_b;
@@ -124,6 +127,7 @@ public:
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
 	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
+	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     }
@@ -133,18 +137,30 @@ public:
     vector<task_assign::waypoint> FindPath(task_assign::waypoint wp_now, vector<task_assign::waypoint> path_new)
     {
 	vector<task_assign::waypoint> path_remain;
-
+	bool is(false);
+	int count(0);
 	for(auto wp : path_new)
 	{
-	    if(wp.x != wp_now.x || wp.y != wp_now.y)
-		path_new.erase(path_new.begin());
-	    else 
+	    count++;
+	    if(wp.x == wp_now.x && wp.y == wp_now.y)
 	    {
-		path_remain = path_new;
+		is = true;
 		break;
 	    }
 	}
-	
+	if(!is)
+	    path_remain = path_new;
+// 	else if(count==1)
+// 		path_remain = path_new;
+	else 
+// 	  if(count>0)
+	{
+	    for(int i=count; i<path_new.size(); i++)
+	    {
+		path_remain.push_back(path_new[i]);
+	    }
+	}
+			
 	return path_remain;
     }
     
@@ -268,6 +284,31 @@ public:
 		    break;
 		}
 	    }   
+	}
+    }
+    
+    
+    
+    void Re_RechargeCallback(const task_assign::assignment::ConstPtr& msg)
+    {
+	if(re_in_recharge) return;
+	
+	//check: deve essere arrivato qualcosa
+	if(msg->assign_vect.size()>0)
+	{	
+	    for(auto elem : msg->assign_vect)
+	    {
+		
+		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
+		// altri messaggi finché non ho finito il task
+		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
+		{
+		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+		    re_in_recharge = true;
+		    path_a = elem.path_a;
+		    break;
+		}   
+	    }
 	}
     }
     
@@ -543,7 +584,7 @@ int main(int argc, char **argv)
 	    robot.taska = true;
 	    robot.publishStatus(); 
 
-	    robot.publishStatus(); 
+// 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
 	    if(robot.re_assignment)
 	    {
@@ -573,16 +614,25 @@ int main(int argc, char **argv)
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS GOING TO RECHARGE IN  " << robot.task_name);
 
 	    robot.publishStatus(); 
-	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);	    
+	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);	 
+	    if(robot.re_assignment)
+	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.path_a);
+		robot.re_in_recharge = false;
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+	    }
 	    sleep(RECHARGE_DURATION);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI E' RICARICATO IN " << robot.task_name);
 	    
 	    robot.b_level = b_level0;
 	    robot.taska = true;
 	    robot.in_recharge = false;
+	    robot.re_in_recharge = false;
 	    robot.publishStatus(); 
-	       
-
 	}
 	
 	robot.taska = false;

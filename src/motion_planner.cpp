@@ -25,6 +25,7 @@
 #include "task_assign/rech_vect.h"
 #include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include "task_assign/glpk_in.h"
 #include "yaml-cpp/yaml.h"
 
@@ -52,6 +53,7 @@ ros::Publisher exec_task_pub;
 ros::Publisher assignment_pub;
 ros::Publisher recharge_pub;
 ros::Publisher marker_pub;
+ros::Publisher marker_array_pub;
 ros::Publisher reass_pub;
 
 #define VELOCITY 10
@@ -220,6 +222,68 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 
 
 
+void publishMarkerArray(vector<task_assign::task> obs_vect)
+{
+    visualization_msgs::MarkerArray markers_vect;
+    
+    for(auto elem : obs_vect)
+    { 
+	visualization_msgs::Marker marker;
+	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
+	marker.header.frame_id = "world";
+	marker.header.stamp = ros::Time::now();
+
+	// Set the namespace and id for this marker.  This serves to create a unique ID
+	// Any marker sent with the same namespace and id will overwrite the old one
+	marker.ns = "robot_node";
+	marker.id = elem.id1;
+
+	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+	marker.type = visualization_msgs::Marker::CUBE;
+
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
+
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = elem.x1;
+	marker.pose.position.y = elem.y1;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = 0.0;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 1.5;
+	marker.scale.y = 1.5;
+	marker.scale.z = 1.5;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 1.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 1.0f;
+	marker.color.a = 0.7;
+
+	marker.lifetime = ros::Duration();
+	
+	markers_vect.markers.push_back(marker);
+    }
+
+    // Publish the markers
+    while (marker_pub.getNumSubscribers() < 1)
+    {
+      if (!ros::ok())
+      {
+	break;
+      }
+      ROS_WARN_ONCE("Please create a subscriber to the marker");
+      sleep(1);
+    }
+    marker_array_pub.publish(markers_vect);
+}
+
+
+
 // Legge gli ostacoli da "obstacles_topic" 
 void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 {
@@ -253,6 +317,7 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 // 	}
 // 	
 	delNode(excl_obs_nodes);
+	publishMarkerArray(obstacles);
     } 
 }
 
@@ -1439,6 +1504,8 @@ void RechPoints()
 
 
 
+
+
     
     
 
@@ -1462,6 +1529,7 @@ int main(int argc, char **argv)
     recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
     
     marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+    marker_array_pub = node.advertise<visualization_msgs::MarkerArray>("visualization_marker_array", 10);
 
     reass_pub = node.advertise<task_assign::glpk_in>("glpk_in_topic", 10);
     

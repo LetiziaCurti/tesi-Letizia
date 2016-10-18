@@ -78,12 +78,14 @@ public:
 
     ros::Subscriber assignment_sub;
     ros::Subscriber recharge_sub;
+    ros::Subscriber reassignment_sub;
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
     
     task_assign::waypoint taska_pose, taskb_pose;
 
     bool assignment = false;
+    bool re_assignment = false;
     bool in_recharge = false;
     string task_name;
     int taska_id_marker, taskb_id_marker;
@@ -121,7 +123,29 @@ public:
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
+	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
+	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+    }
+    
+    
+    
+    vector<task_assign::waypoint> FindPath(task_assign::waypoint wp_now, vector<task_assign::waypoint> path_new)
+    {
+	vector<task_assign::waypoint> path_remain;
+
+	for(auto wp : path_new)
+	{
+	    if(wp.x != wp_now.x || wp.y != wp_now.y)
+		path_new.erase(path_new.begin());
+	    else 
+	    {
+		path_remain = path_new;
+		break;
+	    }
+	}
+	
+	return path_remain;
     }
     
     
@@ -131,16 +155,16 @@ public:
     // dopodiché parte per raggiungere il task seguendo i wp passati dal motion_planner
     void AssignCallback(const task_assign::assignment::ConstPtr& msg)
     {
-	task_assign::waypoint wp;
-// 	ROS_INFO_STREAM(robot_name << " I AM LISTENING THE ASSIGNMENT FROM MOTION PLANNER");
-
 	if(assignment) return;
 	
-	for(auto elem : msg->assign_vect)
-	{
-	    //check: deve essere arrivato qualcosa
-	    if(elem.t_name!="" && elem.r_name!="")
-	    {	    
+	task_assign::waypoint wp;
+	
+	//check: deve essere arrivato qualcosa
+	if(msg->assign_vect.size()>0)
+	{	
+	    for(auto elem : msg->assign_vect)
+	    {
+		
 		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
 		// altri messaggi finché non ho finito il task
 		if(elem.r_name==robot_name && elem.t_name!=task_name)
@@ -172,10 +196,35 @@ public:
 // 		    {
 // 			ROS_INFO_STREAM("coordinate dei wp per taska: "<< wp.x <<" - " << wp.y);
 // 		    }
-		    		    
+				    
 		    break;		  
-		}
-	    }   
+		}  
+	    }
+	}
+    }
+    
+    
+    void ReAssignCallback(const task_assign::assignment::ConstPtr& msg)
+    {
+	if(re_assignment) return;
+	
+	//check: deve essere arrivato qualcosa
+	if(msg->assign_vect.size()>0)
+	{	
+	    for(auto elem : msg->assign_vect)
+	    {
+		
+		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
+		// altri messaggi finché non ho finito il task
+		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
+		{
+		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+		    re_assignment = true;
+		    path_a = elem.path_a;
+		    path_b = elem.path_b;
+		    break;
+		}   
+	    }
 	}
     }
     
@@ -268,7 +317,7 @@ public:
 	
 	for(auto goal_pose : wps)
 	{
-	    if(ros::ok())
+	    if(ros::ok() && !re_assignment)
 	    {
 		ros::Rate rate(30);
 		ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
@@ -287,66 +336,69 @@ public:
 		      if(b_level<BATTERY_THR)
 			  return;
 		      
-	visualization_msgs::Marker marker;
-	// Set the frame ID and timestamp.  See the TF tutorials for information on these.
-	marker.header.frame_id = "world";
-	marker.header.stamp = ros::Time::now();
+		      visualization_msgs::Marker marker;
+		      // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+		      marker.header.frame_id = "world";
+		      marker.header.stamp = ros::Time::now();
 
-	// Set the namespace and id for this marker.  This serves to create a unique ID
-	// Any marker sent with the same namespace and id will overwrite the old one
-	marker.ns = "robot_node";
-	marker.id = id_marker;
+		      // Set the namespace and id for this marker.  This serves to create a unique ID
+		      // Any marker sent with the same namespace and id will overwrite the old one
+		      marker.ns = "robot_node";
+		      marker.id = id_marker;
 
-	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-	marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-	marker.mesh_resource = "package://task_assign/config/Taxi.stl";
+		      // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+		      marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+		      marker.mesh_resource = "package://task_assign/config/Taxi.stl";
 
-	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-	marker.action = visualization_msgs::Marker::ADD;
+		      // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+		      marker.action = visualization_msgs::Marker::ADD;
 
-	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-	marker.pose.position.x = turtlesim_pose.x;
-	marker.pose.position.y =turtlesim_pose.y;
-	marker.pose.position.z = 0;
-	quaternion Quat;
-	Quat = EulToQuat(0.0,turtlesim_pose.theta+1.57,1.57);
-	marker.pose.orientation.x = Quat.x;
-	marker.pose.orientation.y = Quat.y;
-	marker.pose.orientation.z = Quat.z;
-	marker.pose.orientation.w = Quat.w;
+		      // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+		      marker.pose.position.x = turtlesim_pose.x;
+		      marker.pose.position.y =turtlesim_pose.y;
+		      marker.pose.position.z = 0;
+		      quaternion Quat;
+		      Quat = EulToQuat(0.0,turtlesim_pose.theta+1.57,1.57);
+		      marker.pose.orientation.x = Quat.x;
+		      marker.pose.orientation.y = Quat.y;
+		      marker.pose.orientation.z = Quat.z;
+		      marker.pose.orientation.w = Quat.w;
 
-	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 0.1;
-	marker.scale.y = 0.1;
-	marker.scale.z = 0.05;
+		      // Set the scale of the marker -- 1x1x1 here means 1m on a side
+		      marker.scale.x = 0.1;
+		      marker.scale.y = 0.1;
+		      marker.scale.z = 0.05;
 
-	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = r;
-	marker.color.g = g;
-	marker.color.b = b;
-	marker.color.a = 1;
+		      // Set the color -- be sure to set alpha to something non-zero!
+		      marker.color.r = r;
+		      marker.color.g = g;
+		      marker.color.b = b;
+		      marker.color.a = 1;
 
-	marker.lifetime = ros::Duration(rate.sleep());
+		      marker.lifetime = ros::Duration(rate.sleep());
 
-	// Publish the marker
-	while (marker_pub.getNumSubscribers() < 1)
-	{
-	  if (!ros::ok())
-	  {
-	    break;
-	  }
-	  ROS_WARN_ONCE("Please create a subscriber to the marker");
-	  sleep(1);
-	}
-	marker_pub.publish(marker);
+		      // Publish the marker
+		      while (marker_pub.getNumSubscribers() < 1)
+		      {
+			if (!ros::ok())
+			{
+			  break;
+			}
+			ROS_WARN_ONCE("Please create a subscriber to the marker");
+			sleep(1);
+		      }
+		      marker_pub.publish(marker);
 		      
+		      ros::spinOnce();		      
 		      rate.sleep();
 		      
-		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok());
+		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !re_assignment);
 		
 		publishStatus();
 		broadcastPose(turtlesim_pose,robot_name);
 	    }
+	    if(re_assignment)
+		    break;
 	}
     }
 
@@ -453,8 +505,9 @@ int main(int argc, char **argv)
 
     sleep(1); 
 
-
-
+    vector<task_assign::waypoint> new_path;
+    task_assign::waypoint wp;
+    
     ros::Rate rate(10);
     while (ros::ok()) 
     {
@@ -473,6 +526,16 @@ int main(int argc, char **argv)
 	    
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+	    if(robot.re_assignment)
+	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.path_a);
+		robot.re_assignment = false;
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a;
 	    if(robot.b_level<BATTERY_THR)
@@ -482,6 +545,16 @@ int main(int argc, char **argv)
 
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
+	    if(robot.re_assignment)
+	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.path_b);
+		robot.re_assignment = false;		
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
+	    }
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
@@ -489,7 +562,8 @@ int main(int argc, char **argv)
 	    if(robot.b_level<BATTERY_THR)
 		return 0;
 	    robot.taskb = true;
-	    robot.assignment = false;	    
+	    robot.assignment = false;	 
+	    robot.re_assignment = false;
 	    robot.publishStatus();  
 	}
 	

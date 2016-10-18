@@ -244,7 +244,7 @@ int main(int argc, char **argv)
     while(it!=map_task.end() && ros::ok())
     {
 
-	VectMarker(markers);
+// 	VectMarker(markers);
 
 	for(auto elem : it->second)
 	{
@@ -259,7 +259,7 @@ int main(int argc, char **argv)
 	int i = prec_at-pre_prec_at;
 	while(i>0 && ros::ok())
 	{
-	    VectMarker(markers);
+// 	    VectMarker(markers);
 	    sleep(1);
 	    i--;
 	    ros::spinOnce();
@@ -274,7 +274,7 @@ int main(int argc, char **argv)
 	}
 	    
 
-	VectMarker(markers);
+// 	VectMarker(markers);
 	publishObstacles();
 	
 	++it;
@@ -286,7 +286,7 @@ int main(int argc, char **argv)
     
     while(ros::ok())
     {
-      	VectMarker(markers);
+//       	VectMarker(markers);
 	publishObstacles();
 	ros::spinOnce();
 	rate.sleep();

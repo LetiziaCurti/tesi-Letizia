@@ -6,3 +6,4 @@ int32 id_b
 
 string t_name
 string r_name
+bool stop

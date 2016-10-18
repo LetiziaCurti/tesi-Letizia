@@ -303,19 +303,6 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 	    }
 	}
 	
-// 	map<int,SmartDigraph::Node>::iterator it;
-// 	
-// 	for(auto elem : msg->task_vect)
-// 	{
-// 	    // vedo se elem sta già in excl_obs_nodes
-// 	    it = excl_obs_nodes.find(elem.id1);
-// 	    if(it == excl_obs_nodes.end())
-// 	    {
-// 		ROS_INFO_STREAM("The motion_planner is storing the obstacle: "<< elem.name);
-// 		excl_obs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
-// 	    }
-// 	}
-// 	
 	delNode(excl_obs_nodes);
 	publishMarkerArray(obstacles);
     } 
@@ -1141,6 +1128,9 @@ Assign MinPath(task_assign::rt r_t)
 	    path.push_back(tmp);
 	    path_node.push_back(v);
 	}
+	tmp.x = r_t.robot.x;
+	tmp.y = r_t.robot.y;
+	path.push_back(tmp);
 	reverse(path.begin(),path.end());
 	reverse(path_node.begin(),path_node.end());	
     }
@@ -1176,6 +1166,9 @@ Assign MinPath(task_assign::rt r_t)
 		path.push_back(tmp);
 		path_node.push_back(v);
 	    }
+	    tmp.x = r_t.task.x1;
+	    tmp.y = r_t.task.y1;
+	    path.push_back(tmp);
 	    reverse(path.begin(),path.end());
 	    reverse(path_node.begin(),path_node.end());	
 	}
@@ -1244,6 +1237,7 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 		tasks_to_assign = deleteTask(rt.task.name, tasks_to_assign);
 				
 		ass = MinPath(rt);
+		ass.path_tot.stop = false;
 		assignments_vect.push_back(ass.path_tot);
 
 		
@@ -1265,6 +1259,8 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 {
     bool add(true);
     struct Assign ass;
+    
+    robRech_vect.clear();
     
     if(msg->rt_vect.size() > 0)
     {	
@@ -1328,10 +1324,8 @@ void publishAssign()
     for(auto elem : msg.assign_vect)
     {
 	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned task " << elem.t_name);
-// 	for(auto wp : elem.path_a)
-// 	{
-// 	  ROS_INFO_STREAM("coordinate dei wp per taska: "<< wp.x <<" - " << wp.y);
-// 	} 
+	if(elem.stop)
+	    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
     }
 }
 
@@ -1350,6 +1344,8 @@ void publishRecharge()
     for(auto elem : msg.assign_vect)
     {
 	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned rech. point " << elem.t_name);
+	if(elem.stop)
+	    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");     
     }
 }
 
@@ -1578,18 +1574,16 @@ int main(int argc, char **argv)
     {
 	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
     }
-//     delNode(excl_task_nodes);
-//     excl_task_nodes.clear();
 
     int n = obstacles.size();
-
+    ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
     
-    ros::Rate rate(10);
+    ros::Rate rate(50);
     while (ros::ok()) 
     {
 	ros::spinOnce();
 //       tryAgain:
-	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
+	while(!pub_master_in && ros::ok())
 	{
 	    ros::spinOnce();
 	    rate.sleep();	  
@@ -1597,8 +1591,46 @@ int main(int argc, char **argv)
 // 	if(obstacles.size() != n)
 // 	{
 // 	    n = obstacles.size();
-// 	    pub_master_in = false;
-// 	    goto tryAgain;
+// 	    ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
+// 	    delNode(excl_obs_nodes);
+// 	    
+// 	    if(Catalogo_Ass.size()>0)
+// 	    {
+// 		assignments_vect.clear();		
+// 		for(auto elem : Catalogo_Ass)
+// 		{
+// 		    task_assign::rt rt;
+// 		    Assign temp;
+// 		    rt.robot = elem.rob;
+// 		    rt.task = elem.task;
+// 		    temp = MinPath(rt);
+// 		    elem.path_tot = temp.path_tot;
+// 		    elem.path_tot.stop = true;
+// 		    assignments_vect.push_back(elem.path_tot);
+// 		}
+// 		ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+// 		publishAssign();
+// 	    }
+// 	    if(Catalogo_Rech.size()>0)
+// 	    {
+// 		robRech_vect.clear();		    
+// 		for(auto elem : Catalogo_Rech)
+// 		{
+// 		    task_assign::rt rt;
+// 		    Assign temp;
+// 		    rt.robot = elem.rob;
+// 		    rt.task = elem.task;
+// 		    temp = MinPath(rt);
+// 		    elem.path_tot = temp.path_tot;
+// 		    elem.path_tot.stop = true;
+// 		    robRech_vect.push_back(elem.path_tot);
+// 		}
+// 		ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+// 		publishRecharge();
+// 	    }
+// 		
+// // 	    pub_master_in = false;
+// // 	    goto tryAgain;
 // 	}
 	if(pub_master_in && ros::ok())
 	{
@@ -1606,20 +1638,57 @@ int main(int argc, char **argv)
 	    publishMasterIn();
 	    pub_master_in = false;
 	}
-// 	if(obstacles.size() != n)
-// 	{
-// 	    n = obstacles.size();
-// 	    pub_master_in = false;
-// 	    goto tryAgain;
-// 	}
 	if(new_assign && ros::ok())
 	{
+	    if(obstacles.size() != n)
+	    {
+		delNode(excl_obs_nodes);
+		n = obstacles.size();
+		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
+		assignments_vect.clear();
+		
+		for(auto elem : Catalogo_Ass)
+		{
+		    task_assign::rt rt;
+		    Assign temp;
+		    rt.robot = elem.rob;
+		    rt.task = elem.task;
+		    temp = MinPath(rt);
+		    elem.path_tot = temp.path_tot;
+		    elem.path_tot.stop = true;
+		    assignments_vect.push_back(elem.path_tot);
+		}
+		ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+		
+	    }
+	    
 	    sleep(1);
 	    publishAssign();
 	    new_assign = false;
 	}
 	if(new_in_rech && ros::ok())
 	{
+	    if(obstacles.size() != n)
+	    {
+		delNode(excl_obs_nodes);
+		n = obstacles.size();
+		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
+		robRech_vect.clear();
+		
+		for(auto elem : Catalogo_Rech)
+		{
+		    task_assign::rt rt;
+		    Assign temp;
+		    rt.robot = elem.rob;
+		    rt.task = elem.task;
+		    temp = MinPath(rt);
+		    elem.path_tot = temp.path_tot;
+		    elem.path_tot.stop = true;
+		    robRech_vect.push_back(elem.path_tot);
+		}
+		ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+		
+	    }
 	    sleep(1);
 	    publishRecharge();
 	    new_in_rech = false;
@@ -1635,5 +1704,60 @@ int main(int argc, char **argv)
 	rate.sleep();
     }
 
+    
+    
+
     return 0;
 }
+
+// MAIN SENZA REASSIGNMENT - NON TIENE BENE CONTO DEGLI OSTACOLI
+//         ros::Rate rate(10);
+//     while (ros::ok()) 
+//     {
+// 	ros::spinOnce();
+// //       tryAgain:
+// 	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
+// 	{
+// 	    ros::spinOnce();
+// 	    rate.sleep();	  
+// 	}
+// // 	if(obstacles.size() != n)
+// // 	{
+// // 	    n = obstacles.size();
+// // 	    pub_master_in = false;
+// // 	    goto tryAgain;
+// // 	}
+// 	if(pub_master_in && ros::ok())
+// 	{
+// 	    sleep(1);
+// 	    publishMasterIn();
+// 	    pub_master_in = false;
+// 	}
+// // 	if(obstacles.size() != n)
+// // 	{
+// // 	    n = obstacles.size();
+// // 	    pub_master_in = false;
+// // 	    goto tryAgain;
+// // 	}
+// 	if(new_assign && ros::ok())
+// 	{
+// 	    sleep(1);
+// 	    publishAssign();
+// 	    new_assign = false;
+// 	}
+// 	if(new_in_rech && ros::ok())
+// 	{
+// 	    sleep(1);
+// 	    publishRecharge();
+// 	    new_in_rech = false;
+// 	}	
+// 	if(completed && ros::ok())
+// 	{
+// 	    sleep(1);
+// 	    publishExecTask();
+// 	    completed = false;
+// 	}
+// 
+// 	ros::spinOnce();
+// 	rate.sleep();
+//     }

@@ -1,0 +1,111 @@
+TASK:
+  - name: task1
+    arrt: 5
+    status: true
+    tasks:
+      - id: 34
+        wait: 3
+        position: [32, 8, -1.5]
+      - id: 67
+        wait: 5
+        position: [8, 20, -1.5]  
+  - name: task2
+    arrt: 10
+    status: true
+    tasks:
+      - id: 27
+        wait: 3
+        position: [4, 8, -1.5]
+      - id: 98
+        wait: 10
+        position: [28, 28, -1.5]
+  - name: task3
+    arrt: 10
+    status: true
+    tasks:
+      - id: 75
+        wait: 3
+        position: [40, 20, -1.5]
+      - id: 52
+        wait: 5
+        position: [0, 16, -1.5]  
+  - name: task4
+    arrt: 15
+    status: true
+    tasks:
+      - id: 19
+        wait: 3
+        position: [24, 4, -1.5]
+      - id: 107
+        wait: 10
+        position: [12, 32, -1.5]
+  - name: task5
+    arrt: 15
+    status: true
+    tasks:
+      - id: 137
+        wait: 3
+        position: [28, 40, -1.5]
+      - id: 2
+        wait: 3
+        position: [8, 0, -1.5]
+  - name: task6
+    arrt: 30
+    status: true
+    tasks:
+      - id: 92
+        wait: 20
+        position: [4, 28, -1.5]
+      - id: 30
+        wait: 5
+        position: [16, 8, -1.5]  
+  - name: task7
+    arrt: 35
+    status: true
+    tasks:
+      - id: 148
+        wait: 3
+        position: [20, 44, -1.5]
+      - id: 9
+        wait: 5
+        position: [36, 0, -1.5]  
+  - name: task8
+    arrt: 35
+    status: true
+    tasks:
+      - id: 61
+        wait: 3
+        position: [36, 16, -1.5]
+      - id: 101
+        wait: 5
+        position: [40, 28, -1.5]  
+  - name: task9
+    arrt: 45
+    status: true
+    tasks:
+      - id: 156
+        wait: 3
+        position: [0, 48, -1.5]
+      - id: 168
+        wait: 5
+        position: [48, 48, -1.5]  
+  - name: task10
+    arrt: 60
+    status: true
+    tasks:
+      - id: 82
+        wait: 3
+        position: [16, 24, -1.5]
+      - id: 17
+        wait: 5
+        position: [16, 4, -1.5]  
+  - name: task11
+    arrt: 60
+    status: true
+    tasks:
+      - id: 145
+        wait: 3
+        position: [8, 44, -1.5]
+      - id: 114
+        wait: 10
+        position: [40, 32, -1.5]

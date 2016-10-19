@@ -59,3 +59,13 @@ RECH_POINTS:
       - id: 165
         wait: 0
         position: [36, 48, -1.5]
+  - name: rech7
+    arrt: 0
+    status: true
+    tasks:
+      - id: 77
+        wait: 0
+        position: [48, 20, -1.5]
+      - id: 77
+        wait: 0
+        position: [48, 20, -1.5]

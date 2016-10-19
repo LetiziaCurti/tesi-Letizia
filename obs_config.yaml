@@ -1,0 +1,41 @@
+OBSTACLES:
+  - name: obs1
+    arrt: 5
+    status: true
+    tasks:
+      - id: 78
+        wait: 20
+        position: [0, 24, -1.5]
+      - id: 78
+        wait: 20
+        position: [0, 24, -1.5]  
+  - name: obs2
+    arrt: 15
+    status: true
+    tasks:
+      - id: 50
+        wait: 40
+        position: [44, 12, -1.5]
+      - id: 50
+        wait: 40
+        position: [44, 12, -1.5]
+  - name: obs3
+    arrt: 25
+    status: true
+    tasks:
+      - id: 126
+        wait: 30
+        position: [36, 36, -1.5]
+      - id: 126
+        wait: 30
+        position: [36, 36, -1.5]
+  - name: obs4
+    arrt: 35
+    status: true
+    tasks:
+      - id: 131
+        wait: 50
+        position: [4, 40, -1.5]
+      - id: 131
+        wait: 50
+        position: [4, 40, -1.5]

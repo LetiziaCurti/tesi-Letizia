@@ -235,7 +235,7 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 
 	// Set the namespace and id for this marker.  This serves to create a unique ID
 	// Any marker sent with the same namespace and id will overwrite the old one
-	marker.ns = "robot_node";
+	marker.ns = "motion_planner";
 	marker.id = elem.id1;
 
 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
@@ -264,7 +264,7 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 	marker.color.b = 1.0f;
 	marker.color.a = 0.7;
 
-	marker.lifetime = ros::Duration();
+	marker.lifetime = ros::DURATION_MAX;
 	
 	markers_vect.markers.push_back(marker);
     }
@@ -1361,7 +1361,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
 
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
-    marker.ns = "motion_planner";
+    marker.ns = "motion_planner_ric";
     marker.id = id_marker;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
@@ -1390,7 +1390,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     marker.color.b = 0.0f;
     marker.color.a = 0.7;
 
-    marker.lifetime = ros::Duration();
+    marker.lifetime = ros::DURATION_MAX;
 
     // Publish the marker
     while (marker_pub.getNumSubscribers() < 1)

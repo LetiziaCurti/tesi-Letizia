@@ -9,9 +9,6 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "turtlesim/Pose.h"  
-#include "task_assign/IniStatus.h" 
-#include "task_assign/OneAssign.h"
-#include "task_assign/AssignMsg.h"
 #include <sys/stat.h>
 #include <iostream>
 #include <tf/transform_broadcaster.h>
@@ -129,10 +126,10 @@ public:
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
-	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
-	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
+// 	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
+// 	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
 	
-	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10, true);
     }
     
     
@@ -365,7 +362,7 @@ public:
 		ros::Rate rate(30);
 		ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
 		do{
-		      publishMarker(turtlesim_pose);
+// 		      publishMarker(turtlesim_pose);
 		      broadcastPose(turtlesim_pose,robot_name);
 		      
 		      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
@@ -378,59 +375,6 @@ public:
 		      b_level-=0.01;
 		      if(b_level<BATTERY_THR)
 			  return;
-		      
-		      visualization_msgs::Marker marker;
-		      // Set the frame ID and timestamp.  See the TF tutorials for information on these.
-		      marker.header.frame_id = "world";
-		      marker.header.stamp = ros::Time::now();
-
-		      // Set the namespace and id for this marker.  This serves to create a unique ID
-		      // Any marker sent with the same namespace and id will overwrite the old one
-		      marker.ns = "robot_node";
-		      marker.id = id_marker;
-
-		      // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-		      marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-		      marker.mesh_resource = "package://task_assign/config/Taxi.stl";
-
-		      // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-		      marker.action = visualization_msgs::Marker::ADD;
-
-		      // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-		      marker.pose.position.x = turtlesim_pose.x;
-		      marker.pose.position.y =turtlesim_pose.y;
-		      marker.pose.position.z = 0;
-		      quaternion Quat;
-		      Quat = EulToQuat(0.0,turtlesim_pose.theta+1.57,1.57);
-		      marker.pose.orientation.x = Quat.x;
-		      marker.pose.orientation.y = Quat.y;
-		      marker.pose.orientation.z = Quat.z;
-		      marker.pose.orientation.w = Quat.w;
-
-		      // Set the scale of the marker -- 1x1x1 here means 1m on a side
-		      marker.scale.x = 0.1;
-		      marker.scale.y = 0.1;
-		      marker.scale.z = 0.05;
-
-		      // Set the color -- be sure to set alpha to something non-zero!
-		      marker.color.r = r;
-		      marker.color.g = g;
-		      marker.color.b = b;
-		      marker.color.a = 1;
-
-		      marker.lifetime = ros::Duration(rate.sleep());
-
-		      // Publish the marker
-		      while (marker_pub.getNumSubscribers() < 1)
-		      {
-			if (!ros::ok())
-			{
-			  break;
-			}
-			ROS_WARN_ONCE("Please create a subscriber to the marker");
-			sleep(1);
-		      }
-		      marker_pub.publish(marker);
 		      
 		      ros::spinOnce();		      
 		      rate.sleep();
@@ -489,7 +433,7 @@ public:
 	marker.color.b = b;
 	marker.color.a = 1;
 
-	marker.lifetime = ros::Duration();
+	marker.lifetime = ros::DURATION_MAX;
 
 	// Publish the marker
 	while (marker_pub.getNumSubscribers() < 1)
@@ -569,16 +513,16 @@ int main(int argc, char **argv)
 	    
 // 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-	    if(robot.re_assignment)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.new_path_a);
-		robot.re_assignment = false;
-		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-	    }
+// 	    if(robot.re_assignment)
+// 	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.new_path_a);
+// 		robot.re_assignment = false;
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// // 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+// 	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a;
 	    if(robot.b_level<BATTERY_THR)
@@ -587,20 +531,20 @@ int main(int argc, char **argv)
 	    robot.publishStatus(); 
 
 // 	    robot.publishStatus();
-	    if(robot.new_path_b.size()>0)
-		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
-	    else
+// 	    if(robot.new_path_b.size()>0)
+// 		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
+// 	    else
 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
-	    if(robot.re_assignment)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.new_path_b);
-		robot.re_assignment = false;		
-		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
-	    }
+// 	    if(robot.re_assignment)
+// 	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.new_path_b);
+// 		robot.re_assignment = false;		
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// // 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
+// 	    }
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    

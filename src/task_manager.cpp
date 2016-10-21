@@ -62,7 +62,7 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
 
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
-    marker.ns = "robot_node";
+    marker.ns = "task_manager_wp1";
     marker.id = id_marker1;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
@@ -103,7 +103,7 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
 
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
-    marker.ns = "robot_node";
+    marker.ns = "task_manager_wp2";
     marker.id = id_marker2;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
@@ -132,7 +132,7 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.color.b = rgb[2]*0.001;
     marker.color.a = 0.2;
 
-    marker.lifetime = ros::Duration();
+    marker.lifetime = ros::DURATION_MAX;
     
     markers_vect.markers.push_back(marker);
     
@@ -163,7 +163,7 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
 
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
-    marker.ns = "robot_node";
+    marker.ns = "task_manager_wp1";
     marker.id = id_marker1;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
@@ -204,7 +204,7 @@ void deleteMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id
 
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
-    marker.ns = "robot_node";
+    marker.ns = "task_manager_wp2";
     marker.id = id_marker2;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
@@ -477,7 +477,6 @@ int main(int argc, char **argv)
     while(it!=map_task.end() && ros::ok())
     {
       	ros::spinOnce();
-	VectMarker(markers);
 
 	VectMarker(markers);
 

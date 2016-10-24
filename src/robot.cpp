@@ -126,8 +126,8 @@ public:
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
-// 	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
-// 	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
+	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
+	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10, true);
     }
@@ -495,9 +495,12 @@ int main(int argc, char **argv)
     vector<task_assign::waypoint> new_path;
     task_assign::waypoint wp;
     
+    
     ros::Rate rate(10);
     while (ros::ok()) 
     {
+	robot.new_path_b.clear();
+	
 	while(!robot.assignment && !robot.in_recharge && ros::ok())
 	{
 	    robot.broadcastPose(robot.turtlesim_pose, name);
@@ -513,16 +516,16 @@ int main(int argc, char **argv)
 	    
 // 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-// 	    if(robot.re_assignment)
-// 	    {
-// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
-// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
-// 		wp.theta = robot.turtlesim_pose.theta;
-// 		new_path = robot.FindPath(wp, robot.new_path_a);
-// 		robot.re_assignment = false;
-// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// // 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-// 	    }
+	    if(robot.re_assignment)
+	    {
+		wp.x = floor(robot.turtlesim_pose.x+0.5);
+		wp.y = floor(robot.turtlesim_pose.y+0.5);
+		wp.theta = robot.turtlesim_pose.theta;
+		new_path = robot.FindPath(wp, robot.new_path_a);
+		robot.re_assignment = false;
+		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a;
 	    if(robot.b_level<BATTERY_THR)
@@ -530,21 +533,21 @@ int main(int argc, char **argv)
 	    robot.taska = true;
 	    robot.publishStatus(); 
 
-// 	    robot.publishStatus();
-// 	    if(robot.new_path_b.size()>0)
-// 		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
-// 	    else
+	    robot.publishStatus();
+	    if(robot.new_path_b.size()>0)
+		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
+	    else
 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
-// 	    if(robot.re_assignment)
-// 	    {
-// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
-// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
-// 		wp.theta = robot.turtlesim_pose.theta;
-// 		new_path = robot.FindPath(wp, robot.new_path_b);
-// 		robot.re_assignment = false;		
-// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// // 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
-// 	    }
+	    if(robot.re_assignment)
+	    {
+		wp.x = floor(robot.turtlesim_pose.x+0.5);
+		wp.y = floor(robot.turtlesim_pose.y+0.5);
+		wp.theta = robot.turtlesim_pose.theta;
+		new_path = robot.FindPath(wp, robot.new_path_b);
+		robot.re_assignment = false;		
+		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
+	    }
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    

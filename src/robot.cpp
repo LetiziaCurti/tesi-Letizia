@@ -19,7 +19,7 @@
 #include "task_assign/rech_vect.h"
 
 
-#define DISTANCE_TOLERANCE 0.1
+#define DISTANCE_TOLERANCE 0.5
 #define RECHARGE_DURATION 10
 
 using namespace std;
@@ -89,7 +89,7 @@ public:
     bool re_in_recharge = false;
     string task_name;
     int taska_id_marker, taskb_id_marker;
-    double wait_a, wait_b;
+    int wait_a, wait_b;
     vector<task_assign::waypoint> path_a;
     vector<task_assign::waypoint> path_b;
     
@@ -126,8 +126,8 @@ public:
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
-	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
-	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
+// 	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
+// 	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10, true);
     }
@@ -345,6 +345,36 @@ public:
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its battery level " << status_msg.b_level);
     }
     
+        // Il robot pubblica il suo stato su "status_rob_topic"
+    void publishWp() 
+    {
+	task_assign::robot status_msg; 
+	broadcastPose(turtlesim_pose,robot_name);
+
+	status_msg.header.stamp = ros::Time::now();
+	status_msg.name = robot_name;
+	status_msg.id = id_marker;
+	status_msg.status = true;
+	status_msg.b_level0 = b_level0;
+	status_msg.b_level = b_level;
+	status_msg.taska = taska;
+	status_msg.taskb = taskb;
+	
+	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
+	{
+	    status_msg.x = floor(turtlesim_pose.x+0.5);
+	    status_msg.y = floor(turtlesim_pose.y+0.5);
+	    status_msg.theta = floor(turtlesim_pose.theta+0.5);
+	}
+
+	// Wait for the publisher to connect to subscribers
+// 	sleep(1);
+	status_pub.publish(status_msg);
+	
+	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its WP");
+	ROS_INFO_STREAM("x: " << status_msg.x << " y: " << status_msg.y);
+    }
+    
     
     
     // Function for bringing the robot in the position of the task to accomplish and then in the position of
@@ -354,15 +384,15 @@ public:
 	double vel_x;
 	double vel_z;
 	double time = 0.4;
+	ros::Rate rate(10);
 	
 	for(auto goal_pose : wps)
 	{
 	    if(ros::ok())
 	    {
-		ros::Rate rate(30);
+		
 		ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
 		do{
-// 		      publishMarker(turtlesim_pose);
 		      broadcastPose(turtlesim_pose,robot_name);
 		      
 		      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
@@ -381,12 +411,15 @@ public:
 		      
 		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !re_assignment);
 		
-		publishStatus();
-		broadcastPose(turtlesim_pose,robot_name);
+		publishWp();
 	    }
-	    if(re_assignment)
-		    break;
+// 	    if(re_assignment)
+// 		    break;
+	    
+	    
 	}
+// 			      ros::spinOnce();		      
+// 		      rate.sleep();
     }
 
     
@@ -495,12 +528,9 @@ int main(int argc, char **argv)
     vector<task_assign::waypoint> new_path;
     task_assign::waypoint wp;
     
-    
     ros::Rate rate(10);
     while (ros::ok()) 
     {
-	robot.new_path_b.clear();
-	
 	while(!robot.assignment && !robot.in_recharge && ros::ok())
 	{
 	    robot.broadcastPose(robot.turtlesim_pose, name);
@@ -514,40 +544,40 @@ int main(int argc, char **argv)
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
 	    
-// 	    robot.publishStatus(); 
+	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-	    if(robot.re_assignment)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.new_path_a);
-		robot.re_assignment = false;
-		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-	    }
+// 	    if(robot.re_assignment)
+// 	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.new_path_a);
+// 		robot.re_assignment = false;
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// // 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+// 	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a;
 	    if(robot.b_level<BATTERY_THR)
 		return 0;
 	    robot.taska = true;
-	    robot.publishStatus(); 
+// 	    robot.publishStatus(); 
 
 	    robot.publishStatus();
-	    if(robot.new_path_b.size()>0)
-		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
-	    else
+// 	    if(robot.new_path_b.size()>0)
+// 		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
+// 	    else
 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
-	    if(robot.re_assignment)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.new_path_b);
-		robot.re_assignment = false;		
-		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
-	    }
+// 	    if(robot.re_assignment)
+// 	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.new_path_b);
+// 		robot.re_assignment = false;		
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// // 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
+// 	    }
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
@@ -567,16 +597,16 @@ int main(int argc, char **argv)
 
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);	 
-	    if(robot.re_assignment)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.path_a);
-		robot.re_in_recharge = false;
-		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-	    }
+// 	    if(robot.re_assignment)
+// 	    {
+// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
+// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
+// 		wp.theta = robot.turtlesim_pose.theta;
+// 		new_path = robot.FindPath(wp, robot.path_a);
+// 		robot.re_in_recharge = false;
+// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// // 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+// 	    }
 	    sleep(RECHARGE_DURATION);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI E' RICARICATO IN " << robot.task_name);
 	    

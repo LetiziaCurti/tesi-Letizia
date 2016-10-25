@@ -126,8 +126,8 @@ public:
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
-// 	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
-// 	re_recharge_sub = node.subscribe("assignment_topic", 20, &Robot::Re_RechargeCallback,this);
+	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
+	re_recharge_sub = node.subscribe("recharge_topic", 20, &Robot::Re_RechargeCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10, true);
     }
@@ -233,10 +233,55 @@ public:
 		// altri messaggi finché non ho finito il task
 		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-		    re_assignment = true;
-		    new_path_a = elem.path_a;
-		    new_path_b = elem.path_b;
+		    if(elem.path_a.size() == path_a.size())
+		    {
+			int count(0);
+			for(int i=0; i<elem.path_a.size(); i++)
+			{
+			    if(elem.path_a[i].x==path_a[i].x && elem.path_a[i].y==path_a[i].y)
+				count++;
+			    else
+				break;			      
+			}
+			if(count!=elem.path_a.size())
+			{
+			    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+			    re_assignment = true;
+			    path_a = elem.path_a;
+			}
+		    }
+		    else
+		    {
+			ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+			re_assignment = true;
+			path_a = elem.path_a;
+		    }
+		    
+		    
+		    if(elem.path_b.size() == path_b.size())
+		    {
+			int count(0);
+			for(int i=0; i<elem.path_b.size(); i++)
+			{
+			    if(elem.path_b[i].x==path_b[i].x && elem.path_b[i].y==path_b[i].y)
+				count++;
+			    else
+				break;			      
+			}
+			if(count!=elem.path_b.size())
+			{
+			    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+			    re_assignment = true;
+			    path_b = elem.path_b;
+			}
+		    }
+		    else
+		    {
+			ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+			re_assignment = true;
+			path_b = elem.path_b;
+		    }
+		    
 		    break;
 		}   
 	    }
@@ -302,9 +347,30 @@ public:
 		// altri messaggi finché non ho finito il task
 		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
 		{
-		    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-		    re_in_recharge = true;
-		    path_a = elem.path_a;
+		    if(elem.path_a.size() == path_a.size())
+		    {
+			int count(0);
+			for(int i=0; i<elem.path_a.size(); i++)
+			{
+			    if(elem.path_a[i].x==path_a[i].x && elem.path_a[i].y==path_a[i].y)
+				count++;
+			    else
+				break;			      
+			}
+			if(count!=elem.path_a.size())
+			{
+			    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+			    re_in_recharge = true;
+			    path_a = elem.path_a;
+			}
+		    }
+		    else
+		    {
+			ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
+			re_in_recharge = true;
+			path_a = elem.path_a;
+		    }
+		    
 		    break;
 		}   
 	    }
@@ -367,8 +433,6 @@ public:
 	    status_msg.theta = floor(turtlesim_pose.theta+0.5);
 	}
 
-	// Wait for the publisher to connect to subscribers
-// 	sleep(1);
 	status_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its WP");
@@ -388,7 +452,7 @@ public:
 	
 	for(auto goal_pose : wps)
 	{
-	    if(ros::ok())
+	    if(ros::ok() && !re_assignment && !re_in_recharge)
 	    {
 		
 		ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
@@ -409,17 +473,14 @@ public:
 		      ros::spinOnce();		      
 		      rate.sleep();
 		      
-		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !re_assignment);
+		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !re_assignment && !re_in_recharge);
 		
 		publishWp();
 	    }
-// 	    if(re_assignment)
-// 		    break;
-	    
-	    
+	    if(re_assignment || re_in_recharge)
+		break;
+
 	}
-// 			      ros::spinOnce();		      
-// 		      rate.sleep();
     }
 
     
@@ -531,6 +592,9 @@ int main(int argc, char **argv)
     ros::Rate rate(10);
     while (ros::ok()) 
     {
+	robot.new_path_a.clear();
+	robot.new_path_b.clear();
+	
 	while(!robot.assignment && !robot.in_recharge && ros::ok())
 	{
 	    robot.broadcastPose(robot.turtlesim_pose, name);
@@ -546,16 +610,16 @@ int main(int argc, char **argv)
 	    
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-// 	    if(robot.re_assignment)
-// 	    {
-// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
-// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
-// 		wp.theta = robot.turtlesim_pose.theta;
-// 		new_path = robot.FindPath(wp, robot.new_path_a);
-// 		robot.re_assignment = false;
-// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// // 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-// 	    }
+	    if(robot.re_assignment && robot.new_path_a.size()>0)
+	    {
+		wp.x = floor(robot.turtlesim_pose.x+0.5);
+		wp.y = floor(robot.turtlesim_pose.y+0.5);
+		wp.theta = robot.turtlesim_pose.theta;
+		new_path = robot.FindPath(wp, robot.new_path_a);
+		robot.re_assignment = false;
+		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a;
 	    if(robot.b_level<BATTERY_THR)
@@ -564,20 +628,20 @@ int main(int argc, char **argv)
 // 	    robot.publishStatus(); 
 
 	    robot.publishStatus();
-// 	    if(robot.new_path_b.size()>0)
-// 		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
-// 	    else
+	    if(robot.new_path_b.size()>0)
+		robot.moveToWP(robot.new_path_b, DISTANCE_TOLERANCE);
+	    else
 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);
-// 	    if(robot.re_assignment)
-// 	    {
-// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
-// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
-// 		wp.theta = robot.turtlesim_pose.theta;
-// 		new_path = robot.FindPath(wp, robot.new_path_b);
-// 		robot.re_assignment = false;		
-// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// // 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
-// 	    }
+	    if(robot.re_assignment)
+	    {
+		wp.x = floor(robot.turtlesim_pose.x+0.5);
+		wp.y = floor(robot.turtlesim_pose.y+0.5);
+		wp.theta = robot.turtlesim_pose.theta;
+		new_path = robot.FindPath(wp, robot.new_path_b);
+		robot.re_assignment = false;		
+		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
+	    }
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
@@ -597,16 +661,16 @@ int main(int argc, char **argv)
 
 	    robot.publishStatus(); 
 	    robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);	 
-// 	    if(robot.re_assignment)
-// 	    {
-// 		wp.x = floor(robot.turtlesim_pose.x+0.5);
-// 		wp.y = floor(robot.turtlesim_pose.y+0.5);
-// 		wp.theta = robot.turtlesim_pose.theta;
-// 		new_path = robot.FindPath(wp, robot.path_a);
-// 		robot.re_in_recharge = false;
-// 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// // 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
-// 	    }
+	    if(robot.re_in_recharge && robot.new_path_a.size()>0)
+	    {
+		wp.x = floor(robot.turtlesim_pose.x+0.5);
+		wp.y = floor(robot.turtlesim_pose.y+0.5);
+		wp.theta = robot.turtlesim_pose.theta;
+		new_path = robot.FindPath(wp, robot.path_a);
+		robot.re_in_recharge = false;
+		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
+// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
+	    }
 	    sleep(RECHARGE_DURATION);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI E' RICARICATO IN " << robot.task_name);
 	    

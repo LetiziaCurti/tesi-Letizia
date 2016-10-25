@@ -618,14 +618,12 @@ int main(int argc, char **argv)
 		new_path = robot.FindPath(wp, robot.new_path_a);
 		robot.re_assignment = false;
 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
 	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a;
 	    if(robot.b_level<BATTERY_THR)
 		return 0;
 	    robot.taska = true;
-// 	    robot.publishStatus(); 
 
 	    robot.publishStatus();
 	    if(robot.new_path_b.size()>0)
@@ -639,8 +637,7 @@ int main(int argc, char **argv)
 		wp.theta = robot.turtlesim_pose.theta;
 		new_path = robot.FindPath(wp, robot.new_path_b);
 		robot.re_assignment = false;		
-		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_b, DISTANCE_TOLERANCE);		
+		robot.moveToWP(new_path, DISTANCE_TOLERANCE);	
 	    }
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
@@ -669,7 +666,6 @@ int main(int argc, char **argv)
 		new_path = robot.FindPath(wp, robot.path_a);
 		robot.re_in_recharge = false;
 		robot.moveToWP(new_path, DISTANCE_TOLERANCE);
-// 		robot.moveToWP(robot.path_a, DISTANCE_TOLERANCE);
 	    }
 	    sleep(RECHARGE_DURATION);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI E' RICARICATO IN " << robot.task_name);

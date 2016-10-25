@@ -132,7 +132,7 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.color.b = rgb[2]*0.001;
     marker.color.a = 0.2;
 
-    marker.lifetime = ros::DURATION_MAX;
+    marker.lifetime = ros::Duration();
     
     markers_vect.markers.push_back(marker);
     
@@ -330,18 +330,6 @@ void CreateNewTask(string file)
 		}
 	    }
 	}
-// 	inmap = false;
-// 	for(auto elem : map_task)
-// 	{
-// 	    if(elem.first==newTask.ar_time)
-// 	    {
-// 		map_task[newTask.ar_time].push_back(newTask);
-// 		inmap = true;
-// 		break;
-// 	    }
-// 	}
-// 	if(!inmap)
-// 	    map_task[newTask.ar_time] = newTask;
 
 	map_task[newTask.ar_time].push_back(newTask);
     }
@@ -477,6 +465,7 @@ int main(int argc, char **argv)
     while(it!=map_task.end() && ros::ok())
     {
       	ros::spinOnce();
+	VectMarker(markers);
 
 	VectMarker(markers);
 

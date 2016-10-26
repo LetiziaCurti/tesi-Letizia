@@ -1499,7 +1499,93 @@ void RechPoints()
 
 
 
-
+void RicalcAss(Assign elem, int op)
+{
+    task_assign::rt rt;
+    Assign temp;
+    rt.robot = elem.rob;
+    rt.task = elem.task;
+    temp = MinPath(rt);
+    
+    if(op)
+    {
+	if(elem.path_tot.path_a.size()==temp.path_tot.path_a.size() && elem.path_tot.path_b.size()==temp.path_tot.path_b.size())
+	{
+	    int count(0);
+	    for(int i=0; i<elem.path_tot.path_a.size(); i++)
+	    {
+		if(elem.path_tot.path_a[i].x==temp.path_tot.path_a[i].x && elem.path_tot.path_a[i].y==temp.path_tot.path_a[i].y)
+		    count++;
+		else
+		    break;			      
+	    }
+	    if(count==elem.path_tot.path_a.size())
+	    {
+		int count(0);
+		for(int i=0; i<elem.path_tot.path_b.size(); i++)
+		{
+		    if(elem.path_tot.path_b[i].x==temp.path_tot.path_b[i].x && elem.path_tot.path_b[i].y==temp.path_tot.path_b[i].y)
+			count++;
+		    else
+			break;			      
+		}
+		if(count==elem.path_tot.path_b.size())
+		    assignments_vect.push_back(elem.path_tot);
+		else
+		{
+		    temp.path_tot.stop = true;
+		    assignments_vect.push_back(temp.path_tot);
+		    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+		}
+	    }
+	    else
+	    {
+		temp.path_tot.stop = true;
+		assignments_vect.push_back(temp.path_tot);
+		ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+	    }
+	}
+	else
+	{
+	    temp.path_tot.stop = true;
+	    assignments_vect.push_back(temp.path_tot);
+	    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+	}
+    }
+    else
+    {
+	task_assign::rt rt;
+	Assign temp;
+	rt.robot = elem.rob;
+	rt.task = elem.task;
+	temp = MinPath(rt);
+	if(elem.path_tot.path_a.size()==temp.path_tot.path_a.size())
+	{
+	    int count(0);
+	    for(int i=0; i<elem.path_tot.path_a.size(); i++)
+	    {
+		if(elem.path_tot.path_a[i].x==temp.path_tot.path_a[i].x && elem.path_tot.path_a[i].y==temp.path_tot.path_a[i].y)
+		    count++;
+		else
+		    break;			      
+	    }
+	    if(count==elem.path_tot.path_a.size())
+		robRech_vect.push_back(elem.path_tot);
+	    else
+	    {
+		temp.path_tot.stop = true;
+		robRech_vect.push_back(temp.path_tot);
+		ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+	    }
+	}
+	else
+	{
+	    temp.path_tot.stop = true;
+	    robRech_vect.push_back(temp.path_tot);
+	    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+	}
+    }
+}
 
 
     
@@ -1593,6 +1679,33 @@ int main(int argc, char **argv)
 		publishExecTask();
 		completed = false;
 	    }
+	    
+	    if(obstacles.size() != n)
+	    {
+		delNode(excl_obs_nodes);
+		n = obstacles.size();
+		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+		
+		if(Catalogo_Ass.size()>0)
+		{
+		    assignments_vect.clear();
+		    for(auto elem : Catalogo_Ass)
+		    {
+			RicalcAss(elem,1);
+		    }	
+		    publishAssign();
+		}
+		if(Catalogo_Rech.size()>0)
+		{
+		    robRech_vect.clear();
+		    for(auto elem : Catalogo_Rech)
+		    {
+			RicalcAss(elem,0);
+		    }
+		    publishRecharge();
+		}
+	    }
+	    
 	    ros::spinOnce();
 	    rate.sleep();	  
 	}
@@ -1608,63 +1721,32 @@ int main(int argc, char **argv)
 	    {
 		delNode(excl_obs_nodes);
 		n = obstacles.size();
-		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
-		assignments_vect.clear();
+		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
 		
-		for(auto elem : Catalogo_Ass)
+		if(Catalogo_Ass.size()>0)
 		{
-		    task_assign::rt rt;
-		    Assign temp;
-		    rt.robot = elem.rob;
-		    rt.task = elem.task;
-		    temp = MinPath(rt);
-		    if(elem.path_tot.path_a.size()==temp.path_tot.path_a.size() && elem.path_tot.path_b.size()==temp.path_tot.path_b.size())
+		    assignments_vect.clear();
+		    for(auto elem : Catalogo_Ass)
 		    {
-			int count(0);
-			for(int i=0; i<elem.path_tot.path_a.size(); i++)
-			{
-			    if(elem.path_tot.path_a[i].x==temp.path_tot.path_a[i].x && elem.path_tot.path_a[i].y==temp.path_tot.path_a[i].y)
-				count++;
-			    else
-				break;			      
-			}
-			if(count==elem.path_tot.path_a.size())
-			{
-			    int count(0);
-			    for(int i=0; i<elem.path_tot.path_b.size(); i++)
-			    {
-				if(elem.path_tot.path_b[i].x==temp.path_tot.path_b[i].x && elem.path_tot.path_b[i].y==temp.path_tot.path_b[i].y)
-				    count++;
-				else
-				    break;			      
-			    }
-			    if(count==elem.path_tot.path_b.size())
-				assignments_vect.push_back(elem.path_tot);
-			    else
-			    {
-				temp.path_tot.stop = true;
-				assignments_vect.push_back(temp.path_tot);
-				ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
-			    }
-			}
-			else
-			{
-			    temp.path_tot.stop = true;
-			    assignments_vect.push_back(temp.path_tot);
-			    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
-			}
-		    }
-		    else
-		    {
-			temp.path_tot.stop = true;
-			assignments_vect.push_back(temp.path_tot);
-			ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
-		    }
-		}				
+			RicalcAss(elem,1);
+		    }	
+		    publishAssign();
+		}
+// 		if(Catalogo_Rech.size()>0)
+// 		{
+// 		    robRech_vect.clear();
+// 		    for(auto elem : Catalogo_Rech)
+// 		    {
+// 			RicalcAss(elem,0);
+// 		    }
+// 		}
+	    }
+	    else
+	    {
+		sleep(1);
+		publishAssign();
 	    }
 	    
-	    sleep(1);
-	    publishAssign();
 	    new_assign = false;
 	}
 	if(new_in_rech && ros::ok())
@@ -1674,44 +1756,32 @@ int main(int argc, char **argv)
 		delNode(excl_obs_nodes);
 		n = obstacles.size();
 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
-		robRech_vect.clear();
 		
-		for(auto elem : Catalogo_Rech)
+// 		if(Catalogo_Ass.size()>0)
+// 		{
+// 		    assignments_vect.clear();
+// 		    for(auto elem : Catalogo_Ass)
+// 		    {
+// 			RicalcAss(elem,1);
+// 		    }	
+// 		}
+		if(Catalogo_Rech.size()>0)
 		{
-		    task_assign::rt rt;
-		    Assign temp;
-		    rt.robot = elem.rob;
-		    rt.task = elem.task;
-		    temp = MinPath(rt);
-		    if(elem.path_tot.path_a.size()==temp.path_tot.path_a.size())
+		    robRech_vect.clear();
+		    for(auto elem : Catalogo_Rech)
 		    {
-			int count(0);
-			for(int i=0; i<elem.path_tot.path_a.size(); i++)
-			{
-			    if(elem.path_tot.path_a[i].x==temp.path_tot.path_a[i].x && elem.path_tot.path_a[i].y==temp.path_tot.path_a[i].y)
-				count++;
-			    else
-				break;			      
-			}
-			if(count==elem.path_tot.path_a.size())
-			    robRech_vect.push_back(elem.path_tot);
-			else
-			{
-			    temp.path_tot.stop = true;
-			    robRech_vect.push_back(temp.path_tot);
-			    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
-			}
+			RicalcAss(elem,0);
 		    }
-		    else
-		    {
-			temp.path_tot.stop = true;
-			robRech_vect.push_back(temp.path_tot);
-			ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
-		    }
+// 		    sleep(1);
+		    publishRecharge();
 		}		
 	    }
-	    sleep(1);
-	    publishRecharge();
+	    else
+	    {
+		sleep(1);
+		publishRecharge();
+	    }
+	    
 	    new_in_rech = false;
 	}	
 	if(completed && ros::ok())

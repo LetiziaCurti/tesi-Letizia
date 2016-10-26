@@ -132,7 +132,7 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.color.b = rgb[2]*0.001;
     marker.color.a = 0.2;
 
-    marker.lifetime = ros::Duration();
+    marker.lifetime = ros::DURATION_MAX;
     
     markers_vect.markers.push_back(marker);
     
@@ -330,6 +330,18 @@ void CreateNewTask(string file)
 		}
 	    }
 	}
+// 	inmap = false;
+// 	for(auto elem : map_task)
+// 	{
+// 	    if(elem.first==newTask.ar_time)
+// 	    {
+// 		map_task[newTask.ar_time].push_back(newTask);
+// 		inmap = true;
+// 		break;
+// 	    }
+// 	}
+// 	if(!inmap)
+// 	    map_task[newTask.ar_time] = newTask;
 
 	map_task[newTask.ar_time].push_back(newTask);
     }
@@ -355,11 +367,11 @@ void VectMarker(vector<MyMarker> markers)
 	
 	for(auto elem : markers)
 	{
-	    p1.x = elem.task.x1;
-	    p1.y = elem.task.y1;
+	    p1.x = elem.task.x1+1;
+	    p1.y = elem.task.y1+1;
 	    p1.theta = elem.task.theta1;
-	    p2.x = elem.task.x2;
-	    p2.y = elem.task.y2;
+	    p2.x = elem.task.x2+1;
+	    p2.y = elem.task.y2+1;
 	    p2.theta = elem.task.theta2;
 	    colours = elem.rgb;
 	    publishMarkerPair(p1, p2, elem.task.id1, elem.task.id2, colours);
@@ -407,11 +419,11 @@ void ExecCallback(const task_assign::vect_task::ConstPtr& msg)
 		task_assign::waypoint p1;
 		task_assign::waypoint p2;
 		vector<float> colours;
-		p1.x = m.task.x1;
-		p1.y = m.task.y1;
+		p1.x = m.task.x1+1;
+		p1.y = m.task.y1+1;
 		p1.theta = m.task.theta1;
-		p2.x = m.task.x2;
-		p2.y = m.task.y2;
+		p2.x = m.task.x2+1;
+		p2.y = m.task.y2+1;
 		p2.theta = m.task.theta2;
 		colours = m.rgb;
 		deleteMarkerPair(p1, p2, m.task.id1, m.task.id2, colours);
@@ -465,7 +477,6 @@ int main(int argc, char **argv)
     while(it!=map_task.end() && ros::ok())
     {
       	ros::spinOnce();
-	VectMarker(markers);
 
 	VectMarker(markers);
 

@@ -1414,7 +1414,7 @@ void RechPoints()
     task_assign::waypoint wp;
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
-    YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/rech_points_config.yaml");
+    YAML::Node node_conf = YAML::LoadFile("/home/letiziacurti/catkin_ws/src/task_assign/config/rech_points_config.yaml");
     const YAML::Node& node_test1 = node_conf["RECH_POINTS"];
 
     for (std::size_t i = 0; i < node_test1.size(); i++) 
@@ -1625,7 +1625,7 @@ int main(int argc, char **argv)
     // Carica il grafo dal file .lgf, e lo mette nel grafo orientato Mappa (var globale)
     try
     {
-	digraphReader(Mappa, "/home/letizia/catkin_ws/src/task_assign/config/griglia.gml.lgf")
+	digraphReader(Mappa, "/home/letiziacurti/catkin_ws/src/task_assign/config/griglia.gml.lgf")
 	.nodeMap("coordinates_x",coord_x)
 	.nodeMap("coordinates_y",coord_y)
         .nodeMap("label",id)   
@@ -1714,6 +1714,32 @@ int main(int argc, char **argv)
 	    sleep(1);
 	    publishMasterIn();
 	    pub_master_in = false;
+	    
+	    if(obstacles.size() != n)
+	    {
+		delNode(excl_obs_nodes);
+		n = obstacles.size();
+		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+		
+		if(Catalogo_Ass.size()>0)
+		{
+		    assignments_vect.clear();
+		    for(auto elem : Catalogo_Ass)
+		    {
+			RicalcAss(elem,1);
+		    }	
+		    publishAssign();
+		}
+		if(Catalogo_Rech.size()>0)
+		{
+		    robRech_vect.clear();
+		    for(auto elem : Catalogo_Rech)
+		    {
+			RicalcAss(elem,0);
+		    }
+		    publishRecharge();
+		}
+	    }
 	}
 	if(new_assign && ros::ok())
 	{
@@ -1789,6 +1815,32 @@ int main(int argc, char **argv)
 	    sleep(1);
 	    publishExecTask();
 	    completed = false;
+	    
+	    if(obstacles.size() != n)
+	    {
+		delNode(excl_obs_nodes);
+		n = obstacles.size();
+		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+		
+		if(Catalogo_Ass.size()>0)
+		{
+		    assignments_vect.clear();
+		    for(auto elem : Catalogo_Ass)
+		    {
+			RicalcAss(elem,1);
+		    }	
+		    publishAssign();
+		}
+		if(Catalogo_Rech.size()>0)
+		{
+		    robRech_vect.clear();
+		    for(auto elem : Catalogo_Rech)
+		    {
+			RicalcAss(elem,0);
+		    }
+		    publishRecharge();
+		}
+	    }
 	}
 
 	ros::spinOnce();

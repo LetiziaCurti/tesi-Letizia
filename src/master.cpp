@@ -175,7 +175,7 @@ vector<double> calcUFun(vector<task_assign::task> t_ass, vector<task_assign::rob
 	    }
 	    else if(s=="recharge")
 	    {
-		C = b_lev*0.1;
+		C = b_lev*0.05;
 		P = position;
 	    }
 	    for(auto ex : ex_t)

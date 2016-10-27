@@ -10,15 +10,15 @@ OBSTACLES:
         wait: 20
         position: [0, 24, -1.5]  
   - name: obs2
-    arrt: 15
+    arrt: 12
     status: true
     tasks:
-      - id: 50
+      - id: 48
         wait: 40
-        position: [44, 12, -1.5]
-      - id: 50
+        position: [36, 12, -1.5]
+      - id: 48
         wait: 40
-        position: [44, 12, -1.5]
+        position: [36, 12, -1.5]
   - name: obs3
     arrt: 25
     status: true
@@ -39,3 +39,23 @@ OBSTACLES:
       - id: 131
         wait: 50
         position: [4, 40, -1.5]
+  - name: obs5
+    arrt: 25
+    status: true
+    tasks:
+      - id: 84
+        wait: 50
+        position: [24, 24, -1.5]
+      - id: 84
+        wait: 50
+        position: [24, 24, -1.5]
+  - name: obs6
+    arrt: 30
+    status: true
+    tasks:
+      - id: 121
+        wait: 50
+        position: [16, 36, -1.5]
+      - id: 121
+        wait: 50
+        position: [16, 36, -1.5]

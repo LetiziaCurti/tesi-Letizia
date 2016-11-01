@@ -86,9 +86,9 @@ TASK:
       - id: 156
         wait: 3
         position: [0, 48, -1.5]
-      - id: 168
+      - id: 154
         wait: 5
-        position: [48, 48, -1.5]  
+        position: [44, 44, -1.5]  
   - name: task10
     arrt: 60
     status: true
@@ -196,9 +196,9 @@ TASK:
       - id: 156
         wait: 3
         position: [0, 48, -1.5]
-      - id: 168
+      - id: 166
         wait: 5
-        position: [48, 48, -1.5]  
+        position: [40, 48, -1.5]  
   - name: task21
     arrt: 95
     status: true

@@ -427,6 +427,7 @@ public:
 	status_msg.b_level = b_level;
 	status_msg.taska = taska;
 	status_msg.taskb = taskb;
+	status_msg.t_name = task_name;
 	
 	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
 	{
@@ -436,7 +437,7 @@ public:
 	}
 
 	// Wait for the publisher to connect to subscribers
-	sleep(2);
+	sleep(1);
 	status_pub.publish(status_msg);
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
@@ -459,6 +460,7 @@ public:
 	status_msg.b_level = b_level;
 	status_msg.taska = taska;
 	status_msg.taskb = taskb;
+	status_msg.t_name = task_name;
 	
 	if(turtlesim_pose.x!=-1 && turtlesim_pose.y!=-1 && turtlesim_pose.theta!=200)
 	{
@@ -671,13 +673,14 @@ int main(int argc, char **argv)
 	while(!robot.assignment && !robot.in_recharge && ros::ok())
 	{
 	    robot.broadcastPose(robot.turtlesim_pose, name);
+	    sleep(1);
 	    robot.publishStatus();  
 	    ros::spinOnce();
 	    rate.sleep();
 	}
 	
 	if(robot.assignment && ros::ok())
-	{  
+	{  	
 	    // il robot si muove verso il task
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
 	    
@@ -694,11 +697,11 @@ int main(int argc, char **argv)
 	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a*0.01;
-	    if(robot.b_level<BATTERY_THR)
-		return 0;
+// 	    if(robot.b_level<BATTERY_THR)
+// 		return 0;
 	    robot.taska = true;
-
 	    robot.publishStatus();
+	    
 	    robot.moveToWPb(robot.path_b, DISTANCE_TOLERANCE);
 	    while(robot.re_assignment_b)
 	    {
@@ -713,8 +716,8 @@ int main(int argc, char **argv)
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
 	    robot.b_level -= robot.wait_b*0.01;
-	    if(robot.b_level<BATTERY_THR)
-		return 0;
+// 	    if(robot.b_level<BATTERY_THR)
+// 		return 0;
 	    robot.taskb = true;
 	    robot.assignment = false;	 
 	    robot.re_assignment_a = false;
@@ -747,6 +750,8 @@ int main(int argc, char **argv)
 	    robot.re_in_recharge = false;
 	    robot.publishStatus(); 
 	}
+	
+	robot.publishStatus();
 	
 	robot.taska = false;
 	robot.taskb = false;

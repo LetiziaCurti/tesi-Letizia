@@ -557,7 +557,6 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	// vedo se elem sta già in task_to_assign
 	for(auto newel : tasks_to_assign)
 	{
-// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 	    if(newel.name == elem.name)
 	    {
 		new_task = false;
@@ -566,7 +565,6 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	for(auto newel : tasks_in_execution)
 	{
-// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 	    if(newel.name == elem.name)
 	    {
 		new_task = false;
@@ -575,7 +573,6 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	}
 	for(auto newel : completed_tasks)
 	{
-// 	    if(newel.id1 == elem.id1 && newel.id2 == elem.id2)
 	    if(newel.name == elem.name)
 	    {
 		new_task = false;
@@ -587,11 +584,11 @@ void TaskToAssCallback(const task_assign::vect_task::ConstPtr& msg)
 	{
 	    tasks_to_assign.push_back(elem);
 	    ROS_INFO_STREAM("The motion_planner is storing the task to assign: "<< elem.name);
-	    // metti nel vettore excl_task_nodes i nodi corrispondenti ai nuovi task
-	    n = SmartDigraph::nodeFromId(elem.id1);
-	    excl_task_nodes[elem.id1] = n;
-	    n = SmartDigraph::nodeFromId(elem.id2);
-	    excl_task_nodes[elem.id2] = n;
+// 	    // metti nel vettore excl_task_nodes i nodi corrispondenti ai nuovi task
+// 	    n = SmartDigraph::nodeFromId(elem.id1);
+// 	    excl_task_nodes[elem.id1] = n;
+// 	    n = SmartDigraph::nodeFromId(elem.id2);
+// 	    excl_task_nodes[elem.id2] = n;
 	}
 	
 	new_task = true;
@@ -832,7 +829,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 	    // cerco il task corrispondente al robot
 	    for(auto ass : Catalogo_Ass)
 	    {
-		if(msg->name == ass.rob.name)
+		if(msg->name == ass.rob.name && msg->t_name == ass.task.name)
 		{
 		    ROS_INFO_STREAM("il robot " << msg->name << " e' in posizione "<<floor(msg->x+0.5)<<" - "<<floor(msg->y+0.5));
 		    ROS_INFO_STREAM("il robot " << msg->name << " ha livello di batteria "<<msg->b_level);
@@ -856,33 +853,33 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    completed_tasks.push_back(ass.task);
 			    completed = true;
 			    
-			    // aggiorno la mappa dei nodi esclusi
-			    int in(0);
-			    for(auto el : tasks_to_assign)
-			    {
-				if(ass.task.id1 == el.id1)
-				{
-				    in = 1;
-				    break;
-				}
-			    }
-			    for(auto el : tasks_in_execution)
-			    {
-				if(ass.task.id1 == el.id1)
-				{
-				    in = 1;
-				    break;
-				}
-			    }
-			    if(!in)
-			    {
-				it=excl_task_nodes.find(ass.task.id1);
-				if(it != excl_task_nodes.end())
-				    excl_task_nodes.erase(it);
-				it=excl_task_nodes.find(ass.task.id2);
-				if(it != excl_task_nodes.end())
-				    excl_task_nodes.erase(it);
-			    }
+// 			    // aggiorno la mappa dei nodi esclusi
+// 			    int in(0);
+// 			    for(auto el : tasks_to_assign)
+// 			    {
+// 				if(ass.task.id1 == el.id1)
+// 				{
+// 				    in = 1;
+// 				    break;
+// 				}
+// 			    }
+// 			    for(auto el : tasks_in_execution)
+// 			    {
+// 				if(ass.task.id1 == el.id1)
+// 				{
+// 				    in = 1;
+// 				    break;
+// 				}
+// 			    }
+// 			    if(!in)
+// 			    {
+// 				it=excl_task_nodes.find(ass.task.id1);
+// 				if(it != excl_task_nodes.end())
+// 				    excl_task_nodes.erase(it);
+// 				it=excl_task_nodes.find(ass.task.id2);
+// 				if(it != excl_task_nodes.end())
+// 				    excl_task_nodes.erase(it);
+// 			    }
 		
 			    tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 			    robots_in_execution = deleteRob(msg->name, robots_in_execution);
@@ -921,7 +918,7 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			    // (quindi non faccio nulla)
 			  
 			    //altrimenti faccio reassignment
-			    ReAssFunc(*msg,ass);
+// 			    ReAssFunc(*msg,ass);
 			}
 			// verifica sull'errore tra tempi di esecuzione				
 			else
@@ -1414,7 +1411,7 @@ void RechPoints()
     task_assign::waypoint wp;
     
     // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
-    YAML::Node node_conf = YAML::LoadFile("/home/letiziacurti/catkin_ws/src/task_assign/config/rech_points_config.yaml");
+    YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/rech_points_config.yaml");
     const YAML::Node& node_test1 = node_conf["RECH_POINTS"];
 
     for (std::size_t i = 0; i < node_test1.size(); i++) 
@@ -1603,7 +1600,7 @@ int main(int argc, char **argv)
     obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
     rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
     rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
-    status_rob_sub = node.subscribe("status_rob_topic", 20, &StatusCallback);
+    status_rob_sub = node.subscribe("status_rob_topic", 50, &StatusCallback);
     new_task_sub = node.subscribe("new_task_topic", 20, &TaskToAssCallback);
     
     exec_task_pub = node.advertise<task_assign::vect_task>("task_exec_topic", 10);   
@@ -1625,7 +1622,7 @@ int main(int argc, char **argv)
     // Carica il grafo dal file .lgf, e lo mette nel grafo orientato Mappa (var globale)
     try
     {
-	digraphReader(Mappa, "/home/letiziacurti/catkin_ws/src/task_assign/config/griglia.gml.lgf")
+	digraphReader(Mappa, "/home/letizia/catkin_ws/src/task_assign/config/griglia.gml.lgf")
 	.nodeMap("coordinates_x",coord_x)
 	.nodeMap("coordinates_y",coord_y)
         .nodeMap("label",id)   
@@ -1680,31 +1677,31 @@ int main(int argc, char **argv)
 		completed = false;
 	    }
 	    
-	    if(obstacles.size() != n)
-	    {
-		delNode(excl_obs_nodes);
-		n = obstacles.size();
-		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-		
-		if(Catalogo_Ass.size()>0)
-		{
-		    assignments_vect.clear();
-		    for(auto elem : Catalogo_Ass)
-		    {
-			RicalcAss(elem,1);
-		    }	
-		    publishAssign();
-		}
-		if(Catalogo_Rech.size()>0)
-		{
-		    robRech_vect.clear();
-		    for(auto elem : Catalogo_Rech)
-		    {
-			RicalcAss(elem,0);
-		    }
-		    publishRecharge();
-		}
-	    }
+// 	    if(obstacles.size() != n)
+// 	    {
+// 		delNode(excl_obs_nodes);
+// 		n = obstacles.size();
+// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+// 		
+// 		if(Catalogo_Ass.size()>0)
+// 		{
+// 		    assignments_vect.clear();
+// 		    for(auto elem : Catalogo_Ass)
+// 		    {
+// 			RicalcAss(elem,1);
+// 		    }	
+// 		    publishAssign();
+// 		}
+// 		if(Catalogo_Rech.size()>0)
+// 		{
+// 		    robRech_vect.clear();
+// 		    for(auto elem : Catalogo_Rech)
+// 		    {
+// 			RicalcAss(elem,0);
+// 		    }
+// 		    publishRecharge();
+// 		}
+// 	    }
 	    
 	    ros::spinOnce();
 	    rate.sleep();	  
@@ -1715,74 +1712,12 @@ int main(int argc, char **argv)
 	    publishMasterIn();
 	    pub_master_in = false;
 	    
-	    if(obstacles.size() != n)
-	    {
-		delNode(excl_obs_nodes);
-		n = obstacles.size();
-		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-		
-		if(Catalogo_Ass.size()>0)
-		{
-		    assignments_vect.clear();
-		    for(auto elem : Catalogo_Ass)
-		    {
-			RicalcAss(elem,1);
-		    }	
-		    publishAssign();
-		}
-		if(Catalogo_Rech.size()>0)
-		{
-		    robRech_vect.clear();
-		    for(auto elem : Catalogo_Rech)
-		    {
-			RicalcAss(elem,0);
-		    }
-		    publishRecharge();
-		}
-	    }
-	}
-	if(new_assign && ros::ok())
-	{
-	    if(obstacles.size() != n)
-	    {
-		delNode(excl_obs_nodes);
-		n = obstacles.size();
-		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-		
-		if(Catalogo_Ass.size()>0)
-		{
-		    assignments_vect.clear();
-		    for(auto elem : Catalogo_Ass)
-		    {
-			RicalcAss(elem,1);
-		    }	
-		    publishAssign();
-		}
-// 		if(Catalogo_Rech.size()>0)
-// 		{
-// 		    robRech_vect.clear();
-// 		    for(auto elem : Catalogo_Rech)
-// 		    {
-// 			RicalcAss(elem,0);
-// 		    }
-// 		}
-	    }
-	    else
-	    {
-		sleep(1);
-		publishAssign();
-	    }
-	    
-	    new_assign = false;
-	}
-	if(new_in_rech && ros::ok())
-	{
-	    if(obstacles.size() != n)
-	    {
-		delNode(excl_obs_nodes);
-		n = obstacles.size();
-		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
-		
+// 	    if(obstacles.size() != n)
+// 	    {
+// 		delNode(excl_obs_nodes);
+// 		n = obstacles.size();
+// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+// 		
 // 		if(Catalogo_Ass.size()>0)
 // 		{
 // 		    assignments_vect.clear();
@@ -1790,23 +1725,69 @@ int main(int argc, char **argv)
 // 		    {
 // 			RicalcAss(elem,1);
 // 		    }	
+// 		    publishAssign();
 // 		}
-		if(Catalogo_Rech.size()>0)
-		{
-		    robRech_vect.clear();
-		    for(auto elem : Catalogo_Rech)
-		    {
-			RicalcAss(elem,0);
-		    }
-// 		    sleep(1);
-		    publishRecharge();
-		}		
-	    }
-	    else
-	    {
+// 		if(Catalogo_Rech.size()>0)
+// 		{
+// 		    robRech_vect.clear();
+// 		    for(auto elem : Catalogo_Rech)
+// 		    {
+// 			RicalcAss(elem,0);
+// 		    }
+// 		    publishRecharge();
+// 		}
+// 	    }
+	}
+	if(new_assign && ros::ok())
+	{
+// 	    if(obstacles.size() != n)
+// 	    {
+// 		delNode(excl_obs_nodes);
+// 		n = obstacles.size();
+// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+// 		
+// 		if(Catalogo_Ass.size()>0)
+// 		{
+// 		    assignments_vect.clear();
+// 		    for(auto elem : Catalogo_Ass)
+// 		    {
+// 			RicalcAss(elem,1);
+// 		    }	
+// 		    publishAssign();
+// 		}
+// 	    }
+// 	    else
+// 	    {
+		sleep(1);
+		publishAssign();
+// 	    }
+	    
+	    new_assign = false;
+	}
+	if(new_in_rech && ros::ok())
+	{
+// 	    if(obstacles.size() != n)
+// 	    {
+// 		delNode(excl_obs_nodes);
+// 		n = obstacles.size();
+// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
+// 
+// 		if(Catalogo_Rech.size()>0)
+// 		{
+// 		    robRech_vect.clear();
+// 		    for(auto elem : Catalogo_Rech)
+// 		    {
+// 			RicalcAss(elem,0);
+// 		    }
+// // 		    sleep(1);
+// 		    publishRecharge();
+// 		}		
+// 	    }
+// 	    else
+// 	    {
 		sleep(1);
 		publishRecharge();
-	    }
+// 	    }
 	    
 	    new_in_rech = false;
 	}	
@@ -1816,31 +1797,31 @@ int main(int argc, char **argv)
 	    publishExecTask();
 	    completed = false;
 	    
-	    if(obstacles.size() != n)
-	    {
-		delNode(excl_obs_nodes);
-		n = obstacles.size();
-		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-		
-		if(Catalogo_Ass.size()>0)
-		{
-		    assignments_vect.clear();
-		    for(auto elem : Catalogo_Ass)
-		    {
-			RicalcAss(elem,1);
-		    }	
-		    publishAssign();
-		}
-		if(Catalogo_Rech.size()>0)
-		{
-		    robRech_vect.clear();
-		    for(auto elem : Catalogo_Rech)
-		    {
-			RicalcAss(elem,0);
-		    }
-		    publishRecharge();
-		}
-	    }
+// 	    if(obstacles.size() != n)
+// 	    {
+// 		delNode(excl_obs_nodes);
+// 		n = obstacles.size();
+// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+// 		
+// 		if(Catalogo_Ass.size()>0)
+// 		{
+// 		    assignments_vect.clear();
+// 		    for(auto elem : Catalogo_Ass)
+// 		    {
+// 			RicalcAss(elem,1);
+// 		    }	
+// 		    publishAssign();
+// 		}
+// 		if(Catalogo_Rech.size()>0)
+// 		{
+// 		    robRech_vect.clear();
+// 		    for(auto elem : Catalogo_Rech)
+// 		    {
+// 			RicalcAss(elem,0);
+// 		    }
+// 		    publishRecharge();
+// 		}
+// 	    }
 	}
 
 	ros::spinOnce();

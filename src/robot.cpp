@@ -21,6 +21,8 @@
 
 #define DISTANCE_TOLERANCE 0.5
 #define RECHARGE_DURATION 10
+#define BATTERY_THR 10
+#define SEC_DIST 5
 
 using namespace std;
 
@@ -61,8 +63,6 @@ double getDistance(double x1, double y1, double x2, double y2)
   return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
 }
 
-#define BATTERY_THR 10
-#define SEC_DIST 5
 
 
 class Robot
@@ -126,8 +126,8 @@ public:
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
-	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
-	re_recharge_sub = node.subscribe("recharge_topic", 20, &Robot::Re_RechargeCallback,this);
+// 	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
+// 	re_recharge_sub = node.subscribe("recharge_topic", 20, &Robot::Re_RechargeCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10, true);
     }
@@ -542,7 +542,7 @@ public:
 		      turtlesim_pose.y = (vel_x*sin(turtlesim_pose.theta))*time + turtlesim_pose.y;
 		      turtlesim_pose.theta = sin(vel_z*time) + turtlesim_pose.theta;	
 		      
-		      b_level-=0.01;
+		      b_level-=0.02;
 		      if(b_level<BATTERY_THR)
 			  return;
 		      
@@ -693,7 +693,7 @@ int main(int argc, char **argv)
 		robot.moveToWPa(new_path, DISTANCE_TOLERANCE);
 	    }
 	    sleep(robot.wait_a);
-	    robot.b_level -= robot.wait_a;
+	    robot.b_level -= robot.wait_a*0.01;
 	    if(robot.b_level<BATTERY_THR)
 		return 0;
 	    robot.taska = true;
@@ -712,7 +712,7 @@ int main(int argc, char **argv)
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
-	    robot.b_level -= robot.wait_b;
+	    robot.b_level -= robot.wait_b*0.01;
 	    if(robot.b_level<BATTERY_THR)
 		return 0;
 	    robot.taskb = true;

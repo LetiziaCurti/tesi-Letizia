@@ -12,3 +12,4 @@ float32 theta
 
 bool taska
 bool taskb
+string t_name

@@ -46,9 +46,9 @@ TASK:
       - id: 137
         wait: 3
         position: [28, 40, -1.5]
-      - id: 27
+      - id: 2
         wait: 3
-        position: [4, 8, -1.5]
+        position: [8, 0, -1.5]
   - name: task6
     arrt: 30
     status: true
@@ -56,9 +56,9 @@ TASK:
       - id: 92
         wait: 20
         position: [4, 28, -1.5]
-      - id: 52
+      - id: 30
         wait: 5
-        position: [0, 16, -1.5]  
+        position: [16, 8, -1.5]  
   - name: task7
     arrt: 35
     status: true
@@ -73,33 +73,23 @@ TASK:
     arrt: 35
     status: true
     tasks:
-      - id: 34
+      - id: 61
         wait: 3
-        position: [32, 8, -1.5]
-      - id: 67
+        position: [36, 16, -1.5]
+      - id: 101
         wait: 5
-        position: [8, 20, -1.5]  
+        position: [40, 28, -1.5]  
   - name: task9
     arrt: 45
     status: true
     tasks:
-      - id: 27
+      - id: 156
         wait: 3
-        position: [4, 8, -1.5]
-      - id: 9
+        position: [0, 48, -1.5]
+      - id: 154
         wait: 5
-        position: [36, 0, -1.5]  
+        position: [44, 44, -1.5] 
   - name: task10
-    arrt: 10
-    status: true
-    tasks:
-      - id: 92
-        wait: 20
-        position: [4, 28, -1.5]
-      - id: 52
-        wait: 5
-        position: [0, 16, -1.5] 
-  - name: task11
     arrt: 60
     status: true
     tasks:
@@ -109,7 +99,7 @@ TASK:
       - id: 17
         wait: 5
         position: [16, 4, -1.5]  
-  - name: task12
+  - name: task11
     arrt: 60
     status: true
     tasks:

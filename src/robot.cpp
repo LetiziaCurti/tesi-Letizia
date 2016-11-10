@@ -481,9 +481,9 @@ public:
     // the exit
     void moveToWPa(vector <task_assign::waypoint> wps, double distance_tolerance)
     {
-	double vel_x;
-	double vel_z;
-	double time = 0.4;
+	double vel_x(0.0);
+	double vel_z(0.0);
+	double time(0.4);
 	ros::Rate rate(15);
 	
 	for(auto goal_pose : wps)
@@ -495,7 +495,8 @@ public:
 		do{
 		      broadcastPose(turtlesim_pose,robot_name);
 		      
-		      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+		      if(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>1.5)
+			  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
 		      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
 		      
 		      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
@@ -537,7 +538,8 @@ public:
 		do{
 		      broadcastPose(turtlesim_pose,robot_name);
 		      
-		      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+		      if(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>1.5)
+			  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
 		      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
 		      
 		      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;

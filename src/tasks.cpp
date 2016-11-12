@@ -49,6 +49,32 @@ vector<float> gen3rand()
     return rgb;
 }
 
+struct quaternion
+{
+    double x;
+    double y;
+    double z;
+    double w;
+};
+
+quaternion EulToQuat(double y, double z, double x) 
+{
+    quaternion Quat;
+    // Assuming the angles are in radians.
+    double c1 = cos(y);
+    double s1 = sin(y);
+    double c2 = cos(z);
+    double s2 = sin(z);
+    double c3 = cos(x);
+    double s3 = sin(x);
+    Quat.w = sqrt(1.0 + c1 * c2 + c1*c3 - s1 * s2 * s3 + c2*c3) / 2.0;
+    double w4 = (4.0 * Quat.w);
+    Quat.x = (c2 * s3 + c1 * s3 + s1 * s2 * c3) / w4 ;
+    Quat.y = (s1 * c2 + s1 * c3 + c1 * s2 * s3) / w4 ;
+    Quat.z = (-s1 * s3 + c1 * s2 * c3 +s2) / w4 ;
+    
+    return Quat;
+}
 
 // i task sono cilindri viola
 void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int id_marker1, int id_marker2, vector<float> rgb)
@@ -109,24 +135,42 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     marker.id = id_marker2;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-    marker.type = visualization_msgs::Marker::CYLINDER;
+//     marker.type = visualization_msgs::Marker::CYLINDER;
+    marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+    marker.mesh_resource = "package://task_assign/config/croce2.stl";
 
     // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
     marker.action = visualization_msgs::Marker::ADD;
-
+    
     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
     marker.pose.position.x = p2.x;
     marker.pose.position.y = p2.y;
-    marker.pose.position.z = 0.75;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = p2.theta;
-    marker.pose.orientation.w = 1.0;
+    marker.pose.position.z = 0;
+    quaternion Quat;
+    Quat = EulToQuat(1.57,0.0,0.0);
+    marker.pose.orientation.x = Quat.x;
+    marker.pose.orientation.y = Quat.y;
+    marker.pose.orientation.z = Quat.z;
+    marker.pose.orientation.w = Quat.w;
 
     // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    marker.scale.x = 0.3;
-    marker.scale.y = 0.3;
-    marker.scale.z = 1.5;
+    marker.scale.x = 0.04;
+    marker.scale.y = 0.04;
+    marker.scale.z = 0.04;
+
+//     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+//     marker.pose.position.x = p2.x;
+//     marker.pose.position.y = p2.y;
+//     marker.pose.position.z = 0.75;
+//     marker.pose.orientation.x = 0.0;
+//     marker.pose.orientation.y = 0.0;
+//     marker.pose.orientation.z = p2.theta;
+//     marker.pose.orientation.w = 1.0;
+// 
+//     // Set the scale of the marker -- 1x1x1 here means 1m on a side
+//     marker.scale.x = 0.3;
+//     marker.scale.y = 0.3;
+//     marker.scale.z = 1.5;
 
     // Set the color -- be sure to set alpha to something non-zero!
     marker.color.r = rgb[0]*0.001;

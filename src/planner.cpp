@@ -1374,7 +1374,9 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     marker.id = id_marker;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-    marker.type = visualization_msgs::Marker::CUBE;
+//     marker.type = visualization_msgs::Marker::CUBE;
+    marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+    marker.mesh_resource = "package://task_assign/config/pompa.stl";
 
     // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
     marker.action = visualization_msgs::Marker::ADD;
@@ -1382,21 +1384,21 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
     marker.pose.position.x = p.x;
     marker.pose.position.y = p.y;
-    marker.pose.position.z = 0.8;
+    marker.pose.position.z = 0.0;
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
 
     // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    marker.scale.x = 1.5;
-    marker.scale.y = 1.5;
-    marker.scale.z = 1.5;
+    marker.scale.x = 0.01;
+    marker.scale.y = 0.01;
+    marker.scale.z = 0.01;
 
     // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = 0.0f;
-    marker.color.g = 1.0f;
-    marker.color.b = 0.0f;
+    marker.color.r = 255/255.0f;
+    marker.color.g = 216/255.0f;
+    marker.color.b = 0/255.0f;
     marker.color.a = 1;
     
 
@@ -1539,7 +1541,7 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
     
     if(mesh_source == "package://task_assign/config/casa.stl")
     {	
-	marker.pose.position.z = 0;
+	marker.pose.position.z = -0.5;
 	Quat = EulToQuat(0.0,0.95,0.0);	
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side

@@ -94,30 +94,60 @@ void publishMarkerPair(task_assign::waypoint p1, task_assign::waypoint p2, int i
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
 //     marker.type = visualization_msgs::Marker::CYLINDER;
     marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-    marker.mesh_resource = "package://task_assign/config/donna.stl";
+    if(id_marker1%2 == 0)
+    {
+	marker.mesh_resource = "package://task_assign/config/donna.stl";
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
 
-    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-    marker.action = visualization_msgs::Marker::ADD;
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = p1.x;
+	marker.pose.position.y = p1.y;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = p1.theta;
+	marker.pose.orientation.w = 1.0;
 
-    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-    marker.pose.position.x = p1.x;
-    marker.pose.position.y = p1.y;
-    marker.pose.position.z = 0;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = p1.theta;
-    marker.pose.orientation.w = 1.0;
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 0.01;
+	marker.scale.y = 0.01;
+	marker.scale.z = 0.007;
 
-    // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    marker.scale.x = 0.01;
-    marker.scale.y = 0.01;
-    marker.scale.z = 0.007;
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = rgb[0]*0.001;
+	marker.color.g = rgb[1]*0.001;
+	marker.color.b = rgb[2]*0.001;
+	marker.color.a = 1;
+    }
+    else
+    {
+	marker.mesh_resource = "package://task_assign/config/uomo.stl";
+	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+	marker.action = visualization_msgs::Marker::ADD;
 
-    // Set the color -- be sure to set alpha to something non-zero!
-    marker.color.r = rgb[0]*0.001;
-    marker.color.g = rgb[1]*0.001;
-    marker.color.b = rgb[2]*0.001;
-    marker.color.a = 1;
+	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+	marker.pose.position.x = p1.x;
+	marker.pose.position.y = p1.y;
+	marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+	marker.pose.orientation.y = 0.0;
+	marker.pose.orientation.z = p1.theta;
+	marker.pose.orientation.w = 1.0;
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 1;
+	marker.scale.y = 1;
+	marker.scale.z = 1;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = rgb[0]*0.001;
+	marker.color.g = rgb[1]*0.001;
+	marker.color.b = rgb[2]*0.001;
+	marker.color.a = 1;
+    }
+
+    
 
     marker.lifetime = ros::Duration();
     

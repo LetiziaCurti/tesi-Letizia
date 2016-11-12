@@ -1558,7 +1558,7 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
     }
     else if(mesh_source == "package://task_assign/config/grattacielo.stl")
     {
-	marker.pose.position.z = 4;
+	marker.pose.position.z = 4.8;
 // 	Quat = EulToQuat(0.0,3.14-0.25+0.74,0.0);
 	Quat = EulToQuat(0.0,0.0,0.0);
 

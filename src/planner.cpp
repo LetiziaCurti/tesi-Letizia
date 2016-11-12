@@ -1382,7 +1382,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
     marker.pose.position.x = p.x;
     marker.pose.position.y = p.y;
-    marker.pose.position.z = 0;
+    marker.pose.position.z = 0.8;
     marker.pose.orientation.x = 0.0;
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
@@ -1397,7 +1397,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     marker.color.r = 0.0f;
     marker.color.g = 1.0f;
     marker.color.b = 0.0f;
-    marker.color.a = 0.7;
+    marker.color.a = 1;
     
 
     marker.lifetime = ros::Duration();
@@ -1571,6 +1571,23 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
 	marker.color.r = 0.6f;
 	marker.color.g = 0.8f;
 	marker.color.b = 1.0f;
+	marker.color.a = 1.0;
+    }
+    else if(mesh_source == "package://task_assign/config/albero.stl")
+    {
+	marker.pose.position.z = 0;
+// 	Quat = EulToQuat(0.0,3.14-0.25+0.74,0.0);
+	Quat = EulToQuat(0.0,0.0,0.0);
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 0.8;
+	marker.scale.y = 0.8;
+	marker.scale.z = 0.8;
+	
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 1/255.0f;
+	marker.color.g = 50/255.0f;
+	marker.color.b = 32/255.0f;
 	marker.color.a = 1.0;
     }
 	

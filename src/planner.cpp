@@ -1547,9 +1547,12 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
 	marker.scale.z = 0.2;
 
 	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = 1.0f;
-	marker.color.g = 1.0f;
-	marker.color.b = 1.0f;
+	marker.color.r = 152/255.0f;
+	marker.color.g = 118/255.0f;
+	marker.color.b = 84/255.0f;
+// 	marker.color.r = 101/255.0f;
+// 	marker.color.g = 67/255.0f;
+// 	marker.color.b = 33/255.0f;
 	marker.color.a = 1.0;
     }
     else if(mesh_source == "package://task_assign/config/grattacielo.stl")
@@ -1799,6 +1802,11 @@ int main(int argc, char **argv)
     
 
     for(auto elem : recharge_points)
+    {
+	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+    }
+    
+    for(auto elem : static_obstacles)
     {
 	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
     }

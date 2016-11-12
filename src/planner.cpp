@@ -40,6 +40,33 @@ double getDistance(double x1, double y1, double x2, double y2)
     return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
 }
 
+struct quaternion
+{
+    double x;
+    double y;
+    double z;
+    double w;
+};
+
+quaternion EulToQuat(double y, double z, double x) 
+{
+    quaternion Quat;
+    // Assuming the angles are in radians.
+    double c1 = cos(y);
+    double s1 = sin(y);
+    double c2 = cos(z);
+    double s2 = sin(z);
+    double c3 = cos(x);
+    double s3 = sin(x);
+    Quat.w = sqrt(1.0 + c1 * c2 + c1*c3 - s1 * s2 * s3 + c2*c3) / 2.0;
+    double w4 = (4.0 * Quat.w);
+    Quat.x = (c2 * s3 + c1 * s3 + s1 * s2 * c3) / w4 ;
+    Quat.y = (s1 * c2 + s1 * c3 + c1 * s2 * s3) / w4 ;
+    Quat.z = (-s1 * s3 + c1 * s2 * c3 +s2) / w4 ;
+    
+    return Quat;
+}
+
 using namespace std;
 using namespace lemon;
 
@@ -87,6 +114,7 @@ vector<task_assign::info> rt_info_vect;
 vector<task_assign::info> rech_info_vect; 
 
 vector<task_assign::task> obstacles;
+vector<task_assign::task> static_obstacles;
 
 
 SmartDigraph Mappa; 
@@ -221,7 +249,7 @@ vector<Assign> deleteAss(string name, vector<Assign> vect)
 }
 
 
-
+// Function che pubblica i markers relativi agli ostacoli dinamici
 void publishMarkerArray(vector<task_assign::task> obs_vect)
 {
     visualization_msgs::MarkerArray markers_vect;
@@ -241,7 +269,8 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
 // 	marker.type = visualization_msgs::Marker::CUBE;
 	marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-	marker.mesh_resource = "package://task_assign/config/1-82-3_5.stl";
+	
+	marker.mesh_resource = "package://task_assign/config/casa.stl";
 
 	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
 	marker.action = visualization_msgs::Marker::ADD;
@@ -250,24 +279,23 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 	marker.pose.position.x = elem.x1;
 	marker.pose.position.y = elem.y1;
 	marker.pose.position.z = 0;
-	marker.pose.orientation.x = 0.0;
-	marker.pose.orientation.y = 0.0;
-	marker.pose.orientation.z = 0.0;
-	marker.pose.orientation.w = 1.0;
+	quaternion Quat;
+	Quat = EulToQuat(0.0,0.95,0.0);
+	marker.pose.orientation.x = Quat.x;
+	marker.pose.orientation.y = Quat.y;
+	marker.pose.orientation.z = Quat.z;
+	marker.pose.orientation.w = Quat.w;
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-// 	marker.scale.x = 1.5;
-// 	marker.scale.y = 1.5;
-// 	marker.scale.z = 1.5;
-	marker.scale.x = 0.005;
-	marker.scale.y = 0.005;
-	marker.scale.z = 0.005;
+	marker.scale.x = 0.2;
+	marker.scale.y = 0.2;
+	marker.scale.z = 0.2;
 
 	// Set the color -- be sure to set alpha to something non-zero!
 	marker.color.r = 1.0f;
 	marker.color.g = 1.0f;
 	marker.color.b = 1.0f;
-	marker.color.a = 0.7;
+	marker.color.a = 1.0;
 
 	marker.lifetime = ros::Duration();
 	
@@ -312,27 +340,6 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 	publishMarkerArray(obstacles);
     } 
 }
-
-
-
-
-// // TODO se non si vuole dare dall'esterno i task e i robot in base agli id ma in base alle posizioni, 
-// // con una function bisogna cercare nel grafo il nodo n con le coords[n] uguali alla posizione, e prendere l'id del nodo n
-// // ma computazionalmente è costosissimo quindi per ora si evita
-// int poseToId(float x, float y, SmartDigraph maps)
-// {
-//     
-// }
-
-
-
-// // TODO Se si vuole aggiungere la possibilità che il robot sia in una posizione che non sta nella mappa, 
-// // usa questa function per cercare il nodo più vicino e aggiungere nuovi nodo e arco alla mappa
-// void addNodeToMap(double rx, double ry, double tx, double ty, SmartDigraph maps)
-// {
-//     double min_dist(1000);
-//     double dist(0.0);
-// }
 
 
 
@@ -1353,7 +1360,7 @@ void publishRecharge()
 
 
 
-// i punti di ricarica sono cubi verdi
+// Function che pubblica i markers dei punti di ricarica (cubi verdi)
 void publishMarker(task_assign::waypoint p, int id_marker)
 {
     visualization_msgs::Marker marker;
@@ -1501,6 +1508,137 @@ void RechPoints()
 
 
 
+// Function che pubblica i markers degli ostacoli statici
+void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_source)
+{
+    visualization_msgs::Marker marker;
+    // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+    marker.header.frame_id = "world";
+    marker.header.stamp = ros::Time::now();
+
+    // Set the namespace and id for this marker.  This serves to create a unique ID
+    // Any marker sent with the same namespace and id will overwrite the old one
+    marker.ns = "motion_planner_obs_stat";
+    marker.id = id_marker;
+
+    // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
+// 	marker.type = visualization_msgs::Marker::CUBE;
+    marker.type = visualization_msgs::Marker::MESH_RESOURCE;   
+    marker.mesh_resource = mesh_source;
+	
+    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+    marker.action = visualization_msgs::Marker::ADD;
+    
+    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+    marker.pose.position.x = p.x;
+    marker.pose.position.y = p.y;
+    
+    
+    quaternion Quat;
+    
+    if(mesh_source == "package://task_assign/config/casa.stl")
+    {	
+	marker.pose.position.z = 0;
+	Quat = EulToQuat(0.0,0.95,0.0);	
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 0.2;
+	marker.scale.y = 0.2;
+	marker.scale.z = 0.2;
+
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 1.0f;
+	marker.color.g = 1.0f;
+	marker.color.b = 1.0f;
+	marker.color.a = 1.0;
+    }
+    else if(mesh_source == "package://task_assign/config/grattacielo.stl")
+    {
+	marker.pose.position.z = 4;
+	Quat = EulToQuat(0.0,3.14-0.25+0.74,0.0);
+
+	// Set the scale of the marker -- 1x1x1 here means 1m on a side
+	marker.scale.x = 0.005;
+	marker.scale.y = 0.005;
+	marker.scale.z = 0.005;
+	
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 0.6f;
+	marker.color.g = 0.8f;
+	marker.color.b = 1.0f;
+	marker.color.a = 1.0;
+    }
+    
+    marker.pose.orientation.x = Quat.x;
+    marker.pose.orientation.y = Quat.y;
+    marker.pose.orientation.z = Quat.z;
+    marker.pose.orientation.w = Quat.w;
+	
+
+    marker.lifetime = ros::Duration();
+
+    // Publish the marker
+    while (marker_pub.getNumSubscribers() < 1)
+    {
+      if (!ros::ok())
+      {
+	break;
+      }
+      ROS_WARN_ONCE("Please create a subscriber to the marker");
+      sleep(1);
+    }
+    marker_pub.publish(marker);
+}
+
+
+
+// Function con cui carico i punti di ricarico dal file yaml al vettore recharge_points
+void ObsStat()
+{ 
+    task_assign::task newTask;
+    task_assign::waypoint wp;
+    
+    // Leggi tutte le info da un file yaml e mettile al posto di new_task_vect
+    YAML::Node node_conf = YAML::LoadFile("/home/letizia/catkin_ws/src/task_assign/config/obs_static.yaml");
+    const YAML::Node& node_test1 = node_conf["OBSTACLES"];
+
+    for (std::size_t i = 0; i < node_test1.size(); i++) 
+    {
+	const YAML::Node& node_test2 = node_test1[i];
+	newTask.name = node_test2["source"].as<std::string>();
+	newTask.ar_time = node_test2["arrt"].as<double>();
+	newTask.id1 = node_test2["id"].as<double>();
+	const YAML::Node& node_pos = node_test2["position"];
+	for (std::size_t j = 0; j < node_pos.size(); j++) 
+	{
+	    if(j==0)
+	    {
+		newTask.x1 = node_pos[j].as<double>();
+	    }
+	    else  if(j==1)
+	    {
+		newTask.y1 = node_pos[j].as<double>();
+	    }
+	    else  if(j==2)
+	    {
+		newTask.theta1 = node_pos[j].as<double>();
+	    }
+	}
+	
+	static_obstacles.push_back(newTask);	
+    }
+    
+    for(auto elem : static_obstacles)
+    {
+	wp.x = elem.x1;
+	wp.y = elem.y1;
+	wp.theta = elem.theta1;
+	publishMarkerObsStat(wp, elem.id1, elem.name);
+    }
+}
+
+
+
 void RicalcAss(Assign elem, int op)
 {
     task_assign::rt rt;
@@ -1602,7 +1740,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "planner");
     ros::NodeHandle node;
     
-    obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
+//     obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
     rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
     rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
     status_rob_sub = node.subscribe("status_rob_topic", 50, &StatusCallback);
@@ -1622,7 +1760,9 @@ int main(int argc, char **argv)
 
     
     // Carico i recharge points in recharge_points e poi metto i nodi del grafo corrispondenti in excl_task_nodes
-    RechPoints();   
+    RechPoints();  
+    
+    ObsStat();
     
     // Carica il grafo dal file .lgf, e lo mette nel grafo orientato Mappa (var globale)
     try

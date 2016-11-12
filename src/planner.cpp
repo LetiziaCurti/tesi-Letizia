@@ -1398,6 +1398,7 @@ void publishMarker(task_assign::waypoint p, int id_marker)
     marker.color.g = 1.0f;
     marker.color.b = 0.0f;
     marker.color.a = 0.7;
+    
 
     marker.lifetime = ros::Duration();
 
@@ -1542,8 +1543,8 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
 	Quat = EulToQuat(0.0,0.95,0.0);	
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 0.2;
-	marker.scale.y = 0.2;
+	marker.scale.x = 0.1;
+	marker.scale.y = 0.1;
 	marker.scale.z = 0.2;
 
 	// Set the color -- be sure to set alpha to something non-zero!
@@ -1558,12 +1559,13 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
     else if(mesh_source == "package://task_assign/config/grattacielo.stl")
     {
 	marker.pose.position.z = 4;
-	Quat = EulToQuat(0.0,3.14-0.25+0.74,0.0);
+// 	Quat = EulToQuat(0.0,3.14-0.25+0.74,0.0);
+	Quat = EulToQuat(0.0,0.0,0.0);
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
 	marker.scale.x = 0.005;
 	marker.scale.y = 0.005;
-	marker.scale.z = 0.005;
+	marker.scale.z = 0.006;
 	
 	// Set the color -- be sure to set alpha to something non-zero!
 	marker.color.r = 0.6f;
@@ -1571,7 +1573,7 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
 	marker.color.b = 1.0f;
 	marker.color.a = 1.0;
     }
-    
+	
     marker.pose.orientation.x = Quat.x;
     marker.pose.orientation.y = Quat.y;
     marker.pose.orientation.z = Quat.z;
@@ -1801,16 +1803,16 @@ int main(int argc, char **argv)
     }
     
 
-    for(auto elem : recharge_points)
-    {
-	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
-    }
-    
     for(auto elem : static_obstacles)
     {
 	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
     }
+    delNode(excl_task_nodes);
     
+    for(auto elem : recharge_points)
+    {
+	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+    }
     
 
     int n = obstacles.size();

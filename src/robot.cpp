@@ -588,7 +588,7 @@ public:
 	// Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
 	marker.pose.position.x = p.x;
 	marker.pose.position.y = p.y;
-	marker.pose.position.z = 0;
+	marker.pose.position.z = 0.6;
 	quaternion Quat;
 	Quat = EulToQuat(0.0,p.theta+1.57,1.57);
 	marker.pose.orientation.x = Quat.x;

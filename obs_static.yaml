@@ -1,0 +1,33 @@
+OBSTACLES:
+  - id: 79
+    arrt: 0
+    position: [4, 24, -1.5]
+    source: "package://task_assign/config/casa.stl"
+  - id: 48
+    arrt: 0
+    position: [36, 12, -1.5]
+    source: "package://task_assign/config/casa.stl"
+  - id: 126
+    arrt: 0
+    position: [36, 36, -1.5]
+    source: "package://task_assign/config/casa.stl"
+  - id: 131
+    arrt: 0
+    position: [4, 40, -1.5]
+    source: "package://task_assign/config/grattacielo.stl"
+  - id: 84
+    arrt: 0
+    position: [24, 24, -1.5]
+    source: "package://task_assign/config/grattacielo.stl"
+  - id: 121
+    arrt: 0
+    position: [16, 36, -1.5]
+    source: "package://task_assign/config/grattacielo.stl"
+  - id: 33
+    arrt: 0
+    position: [28, 8, -1.5]
+    source: "package://task_assign/config/grattacielo.stl"
+  - id: 31
+    arrt: 0
+    position: [20, 8, -1.5]
+    source: "package://task_assign/config/casa.stl"

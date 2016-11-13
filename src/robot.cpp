@@ -78,8 +78,7 @@ public:
 
     ros::Subscriber assignment_sub;
     ros::Subscriber recharge_sub;
-    ros::Subscriber reassignment_sub;
-    ros::Subscriber re_recharge_sub;
+    ros::Subscriber replan_sub;
     
     ros::Publisher status_pub;
     ros::Publisher marker_pub;
@@ -89,8 +88,7 @@ public:
     bool status = true;
 
     bool assignment = false;
-    bool re_assignment_a = false;
-    bool re_assignment_b = false;
+    bool replan = false;
     
     bool in_recharge = false;
     bool re_in_recharge = false;
@@ -130,8 +128,7 @@ public:
 	assignment_sub = node.subscribe("assignment_topic", 20, &Robot::AssignCallback,this);
 	recharge_sub = node.subscribe("recharge_topic", 20, &Robot::RechargeCallback,this);
 	
-// 	reassignment_sub = node.subscribe("assignment_topic", 20, &Robot::ReAssignCallback,this);
-// 	re_recharge_sub = node.subscribe("recharge_topic", 20, &Robot::Re_RechargeCallback,this);
+	replan_sub = node.subscribe("replan_topic", 20, &Robot::RePlanCallback,this);
 	
 	marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10, true);
     }
@@ -258,66 +255,33 @@ public:
     }
     
     
-    void ReAssignCallback(const task_assign::assignment::ConstPtr& msg)
+    void RePlanCallback(const task_assign::assignment::ConstPtr& msg)
     {
-// 	if(re_assignment) return;
-	
 	//check: deve essere arrivato qualcosa
 	if(msg->assign_vect.size()>0)
 	{	
+	    task_assign::waypoint wp;
+	    
 	    for(auto elem : msg->assign_vect)
 	    {		
-		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
-		// altri messaggi finché non ho finito il task
-		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
+		if(elem.r_name==robot_name && elem.t_name==task_name)
 		{
-		    if(elem.path_a.size() == path_a.size())
-		    {
-			int count(0);
-			for(int i=0; i<elem.path_a.size(); i++)
-			{
-			    if(elem.path_a[i].x==path_a[i].x && elem.path_a[i].y==path_a[i].y)
-				count++;
-			    else
-				break;			      
-			}
-			if(count!=elem.path_a.size())
-			{
-			    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-			    re_assignment_a = true;
-			    path_a = elem.path_a;
-			}
-		    }
-		    else
-		    {
-			ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-			re_assignment_a = true;
-			path_a = elem.path_a;
-		    }
+		    replan = true;
+		    path_a = elem.path_a;
+		    wp = path_a.back();
+		    taska_pose.x = wp.x;
+		    taska_pose.y = wp.y;
+		    taska_pose.theta = wp.theta;
+		    wait_a = wp.wait;
 		    
-		    
-		    if(elem.path_b.size() == path_b.size())
+		    if(elem.id_a != elem.id_b)
 		    {
-			int count(0);
-			for(int i=0; i<elem.path_b.size(); i++)
-			{
-			    if(elem.path_b[i].x==path_b[i].x && elem.path_b[i].y==path_b[i].y)
-				count++;
-			    else
-				break;			      
-			}
-			if(count!=elem.path_b.size())
-			{
-			    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-			    re_assignment_b = true;
-			    path_b = elem.path_b;
-			}
-		    }
-		    else
-		    {
-			ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-			re_assignment_b = true;
 			path_b = elem.path_b;
+			wp = path_b.back();
+			taskb_pose.x = wp.x;
+			taskb_pose.y = wp.y;
+			taskb_pose.theta = wp.theta;
+			wait_b = wp.wait;
 		    }
 		    
 		    break;
@@ -366,52 +330,6 @@ public:
 		    break;
 		}
 	    }   
-	}
-    }
-    
-    
-    
-    void Re_RechargeCallback(const task_assign::assignment::ConstPtr& msg)
-    {
-// 	if(re_in_recharge) return;
-	
-	//check: deve essere arrivato qualcosa
-	if(msg->assign_vect.size()>0)
-	{	
-	    for(auto elem : msg->assign_vect)
-	    {
-		
-		// se l'assignment che leggo mi riguarda metto assignment a true così smetto di ascoltare 
-		// altri messaggi finché non ho finito il task
-		if(elem.r_name==robot_name && elem.t_name==task_name && elem.stop)
-		{
-		    if(elem.path_a.size() == path_a.size())
-		    {
-			int count(0);
-			for(int i=0; i<elem.path_a.size(); i++)
-			{
-			    if(elem.path_a[i].x==path_a[i].x && elem.path_a[i].y==path_a[i].y)
-				count++;
-			    else
-				break;			      
-			}
-			if(count!=elem.path_a.size())
-			{
-			    ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-			    re_in_recharge = true;
-			    path_a = elem.path_a;
-			}
-		    }
-		    else
-		    {
-			ROS_INFO_STREAM(robot_name << " is listening its REASSIGNMENT for "<< elem.t_name <<" from motion_planner");		    
-			re_in_recharge = true;
-			path_a = elem.path_a;
-		    }
-		    
-		    break;
-		}   
-	    }
 	}
     }
     
@@ -511,7 +429,7 @@ public:
 	
 	for(auto goal_pose : wps)
 	{
-	    if(ros::ok() && !re_assignment_a && !re_in_recharge)
+	    if(ros::ok() && !replan)
 	    {
 		
 		ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
@@ -532,12 +450,18 @@ public:
 		      ros::spinOnce();		      
 		      rate.sleep();
 		      
-		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !re_assignment_a && !re_in_recharge);
+		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !replan);
 		
 		publishWp();
 	    }
-	    if(re_assignment_a || re_in_recharge)
+	    if(replan)
+	    {
+		vector <task_assign::waypoint> new_path;
+		new_path = FindPath(turtlesim_pose,path_a);
+		replan = false;
+		moveToWPa(new_path, DISTANCE_TOLERANCE);
 		break;
+	    }
 
 	}
     }
@@ -553,7 +477,7 @@ public:
 	
 	for(auto goal_pose : wps)
 	{
-	    if(ros::ok() && !re_assignment_b)
+	    if(ros::ok() && !replan)
 	    {
 		
 		ROS_INFO_STREAM("ROBOT "<< robot_name <<" IS MOVING TO " << task_name);
@@ -574,12 +498,18 @@ public:
 		      ros::spinOnce();		      
 		      rate.sleep();
 		      
-		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !re_assignment_b);
+		}while(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>distance_tolerance && ros::ok() && !replan);
 		
 		publishWp();
 	    }
-	    if(re_assignment_b)
+	    if(replan)
+	    {
+		vector <task_assign::waypoint> new_path;
+		new_path = FindPath(turtlesim_pose,path_b);
+		replan = false;
+		moveToWPa(new_path, DISTANCE_TOLERANCE);
 		break;
+	    }
 
 	}
     }
@@ -685,7 +615,6 @@ int main(int argc, char **argv)
     vector<task_assign::waypoint> new_path;
     task_assign::waypoint wp;
     
-//     inizio = ros::Time::now();
     inizio = ros::Time::now() + life;
 
     
@@ -707,39 +636,19 @@ int main(int argc, char **argv)
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" IS MOVING TO " << robot.task_name);
 	    
 	    robot.publishStatus(); 
-	    robot.moveToWPa(robot.path_a, DISTANCE_TOLERANCE);
-	    while(robot.re_assignment_a)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.path_a);
-		robot.re_assignment_a = false;
-		robot.moveToWPa(new_path, DISTANCE_TOLERANCE);
-	    }
+	    robot.moveToWPa(robot.path_a, DISTANCE_TOLERANCE);	    
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a*0.01;
 	    robot.taska = true;
 	    robot.publishStatus();
 	    
 	    robot.moveToWPb(robot.path_b, DISTANCE_TOLERANCE);
-	    while(robot.re_assignment_b)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.path_b);
-		robot.re_assignment_b = false;		
-		robot.moveToWPb(new_path, DISTANCE_TOLERANCE);	
-	    }
 	    sleep(robot.wait_b);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
 	    robot.b_level -= robot.wait_b*0.01;
 	    robot.taskb = true;
 	    robot.assignment = false;	 
-	    robot.re_assignment_a = false;
-	    robot.re_assignment_b = false;
 	    robot.publishStatus();  
 	}
 	
@@ -750,15 +659,6 @@ int main(int argc, char **argv)
 
 	    robot.publishStatus(); 
 	    robot.moveToWPa(robot.path_a, DISTANCE_TOLERANCE);	 
-	    while(robot.re_in_recharge)
-	    {
-		wp.x = floor(robot.turtlesim_pose.x+0.5);
-		wp.y = floor(robot.turtlesim_pose.y+0.5);
-		wp.theta = robot.turtlesim_pose.theta;
-		new_path = robot.FindPath(wp, robot.path_a);
-		robot.re_in_recharge = false;
-		robot.moveToWPa(new_path, DISTANCE_TOLERANCE);
-	    }
 	    sleep(RECHARGE_DURATION);
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" SI E' RICARICATO IN " << robot.task_name);
 	    

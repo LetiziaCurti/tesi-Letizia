@@ -125,6 +125,7 @@ SmartDigraph::NodeMap<dim2::Point<float> > coords(Mappa);
 SmartDigraph::ArcMap<double> len(Mappa);
 map<int, SmartDigraph::Node> excl_task_nodes;
 map<int, SmartDigraph::Node> excl_obs_nodes;
+map<int, SmartDigraph::Node> excl_dynobs_nodes;
 
 
 struct Assign
@@ -267,10 +268,10 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 	marker.id = elem.id1;
 
 	// Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-// 	marker.type = visualization_msgs::Marker::CUBE;
-	marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-	
-	marker.mesh_resource = "package://task_assign/config/casa.stl";
+	marker.type = visualization_msgs::Marker::CUBE;
+// 	marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+// 	
+// 	marker.mesh_resource = "package://task_assign/config/casa.stl";
 
 	// Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
 	marker.action = visualization_msgs::Marker::ADD;
@@ -287,9 +288,12 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 	marker.pose.orientation.w = Quat.w;
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 0.2;
-	marker.scale.y = 0.2;
-	marker.scale.z = 0.2;
+// 	marker.scale.x = 0.2;
+// 	marker.scale.y = 0.2;
+// 	marker.scale.z = 0.2;
+	marker.scale.x = 1.5;
+	marker.scale.y = 1.5;
+	marker.scale.z = 1.5;
 
 	// Set the color -- be sure to set alpha to something non-zero!
 	marker.color.r = 1.0f;
@@ -327,16 +331,16 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 	for(auto elem : msg->task_vect)
 	{
 	    // vedo se elem sta già in obstacles
-	    it = excl_obs_nodes.find(elem.id1);
+	    it = excl_dynobs_nodes.find(elem.id1);
 	    if(it == excl_obs_nodes.end())
 	    {
 		ROS_INFO_STREAM("The motion_planner is storing the obstacle: "<< elem.name);
 		obstacles.push_back(elem);
-		excl_obs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+		excl_dynobs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
 	    }
 	}
 	
-	delNode(excl_obs_nodes);
+	delNode(excl_dynobs_nodes);
 	publishMarkerArray(obstacles);
     } 
 }
@@ -1084,11 +1088,6 @@ Assign MinPath(task_assign::rt r_t)
     }
     delNode(excl_task_nodes);
     delNode(excl_obs_nodes);
-//     temp.clear();
-//     temp[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
-//     if(r_t.task.id1 != r_t.task.id2)
-// 	temp[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
-//     insertNode(temp);
     
     Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
     
@@ -1174,7 +1173,6 @@ Assign MinPath(task_assign::rt r_t)
     excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
     if(r_t.task.id1 != r_t.task.id2) 
 	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
-//     delNode(temp);
 	    
     return ass;
 }
@@ -1191,7 +1189,6 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
     
     if(msg->rt_vect.size() > 0)
     {	
-// 	delNode(excl_task_nodes);
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -1230,8 +1227,6 @@ void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    
 	    add = true;
 	}
-	
-// 	insertNode(excl_task_nodes);
     }
 }
 
@@ -1247,7 +1242,6 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
     
     if(msg->rt_vect.size() > 0)
     {	
-// 	delNode(excl_task_nodes);
 	//metto le nuove coppie r-t nel catalogo, gli associo il percorso selezionandolo dalla mappa globale, metto
 	// il robot in robots_in_execution e il task in tasks_in_execution
 	for(auto rt : msg->rt_vect)
@@ -1286,8 +1280,6 @@ void RechCallback(const task_assign::rt_vect::ConstPtr& msg)
 	    
 	    add = true;
 	}
-	
-// 	insertNode(excl_task_nodes);
     }
 }
 
@@ -1782,11 +1774,6 @@ int main(int argc, char **argv)
 	coord_x[n]=coord_x[n]/10;
 	coord_y[n]=coord_y[n]/10;
 	coords[n]=dim2::Point<float>(coord_x[n], coord_y[n]);
-	
-// 	task_assign::waypoint wp;
-// 	wp.x = coord_x[n];
-// 	wp.y = coord_y[n];
-// 	publishMarker(wp,id[n]);
     }
 
     for (SmartDigraph::ArcIt a(Mappa); a != INVALID; ++a)
@@ -1817,7 +1804,7 @@ int main(int argc, char **argv)
 	ros::spinOnce();
 	delNode(excl_obs_nodes);
 
-	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
+	while(!pub_master_in && !new_assign && !new_in_rech && !completed && obstacles.size() == n && ros::ok())
 	{
 	    if(completed && ros::ok())
 	    {
@@ -1826,118 +1813,28 @@ int main(int argc, char **argv)
 		completed = false;
 	    }
 	    
-// 	    if(obstacles.size() != n)
-// 	    {
-// 		delNode(excl_obs_nodes);
-// 		n = obstacles.size();
-// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-// 		
-// 		if(Catalogo_Ass.size()>0)
-// 		{
-// 		    assignments_vect.clear();
-// 		    for(auto elem : Catalogo_Ass)
-// 		    {
-// 			RicalcAss(elem,1);
-// 		    }	
-// 		    publishAssign();
-// 		}
-// 		if(Catalogo_Rech.size()>0)
-// 		{
-// 		    robRech_vect.clear();
-// 		    for(auto elem : Catalogo_Rech)
-// 		    {
-// 			RicalcAss(elem,0);
-// 		    }
-// 		    publishRecharge();
-// 		}
-// 	    }
-	    
 	    ros::spinOnce();
 	    rate.sleep();	  
 	}
+	if(obstacles.size() != n)
+	{}
 	if(pub_master_in && ros::ok())
 	{
 	    sleep(1);
 	    publishMasterIn();
 	    pub_master_in = false;
 	    
-// 	    if(obstacles.size() != n)
-// 	    {
-// 		delNode(excl_obs_nodes);
-// 		n = obstacles.size();
-// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-// 		
-// 		if(Catalogo_Ass.size()>0)
-// 		{
-// 		    assignments_vect.clear();
-// 		    for(auto elem : Catalogo_Ass)
-// 		    {
-// 			RicalcAss(elem,1);
-// 		    }	
-// 		    publishAssign();
-// 		}
-// 		if(Catalogo_Rech.size()>0)
-// 		{
-// 		    robRech_vect.clear();
-// 		    for(auto elem : Catalogo_Rech)
-// 		    {
-// 			RicalcAss(elem,0);
-// 		    }
-// 		    publishRecharge();
-// 		}
-// 	    }
 	}
 	if(new_assign && ros::ok())
 	{
-// 	    if(obstacles.size() != n)
-// 	    {
-// 		delNode(excl_obs_nodes);
-// 		n = obstacles.size();
-// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-// 		
-// 		if(Catalogo_Ass.size()>0)
-// 		{
-// 		    assignments_vect.clear();
-// 		    for(auto elem : Catalogo_Ass)
-// 		    {
-// 			RicalcAss(elem,1);
-// 		    }	
-// 		    publishAssign();
-// 		}
-// 	    }
-// 	    else
-// 	    {
-		sleep(1);
-		publishAssign();
-// 	    }
-	    
+	    sleep(1);
+	    publishAssign();	    
 	    new_assign = false;
 	}
 	if(new_in_rech && ros::ok())
 	{
-// 	    if(obstacles.size() != n)
-// 	    {
-// 		delNode(excl_obs_nodes);
-// 		n = obstacles.size();
-// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
-// 
-// 		if(Catalogo_Rech.size()>0)
-// 		{
-// 		    robRech_vect.clear();
-// 		    for(auto elem : Catalogo_Rech)
-// 		    {
-// 			RicalcAss(elem,0);
-// 		    }
-// // 		    sleep(1);
-// 		    publishRecharge();
-// 		}		
-// 	    }
-// 	    else
-// 	    {
-		sleep(1);
-		publishRecharge();
-// 	    }
-	    
+	    sleep(1);
+	    publishRecharge();	    
 	    new_in_rech = false;
 	}	
 	if(completed && ros::ok())
@@ -1945,33 +1842,8 @@ int main(int argc, char **argv)
 	    sleep(1);
 	    publishExecTask();
 	    completed = false;
-	    
-// 	    if(obstacles.size() != n)
-// 	    {
-// 		delNode(excl_obs_nodes);
-// 		n = obstacles.size();
-// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
-// 		
-// 		if(Catalogo_Ass.size()>0)
-// 		{
-// 		    assignments_vect.clear();
-// 		    for(auto elem : Catalogo_Ass)
-// 		    {
-// 			RicalcAss(elem,1);
-// 		    }	
-// 		    publishAssign();
-// 		}
-// 		if(Catalogo_Rech.size()>0)
-// 		{
-// 		    robRech_vect.clear();
-// 		    for(auto elem : Catalogo_Rech)
-// 		    {
-// 			RicalcAss(elem,0);
-// 		    }
-// 		    publishRecharge();
-// 		}
-// 	    }
 	}
+
 
 	ros::spinOnce();
 	rate.sleep();
@@ -1981,5 +1853,31 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+// 	if(obstacles.size() != n)
+// 	{
+// 		delNode(excl_obs_nodes);
+// 		n = obstacles.size();
+// 		ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");		
+// 		
+// 		if(Catalogo_Ass.size()>0)
+// 		{
+// 		    assignments_vect.clear();
+// 		    for(auto elem : Catalogo_Ass)
+// 		    {
+// 			RicalcAss(elem,1);
+// 		    }	
+// 		    publishAssign();
+// 		}
+// 		if(Catalogo_Rech.size()>0)
+// 		{
+// 		    robRech_vect.clear();
+// 		    for(auto elem : Catalogo_Rech)
+// 		    {
+// 			RicalcAss(elem,0);
+// 		    }
+// 		    publishRecharge();
+// 		}
+// 	}
 
 

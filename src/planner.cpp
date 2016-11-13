@@ -82,6 +82,7 @@ ros::Publisher recharge_pub;
 ros::Publisher marker_pub;
 ros::Publisher marker_array_pub;
 ros::Publisher reass_pub;
+ros::Publisher replan_pub;
 
 #define VELOCITY 10
 #define BATTERY_THR_1 10
@@ -109,6 +110,7 @@ vector<task_assign::task> recharge_points_busy;
 
 vector<task_assign::task_path> assignments_vect;	//vettore delle info da inviare ai robots (nome del task e percorso per raggiungerlo)
 vector<task_assign::task_path> robRech_vect;		//vettore degli assignments robot-punto di ricarica
+vector<task_assign::task_path> replan_vect;
 
 vector<task_assign::info> rt_info_vect;
 vector<task_assign::info> rech_info_vect; 
@@ -281,7 +283,7 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 	marker.pose.position.y = elem.y1;
 	marker.pose.position.z = 0;
 	quaternion Quat;
-	Quat = EulToQuat(0.0,0.95,0.0);
+	Quat = EulToQuat(0.0,0.0,0.0);
 	marker.pose.orientation.x = Quat.x;
 	marker.pose.orientation.y = Quat.y;
 	marker.pose.orientation.z = Quat.z;
@@ -297,8 +299,8 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 
 	// Set the color -- be sure to set alpha to something non-zero!
 	marker.color.r = 1.0f;
-	marker.color.g = 1.0f;
-	marker.color.b = 1.0f;
+	marker.color.g = 0.0f;
+	marker.color.b = 0.0f;
 	marker.color.a = 1.0;
 
 	marker.lifetime = ros::Duration();
@@ -321,9 +323,166 @@ void publishMarkerArray(vector<task_assign::task> obs_vect)
 
 
 
+void publishRePlan()
+{
+    task_assign::assignment msg;
+    
+    msg.assign_vect = replan_vect;
+    
+    sleep(1);
+    replan_pub.publish(msg);
+    
+    for(auto elem : msg.assign_vect)
+    {
+	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned task " << elem.t_name);
+	ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
+    }
+}
+
+
+
+// Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
+// e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
+Assign MinPath(task_assign::rt r_t)
+{
+    Assign ass;   
+    SmartDigraph::Node rob;
+    SmartDigraph::Node taska;
+    SmartDigraph::Node taskb;
+    task_assign::waypoint tmp;
+    vector<task_assign::waypoint> path;
+    vector<SmartDigraph::Node> path_node;
+    
+    map<int, SmartDigraph::Node>::iterator it;
+    map<int, SmartDigraph::Node> temp;
+    SmartDigraph::Node n;
+  
+  
+    ass.rob = r_t.robot;
+    ass.task = r_t.task;
+    
+    ass.path_tot.r_name = r_t.robot.name;
+    ass.path_tot.t_name = r_t.task.name;
+    ass.path_tot.id_a = r_t.task.id1;
+    ass.path_tot.id_b = r_t.task.id2;
+    ass.path_tot.stop = false;
+    
+    rob = SmartDigraph::nodeFromId(searchNode( r_t.robot.x, r_t.robot.y));
+    taska = SmartDigraph::nodeFromId(r_t.task.id1);
+    if(r_t.task.id1 != r_t.task.id2) //il task non è un rech. point
+	taskb = SmartDigraph::nodeFromId(r_t.task.id2);
+    
+
+    it=excl_task_nodes.find(r_t.task.id1);
+    if(it != excl_task_nodes.end())
+	excl_task_nodes.erase(it);
+    if(r_t.task.id1 != r_t.task.id2) 
+    {
+	it=excl_task_nodes.find(r_t.task.id2);
+	if(it != excl_task_nodes.end())
+	    excl_task_nodes.erase(it);
+    }
+    delNode(excl_task_nodes);
+    delNode(excl_obs_nodes);
+    
+    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
+    
+    
+    // prima parte del task
+    // ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di 
+    // task_a di r_t
+
+    dijkstra_test.run(rob, taska);
+    // se il task non coincide col robot
+    if (dijkstra_test.dist(taska) > 0)
+    { 
+	// ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
+	// arrivare al successivo
+	// memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
+	// i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
+	for (SmartDigraph::Node v = taska; v != rob; v = dijkstra_test.predNode(v))
+	{
+	    tmp.y = coord_y[v];
+	    tmp.x = coord_x[v];
+	    path.push_back(tmp);
+	    path_node.push_back(v);
+	}
+// 	tmp.x = r_t.robot.x;
+// 	tmp.y = r_t.robot.y;
+// 	path.push_back(tmp);
+	reverse(path.begin(),path.end());
+	reverse(path_node.begin(),path_node.end());	
+    }
+    else
+    {
+	tmp.x = r_t.robot.x;
+	tmp.y = r_t.robot.y;
+	path.push_back(tmp);
+    }
+
+    ass.path_tot.path_a = path;
+    path.clear();
+    path_node.clear();
+       
+    
+    
+    // seconda parte del task
+    
+    if(r_t.task.id1 != r_t.task.id2) 
+    {
+	dijkstra_test.run(taska, taskb);
+	// se il task non coincide col robot
+	if (dijkstra_test.dist(taskb) > 0)
+	{ 
+	    // ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
+	    // arrivare al successivo
+	    // memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
+	    // i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
+	    for (SmartDigraph::Node v = taskb; v != taska; v = dijkstra_test.predNode(v))
+	    {
+		tmp.y = coord_y[v];
+		tmp.x = coord_x[v];
+		path.push_back(tmp);
+		path_node.push_back(v);
+	    }
+// 	    tmp.x = r_t.task.x1;
+// 	    tmp.y = r_t.task.y1;
+// 	    path.push_back(tmp);
+	    reverse(path.begin(),path.end());
+	    reverse(path_node.begin(),path_node.end());	
+	}
+	// altrimenti taska coincide con taskb, questo significa che il task è un punto di ricarica
+	else
+	{
+	    tmp.x = r_t.task.x1;
+	    tmp.y = r_t.task.y1;
+	    path.push_back(tmp);
+	}
+	
+	ass.path_tot.path_b = path;
+	path.clear();
+	path_node.clear();
+    }
+    
+    
+    insertNode(excl_task_nodes);
+    excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+    if(r_t.task.id1 != r_t.task.id2) 
+	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
+	    
+    return ass;
+}
+
+
+
 // Legge gli ostacoli da "obstacles_topic" 
 void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 {
+    bool trovato = false;
+    bool new_plan(false);
+    task_assign::rt rt;
+    Assign temp;
+    
     if(msg->task_vect.size()>0)
     {
 	map<int,SmartDigraph::Node>::iterator it;
@@ -332,15 +491,93 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 	{
 	    // vedo se elem sta già in obstacles
 	    it = excl_dynobs_nodes.find(elem.id1);
-	    if(it == excl_obs_nodes.end())
+	    if(it == excl_dynobs_nodes.end())
 	    {
 		ROS_INFO_STREAM("The motion_planner is storing the obstacle: "<< elem.name);
 		obstacles.push_back(elem);
 		excl_dynobs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
 	    }
+	}	
+	delNode(excl_dynobs_nodes);
+	
+	
+	if(Catalogo_Ass.size()>0)
+	{
+	    for(auto obs : obstacles)
+	    {
+		for(auto elem : Catalogo_Ass)
+		{
+		    for(auto wp : elem.path_tot.path_a)
+		    {
+			if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+			{
+			    trovato = true;
+			    break;
+			}
+		    }
+		    if(!trovato)
+		    {
+			for(auto wp : elem.path_tot.path_b)
+			{
+			    if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+			    {
+				trovato = true;
+				break;
+			    }
+			}
+		    }
+		    if(trovato)
+		    {
+			rt.robot = elem.rob;
+			rt.task = elem.task;
+			temp = MinPath(rt);
+			replan_vect.push_back(temp.path_tot);
+			new_plan = true;
+			Catalogo_Ass = deleteAss(elem.rob.name, Catalogo_Ass);
+			Catalogo_Ass.push_back(temp);
+		    }
+		    trovato = false;
+		}
+		
+		trovato = false;
+	    }	    
+	}
+	if(Catalogo_Rech.size()>0)
+	{
+	    for(auto obs : obstacles)
+	    {
+		for(auto elem : Catalogo_Rech)
+		{
+		    for(auto wp : elem.path_tot.path_a)
+		    {
+			if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+			{
+			    trovato = true;
+			    break;
+			}
+		    }
+		    if(trovato)
+		    {
+			rt.robot = elem.rob;
+			rt.task = elem.task;
+			temp = MinPath(rt);
+			replan_vect.push_back(temp.path_tot);
+			new_plan = true;
+			Catalogo_Rech = deleteAss(elem.rob.name, Catalogo_Rech);
+			
+			Catalogo_Rech.push_back(temp);
+		    }
+		    trovato = false;
+		}
+		
+		trovato = false;
+	    }	    
 	}
 	
-	delNode(excl_dynobs_nodes);
+	
+	if(new_plan)
+	    publishRePlan();
+	
 	publishMarkerArray(obstacles);
     } 
 }
@@ -858,7 +1095,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 			ROS_INFO_STREAM("il robot " << msg->name << " sta eseguendo il task "<<ass.task.name);
 			
 			// vedo se il robot è arrivato al task
-    // 		    if(floor(msg->x+0.5) == ass.task.x2 && floor(msg->y+0.5) == ass.task.y2)
 			if(msg->taska && msg->taskb)
 			{			
 			    for(auto newel : completed_tasks)
@@ -874,34 +1110,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 				ROS_INFO_STREAM("il task " << ass.task.name << " e' stato completato");
 				completed_tasks.push_back(ass.task);
 				completed = true;
-				
-    // 			    // aggiorno la mappa dei nodi esclusi
-    // 			    int in(0);
-    // 			    for(auto el : tasks_to_assign)
-    // 			    {
-    // 				if(ass.task.id1 == el.id1)
-    // 				{
-    // 				    in = 1;
-    // 				    break;
-    // 				}
-    // 			    }
-    // 			    for(auto el : tasks_in_execution)
-    // 			    {
-    // 				if(ass.task.id1 == el.id1)
-    // 				{
-    // 				    in = 1;
-    // 				    break;
-    // 				}
-    // 			    }
-    // 			    if(!in)
-    // 			    {
-    // 				it=excl_task_nodes.find(ass.task.id1);
-    // 				if(it != excl_task_nodes.end())
-    // 				    excl_task_nodes.erase(it);
-    // 				it=excl_task_nodes.find(ass.task.id2);
-    // 				if(it != excl_task_nodes.end())
-    // 				    excl_task_nodes.erase(it);
-    // 			    }
 		    
 				tasks_in_execution = deleteTask(ass.task.name, tasks_in_execution);
 				robots_in_execution = deleteRob(msg->name, robots_in_execution);
@@ -1044,141 +1252,6 @@ void StatusCallback(const task_assign::robot::ConstPtr& msg)
 
 
 
-
-// Function che mette in un oggetto di tipo Assign (che verrà messo poi nel Catalogo_Ass) il robot e il task di un assignment 
-// e il percorso che deve fare il robot per raggiungere il task (prima fino task_a e poi da task_a a task_b)
-Assign MinPath(task_assign::rt r_t)
-{
-    Assign ass;   
-    SmartDigraph::Node rob;
-    SmartDigraph::Node taska;
-    SmartDigraph::Node taskb;
-    task_assign::waypoint tmp;
-    vector<task_assign::waypoint> path;
-    vector<SmartDigraph::Node> path_node;
-    
-    map<int, SmartDigraph::Node>::iterator it;
-    map<int, SmartDigraph::Node> temp;
-    SmartDigraph::Node n;
-  
-  
-    ass.rob = r_t.robot;
-    ass.task = r_t.task;
-    
-    ass.path_tot.r_name = r_t.robot.name;
-    ass.path_tot.t_name = r_t.task.name;
-    ass.path_tot.id_a = r_t.task.id1;
-    ass.path_tot.id_b = r_t.task.id2;
-    ass.path_tot.stop = false;
-    
-    rob = SmartDigraph::nodeFromId(searchNode( r_t.robot.x, r_t.robot.y));
-    taska = SmartDigraph::nodeFromId(r_t.task.id1);
-    if(r_t.task.id1 != r_t.task.id2) //il task non è un rech. point
-	taskb = SmartDigraph::nodeFromId(r_t.task.id2);
-    
-
-    it=excl_task_nodes.find(r_t.task.id1);
-    if(it != excl_task_nodes.end())
-	excl_task_nodes.erase(it);
-    if(r_t.task.id1 != r_t.task.id2) 
-    {
-	it=excl_task_nodes.find(r_t.task.id2);
-	if(it != excl_task_nodes.end())
-	    excl_task_nodes.erase(it);
-    }
-    delNode(excl_task_nodes);
-    delNode(excl_obs_nodes);
-    
-    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
-    
-    
-    // prima parte del task
-    // ora scrivo path_a prendendo dalla mappa la lista di waypoint che vanno dalla posizione del robot alla posizione di 
-    // task_a di r_t
-
-    dijkstra_test.run(rob, taska);
-    // se il task non coincide col robot
-    if (dijkstra_test.dist(taska) > 0)
-    { 
-	// ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
-	// arrivare al successivo
-	// memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
-	// i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
-	for (SmartDigraph::Node v = taska; v != rob; v = dijkstra_test.predNode(v))
-	{
-	    tmp.y = coord_y[v];
-	    tmp.x = coord_x[v];
-	    path.push_back(tmp);
-	    path_node.push_back(v);
-	}
-// 	tmp.x = r_t.robot.x;
-// 	tmp.y = r_t.robot.y;
-// 	path.push_back(tmp);
-	reverse(path.begin(),path.end());
-	reverse(path_node.begin(),path_node.end());	
-    }
-    else
-    {
-	tmp.x = r_t.robot.x;
-	tmp.y = r_t.robot.y;
-	path.push_back(tmp);
-    }
-
-    ass.path_tot.path_a = path;
-    path.clear();
-    path_node.clear();
-       
-    
-    
-    // seconda parte del task
-    
-    if(r_t.task.id1 != r_t.task.id2) 
-    {
-	dijkstra_test.run(taska, taskb);
-	// se il task non coincide col robot
-	if (dijkstra_test.dist(taskb) > 0)
-	{ 
-	    // ad ogni iterazione, andando a ritroso l'alg. trovo il nodo precedente da cui è minimo il costo per 
-	    // arrivare al successivo
-	    // memorizzo la posizione del nodo in tmp e la metto nel vettore path, e metto il nodo nel vettore path_node
-	    // i vettori path e path_node sono vettori temporanei che mi servono per calcolare time_a e time_b
-	    for (SmartDigraph::Node v = taskb; v != taska; v = dijkstra_test.predNode(v))
-	    {
-		tmp.y = coord_y[v];
-		tmp.x = coord_x[v];
-		path.push_back(tmp);
-		path_node.push_back(v);
-	    }
-// 	    tmp.x = r_t.task.x1;
-// 	    tmp.y = r_t.task.y1;
-// 	    path.push_back(tmp);
-	    reverse(path.begin(),path.end());
-	    reverse(path_node.begin(),path_node.end());	
-	}
-	// altrimenti taska coincide con taskb, questo significa che il task è un punto di ricarica
-	else
-	{
-	    tmp.x = r_t.task.x1;
-	    tmp.y = r_t.task.y1;
-	    path.push_back(tmp);
-	}
-	
-	ass.path_tot.path_b = path;
-	path.clear();
-	path_node.clear();
-    }
-    
-    
-    insertNode(excl_task_nodes);
-    excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
-    if(r_t.task.id1 != r_t.task.id2) 
-	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
-	    
-    return ass;
-}
-
-
-
 // Legge "assignment_topic" 
 void RTCallback(const task_assign::rt_vect::ConstPtr& msg)
 {
@@ -1299,8 +1372,6 @@ void publishAssign()
     for(auto elem : msg.assign_vect)
     {
 	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned task " << elem.t_name);
-	if(elem.stop)
-	    ROS_INFO_STREAM("\n I'M PUBLISHING REASSIGN \n");
     }
 }
 
@@ -1730,7 +1801,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "planner");
     ros::NodeHandle node;
     
-//     obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
+    obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
     rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
     rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
     status_rob_sub = node.subscribe("status_rob_topic", 50, &StatusCallback);
@@ -1739,6 +1810,7 @@ int main(int argc, char **argv)
     exec_task_pub = node.advertise<task_assign::vect_task>("task_exec_topic", 10);   
     assignment_pub = node.advertise<task_assign::assignment>("assignment_topic", 10);
     recharge_pub = node.advertise<task_assign::assignment>("recharge_topic", 10);
+    replan_pub = node.advertise<task_assign::assignment>("replan_topic", 10);
     
     marker_pub = node.advertise<visualization_msgs::Marker>("visualization_marker", 10);
     marker_array_pub = node.advertise<visualization_msgs::MarkerArray>("visualization_marker_array", 10);

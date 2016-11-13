@@ -63,6 +63,8 @@ double getDistance(double x1, double y1, double x2, double y2)
   return sqrt(pow((x1-x2),2)+pow((y1-y2),2));
 }
 
+ros::Time inizio;
+ros::Duration life(10.0);
 
 
 class Robot
@@ -83,6 +85,8 @@ public:
     ros::Publisher marker_pub;
     
     task_assign::waypoint taska_pose, taskb_pose;
+    
+    bool status = true;
 
     bool assignment = false;
     bool re_assignment_a = false;
@@ -416,13 +420,20 @@ public:
     // Il robot pubblica il suo stato su "status_rob_topic"
     void publishStatus() 
     {
+	if(robot_name == "robot3" && ros::Time::now() > inizio)
+	{
+	    cout << robot_name << "E' MORTOOOOOOOOO";
+	    status = false;
+	    exit(0);
+	}
+	
 	task_assign::robot status_msg; 
 	broadcastPose(turtlesim_pose,robot_name);
 
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.name = robot_name;
 	status_msg.id = id_marker;
-	status_msg.status = true;
+	status_msg.status = status;
 	status_msg.b_level0 = b_level0;
 	status_msg.b_level = b_level;
 	status_msg.taska = taska;
@@ -449,13 +460,20 @@ public:
         // Il robot pubblica il suo stato su "status_rob_topic"
     void publishWp() 
     {
+	if(robot_name == "robot3" && ros::Time::now() > inizio)
+	{
+	    cout << robot_name << "E' MORTOOOOOOOOO";
+	    status = false;
+	    exit(0);
+	}
+	
 	task_assign::robot status_msg; 
 	broadcastPose(turtlesim_pose,robot_name);
 
 	status_msg.header.stamp = ros::Time::now();
 	status_msg.name = robot_name;
 	status_msg.id = id_marker;
-	status_msg.status = true;
+	status_msg.status = status;
 	status_msg.b_level0 = b_level0;
 	status_msg.b_level = b_level;
 	status_msg.taska = taska;
@@ -495,8 +513,7 @@ public:
 		do{
 		      broadcastPose(turtlesim_pose,robot_name);
 		      
-		      if(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>1.5)
-			  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+		      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
 		      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
 		      
 		      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
@@ -538,8 +555,7 @@ public:
 		do{
 		      broadcastPose(turtlesim_pose,robot_name);
 		      
-		      if(getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y)>1.5)
-			  vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
+		      vel_x = 0.5*getDistance(turtlesim_pose.x,turtlesim_pose.y,goal_pose.x,goal_pose.y);
 		      vel_z = 4*sin((atan2(goal_pose.y - turtlesim_pose.y, goal_pose.x - turtlesim_pose.x)-turtlesim_pose.theta));
 		      
 		      turtlesim_pose.x = (vel_x*cos(turtlesim_pose.theta))*time + turtlesim_pose.x;
@@ -637,11 +653,6 @@ public:
 	
 	publishMarker(posa);
     }
-
-
-    
-    
-
 };
 
 
@@ -668,6 +679,10 @@ int main(int argc, char **argv)
 
     vector<task_assign::waypoint> new_path;
     task_assign::waypoint wp;
+    
+//     inizio = ros::Time::now();
+    inizio = ros::Time::now() + life;
+
     
     ros::Rate rate(10);
     while (ros::ok()) 
@@ -699,8 +714,6 @@ int main(int argc, char **argv)
 	    }
 	    sleep(robot.wait_a);
 	    robot.b_level -= robot.wait_a*0.01;
-// 	    if(robot.b_level<BATTERY_THR)
-// 		return 0;
 	    robot.taska = true;
 	    robot.publishStatus();
 	    
@@ -718,8 +731,6 @@ int main(int argc, char **argv)
 	    ROS_INFO_STREAM("ROBOT "<< robot.robot_name <<" HA COMPLETATO " << robot.task_name);
 	    
 	    robot.b_level -= robot.wait_b*0.01;
-// 	    if(robot.b_level<BATTERY_THR)
-// 		return 0;
 	    robot.taskb = true;
 	    robot.assignment = false;	 
 	    robot.re_assignment_a = false;

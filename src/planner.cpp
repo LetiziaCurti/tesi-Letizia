@@ -402,7 +402,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     SmartDigraph::Node n;
     map<int, SmartDigraph::Node> temp;
     
-    
+    delNode(excl_obs_nodes);
    
     
     for(int i=0; i<robots.size(); i++)
@@ -1110,6 +1110,7 @@ Assign MinPath(task_assign::rt r_t)
 	    excl_task_nodes.erase(it);
     }
     delNode(excl_task_nodes);
+    delNode(excl_obs_nodes);
 //     temp.clear();
 //     temp[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
 //     if(r_t.task.id1 != r_t.task.id2)
@@ -1565,14 +1566,14 @@ void publishMarkerObsStat(task_assign::waypoint p, int id_marker, string mesh_so
 	Quat = EulToQuat(0.0,0.0,0.0);
 
 	// Set the scale of the marker -- 1x1x1 here means 1m on a side
-	marker.scale.x = 0.005;
-	marker.scale.y = 0.005;
+	marker.scale.x = 0.003;
+	marker.scale.y = 0.003;
 	marker.scale.z = 0.006;
 	
 	// Set the color -- be sure to set alpha to something non-zero!
-	marker.color.r = 0.6f;
-	marker.color.g = 0.8f;
-	marker.color.b = 1.0f;
+	marker.color.r = 47/255.0f;
+	marker.color.g = 79/255.0f;
+	marker.color.b = 79/255.0f;
 	marker.color.a = 1.0;
     }
     else if(mesh_source == "package://task_assign/config/albero.stl")
@@ -1824,9 +1825,9 @@ int main(int argc, char **argv)
 
     for(auto elem : static_obstacles)
     {
-	excl_task_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+	excl_obs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
     }
-    delNode(excl_task_nodes);
+    delNode(excl_obs_nodes);
     
     for(auto elem : recharge_points)
     {
@@ -1841,6 +1842,7 @@ int main(int argc, char **argv)
     while (ros::ok()) 
     {
 	ros::spinOnce();
+	delNode(excl_obs_nodes);
 
 	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
 	{

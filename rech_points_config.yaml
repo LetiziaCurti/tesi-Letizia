@@ -23,12 +23,12 @@ RECH_POINTS:
     arrt: 0
     status: true
     tasks:
-      - id: 11
+      - id: 21
         wait: 0
-        position: [44, 0, -1.5]
-      - id: 11
+        position: [32, 4, -1.5]
+      - id: 21
         wait: 0
-        position: [44, 0, -1.5]
+        position: [32, 4, -1.5]
   - name: rech4
     arrt: 0
     status: true

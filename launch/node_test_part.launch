@@ -1,15 +1,15 @@
 <launch> 
   
-  <node name="tasks" pkg="task_assign" type="task_manager" args="/home/letizia/catkin_ws/src/task_assign/config/tasks_config.yaml" output="screen"/> 
-  <node name="motion_planner" pkg="task_assign" type="motion_planner" output="screen"/> 
-  <node name="obstacles" pkg="task_assign" type="obstacle_node" args="/home/letizia/catkin_ws/src/task_assign/config/obs_config.yaml" output="screen"/> 
-  <node name="TA_solver" pkg="task_assign" type="master" output="screen"/> 
+  <node name="tasks" pkg="task_assign" type="tasks" args="/home/letizia/catkin_ws/src/task_assign/config/tasks_config.yaml" output="screen"/> 
+  <node name="planner" pkg="task_assign" type="planner" output="screen"/> 
+  <node name="obstacles" pkg="task_assign" type="obstacles" args="/home/letizia/catkin_ws/src/task_assign/config/obs_config.yaml" output="screen"/> 
+  <node name="TA_solver" pkg="task_assign" type="TA_solver" output="screen"/> 
   
-  <node name="robot1" pkg="task_assign" type="robot" args="robot1 113 36 32 -1.57 20 1 0 0" output="screen"/> 
-  <node name="robot2" pkg="task_assign" type="robot" args="robot2 114 40 32 -1.57 20 0 0.5 0.4" output="screen"/> 
-  <node name="robot3" pkg="task_assign" type="robot" args="robot3 115 44 32 -1.57 20 0 0 1" output="screen"/> 
-  <node name="robot4" pkg="task_assign" type="robot" args="robot4 145 8 44 -1.57 20 0.5 0.5 0.4" output="screen"/> 
-  <node name="robot5" pkg="task_assign" type="robot" args="robot5 148 20 44 -1.57 20 0.5 0 1" output="screen"/> 
+  <node name="robot1" pkg="task_assign" type="robot_node" args="robot1 116 48 32 -1.57 20 1 0 0" output="screen"/> 
+  <node name="robot2" pkg="task_assign" type="robot_node" args="robot2 114 40 32 -1.57 20 0 0.5 0.4" output="screen"/> 
+  <node name="robot3" pkg="task_assign" type="robot_node" args="robot3 115 44 32 -1.57 20 0 0 1" output="screen"/> 
+  <node name="robot4" pkg="task_assign" type="robot_node" args="robot4 146 12 44 -1.57 20 0.5 0.5 0.4" output="screen"/> 
+  <node name="robot5" pkg="task_assign" type="robot_node" args="robot5 148 20 44 -1.57 20 0.5 0 1" output="screen"/> 
   
   
 </launch>

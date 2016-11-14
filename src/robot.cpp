@@ -65,7 +65,7 @@ double getDistance(double x1, double y1, double x2, double y2)
 
 ros::Time inizio;
 ros::Duration life(26.0);
-bool rottura = false;
+bool rottura = true;
 string rob_rotto = "robot3";
 
 

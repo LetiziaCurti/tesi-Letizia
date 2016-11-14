@@ -89,6 +89,8 @@ ros::Publisher replan_pub;
 #define BATTERY_THR_2 15
 #define SEC_DIST 4
 
+bool do_replan = true;
+
 bool new_assign(false);
 bool new_in_rech(false);
 bool new_task(false);
@@ -139,8 +141,6 @@ struct Assign
 
 vector<Assign> Catalogo_Ass;				//struttura che tiene in memoria tutti gli assignment task - robot
 vector<Assign> Catalogo_Rech;				//struttura che tiene in memoria tutti gli assignment robot - p.to di ric.
-
-
 
 
 
@@ -478,14 +478,17 @@ Assign MinPath(task_assign::rt r_t)
 // Legge gli ostacoli da "obstacles_topic" 
 void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 {
-    bool trovato = false;
-    bool new_plan(false);
-    task_assign::rt rt;
-    Assign temp;
-    
     if(msg->task_vect.size()>0)
     {
+	bool trovato = false;
+	bool new_plan = false;
+	task_assign::rt rt;
+	Assign temp;
+	
 	map<int,SmartDigraph::Node>::iterator it;
+	bool new_obs(false);
+	vector<task_assign::task> new_obstacles;
+	replan_vect.clear();
 	
 	for(auto elem : msg->task_vect)
 	{
@@ -496,28 +499,21 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 		ROS_INFO_STREAM("The motion_planner is storing the obstacle: "<< elem.name);
 		obstacles.push_back(elem);
 		excl_dynobs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
+		new_obs = true;
+		new_obstacles.push_back(elem);
 	    }
 	}	
 	delNode(excl_dynobs_nodes);
 	
-	
-	if(Catalogo_Ass.size()>0)
+	if(new_obs && do_replan)
 	{
-	    for(auto obs : obstacles)
+	    if(Catalogo_Ass.size()>0)
 	    {
-		for(auto elem : Catalogo_Ass)
+		for(auto obs : new_obstacles)
 		{
-		    for(auto wp : elem.path_tot.path_a)
+		    for(auto elem : Catalogo_Ass)
 		    {
-			if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
-			{
-			    trovato = true;
-			    break;
-			}
-		    }
-		    if(!trovato)
-		    {
-			for(auto wp : elem.path_tot.path_b)
+			for(auto wp : elem.path_tot.path_a)
 			{
 			    if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
 			    {
@@ -525,58 +521,68 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 				break;
 			    }
 			}
-		    }
-		    if(trovato)
-		    {
-			rt.robot = elem.rob;
-			rt.task = elem.task;
-			temp = MinPath(rt);
-			replan_vect.push_back(temp.path_tot);
-			new_plan = true;
-			Catalogo_Ass = deleteAss(elem.rob.name, Catalogo_Ass);
-			Catalogo_Ass.push_back(temp);
-		    }
-		    trovato = false;
-		}
-		
-		trovato = false;
-	    }	    
-	}
-	if(Catalogo_Rech.size()>0)
-	{
-	    for(auto obs : obstacles)
-	    {
-		for(auto elem : Catalogo_Rech)
-		{
-		    for(auto wp : elem.path_tot.path_a)
-		    {
-			if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+			if(!trovato)
 			{
-			    trovato = true;
-			    break;
+			    for(auto wp : elem.path_tot.path_b)
+			    {
+				if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+				{
+				    trovato = true;
+				    break;
+				}
+			    }
 			}
+			if(trovato)
+			{
+			    rt.robot = elem.rob;
+			    rt.task = elem.task;
+			    temp = MinPath(rt);
+			    replan_vect.push_back(temp.path_tot);
+			    new_plan = true;
+			    Catalogo_Ass = deleteAss(elem.rob.name, Catalogo_Ass);
+			    Catalogo_Ass.push_back(temp);
+			}
+			trovato = false;
 		    }
-		    if(trovato)
-		    {
-			rt.robot = elem.rob;
-			rt.task = elem.task;
-			temp = MinPath(rt);
-			replan_vect.push_back(temp.path_tot);
-			new_plan = true;
-			Catalogo_Rech = deleteAss(elem.rob.name, Catalogo_Rech);
-			
-			Catalogo_Rech.push_back(temp);
-		    }
+		    
 		    trovato = false;
-		}
-		
-		trovato = false;
-	    }	    
+		}	    
+	    }
+	    if(Catalogo_Rech.size()>0)
+	    {
+		for(auto obs : new_obstacles)
+		{
+		    for(auto elem : Catalogo_Rech)
+		    {
+			for(auto wp : elem.path_tot.path_a)
+			{
+			    if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+			    {
+				trovato = true;
+				break;
+			    }
+			}
+			if(trovato)
+			{
+			    rt.robot = elem.rob;
+			    rt.task = elem.task;
+			    temp = MinPath(rt);
+			    replan_vect.push_back(temp.path_tot);
+			    new_plan = true;
+			    Catalogo_Rech = deleteAss(elem.rob.name, Catalogo_Rech);
+			    
+			    Catalogo_Rech.push_back(temp);
+			}
+			trovato = false;
+		    }
+		    
+		    trovato = false;
+		}	    
+	    }
+
+	    if(new_plan)
+		publishRePlan();
 	}
-	
-	
-	if(new_plan)
-	    publishRePlan();
 	
 	publishMarkerArray(obstacles);
     } 
@@ -1867,8 +1873,6 @@ int main(int argc, char **argv)
     }
     
 
-    int n = obstacles.size();
-    ROS_INFO_STREAM("\nCI SONO " << n << " OSTACOLI \n");
     
     ros::Rate rate(50);
     while (ros::ok()) 
@@ -1876,7 +1880,7 @@ int main(int argc, char **argv)
 	ros::spinOnce();
 	delNode(excl_obs_nodes);
 
-	while(!pub_master_in && !new_assign && !new_in_rech && !completed && obstacles.size() == n && ros::ok())
+	while(!pub_master_in && !new_assign && !new_in_rech && !completed && ros::ok())
 	{
 	    if(completed && ros::ok())
 	    {
@@ -1888,8 +1892,6 @@ int main(int argc, char **argv)
 	    ros::spinOnce();
 	    rate.sleep();	  
 	}
-	if(obstacles.size() != n)
-	{}
 	if(pub_master_in && ros::ok())
 	{
 	    sleep(1);

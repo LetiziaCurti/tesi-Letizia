@@ -57,11 +57,6 @@ endif(NEW_YAMLCPP_FOUND)
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   AgentStatus.msg
-   SecondAgent.msg
-   IniStatus.msg
-   AssignMsg.msg
-   OneAssign.msg
    task.msg
    vect_task.msg
    robot.msg
@@ -76,7 +71,6 @@ endif(NEW_YAMLCPP_FOUND)
    recharge.msg
    rech_vect.msg
    glpk_in.msg
-   glpk_sol.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -158,60 +152,30 @@ include_directories(
 # add_dependencies(task_assign ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(task_assign_node src/task_assign_node.cpp)
-add_executable(robot_node src/robot_node.cpp)
-add_executable(task_node src/task_node.cpp)
-add_executable(central_node src/central_node.cpp)
-# add_executable(users_node src/users_node.cpp)
-add_executable(task_manager src/task_manager.cpp)
-add_executable(motion_planner src/motion_planner.cpp)
-add_executable(obstacle_node src/obstacle_node.cpp)
-add_executable(master src/master.cpp)
-add_executable(robot src/robot.cpp)
-# add_executable(temp src/temp.cpp)
-# add_executable(map src/map.cpp)
-add_executable(monsters_test src/monsters_test.cpp)
-# add_executable(task_test_config src/task_test_config.cpp)
-# add_executable(robot_node src/robot_node_2.cpp)
-# add_executable(task_node src/task_node_2.cpp)
-# add_executable(central_node src/central_node_2.cpp)
+add_executable(tasks src/tasks.cpp)
+add_executable(planner src/planner.cpp)
+add_executable(obstacles src/obstacles.cpp)
+add_executable(TA_solver src/TA_solver.cpp)
+add_executable(robot_node src/robot.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(task_assign_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(tasks ${PROJECT_NAME}_gencpp)
+add_dependencies(planner ${PROJECT_NAME}_gencpp)
+add_dependencies(obstacles ${PROJECT_NAME}_gencpp)
+add_dependencies(TA_solver ${PROJECT_NAME}_gencpp)
 add_dependencies(robot_node ${PROJECT_NAME}_gencpp)
-add_dependencies(task_node ${PROJECT_NAME}_gencpp)
-add_dependencies(central_node ${PROJECT_NAME}_gencpp)
-# add_dependencies(users_node ${PROJECT_NAME}_gencpp)
-add_dependencies(task_manager ${PROJECT_NAME}_gencpp)
-add_dependencies(motion_planner ${PROJECT_NAME}_gencpp)
-add_dependencies(obstacle_node ${PROJECT_NAME}_gencpp)
-add_dependencies(master ${PROJECT_NAME}_gencpp)
-add_dependencies(robot ${PROJECT_NAME}_gencpp)
-# add_dependencies(temp ${PROJECT_NAME}_gencpp)
-# add_dependencies(reass_manager ${PROJECT_NAME}_gencpp)
-# add_dependencies(map ${PROJECT_NAME}_gencpp)
-add_dependencies(monsters_test ${PROJECT_NAME}_gencpp)
-# add_dependencies(task_test_config ${PROJECT_NAME}_gencpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(task_assign_node
 #   ${catkin_LIBRARIES}
 # )
+target_link_libraries(tasks yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(planner lemon_ros gmlreader yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(obstacles yaml-cpp ${catkin_LIBRARIES})
+target_link_libraries(TA_solver glpk yaml-cpp ${catkin_LIBRARIES})
 target_link_libraries(robot_node ${catkin_LIBRARIES})
-target_link_libraries(task_node ${catkin_LIBRARIES})
-target_link_libraries(central_node ${catkin_LIBRARIES})
-# target_link_libraries(users_node yaml-cpp ${catkin_LIBRARIES})
-target_link_libraries(task_manager yaml-cpp ${catkin_LIBRARIES})
-target_link_libraries(motion_planner lemon_ros gmlreader yaml-cpp ${catkin_LIBRARIES})
-target_link_libraries(obstacle_node yaml-cpp ${catkin_LIBRARIES})
-target_link_libraries(master glpk yaml-cpp ${catkin_LIBRARIES})
-target_link_libraries(robot ${catkin_LIBRARIES})
-# target_link_libraries(temp yaml-cpp ${catkin_LIBRARIES})
-# target_link_libraries(reass_manager ${catkin_LIBRARIES})
-# target_link_libraries(map ${catkin_LIBRARIES})
-target_link_libraries(monsters_test yaml-cpp ${catkin_LIBRARIES})
-# target_link_libraries(task_test_config ${catkin_LIBRARIES})
 
 
 #############

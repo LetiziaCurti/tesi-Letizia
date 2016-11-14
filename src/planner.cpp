@@ -89,6 +89,9 @@ ros::Publisher replan_pub;
 #define BATTERY_THR_2 15
 #define SEC_DIST 4
 
+bool obs_dyn = true;
+bool do_replan = false;
+
 bool new_assign(false);
 bool new_in_rech(false);
 bool new_task(false);
@@ -480,8 +483,10 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 {
     bool trovato = false;
     bool new_plan(false);
+    bool new_obs(false);
     task_assign::rt rt;
     Assign temp;
+    replan_vect.clear();
     
     if(msg->task_vect.size()>0)
     {
@@ -498,85 +503,88 @@ void ObsCallback(const task_assign::vect_task::ConstPtr& msg)
 		excl_dynobs_nodes[elem.id1] = SmartDigraph::nodeFromId(elem.id1);
 	    }
 	}	
-	delNode(excl_dynobs_nodes);
-	
-	
-// 	if(Catalogo_Ass.size()>0)
-// 	{
-// 	    for(auto obs : obstacles)
-// 	    {
-// 		for(auto elem : Catalogo_Ass)
-// 		{
-// 		    for(auto wp : elem.path_tot.path_a)
-// 		    {
-// 			if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
-// 			{
-// 			    trovato = true;
-// 			    break;
-// 			}
-// 		    }
-// 		    if(!trovato)
-// 		    {
-// 			for(auto wp : elem.path_tot.path_b)
-// 			{
-// 			    if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
-// 			    {
-// 				trovato = true;
-// 				break;
-// 			    }
-// 			}
-// 		    }
-// 		    if(trovato)
-// 		    {
-// 			rt.robot = elem.rob;
-// 			rt.task = elem.task;
-// 			temp = MinPath(rt);
-// 			replan_vect.push_back(temp.path_tot);
-// 			new_plan = true;
-// 			Catalogo_Ass = deleteAss(elem.rob.name, Catalogo_Ass);
-// 			Catalogo_Ass.push_back(temp);
-// 		    }
-// 		    trovato = false;
-// 		}
-// 		
-// 		trovato = false;
-// 	    }	    
-// 	}
-// 	if(Catalogo_Rech.size()>0)
-// 	{
-// 	    for(auto obs : obstacles)
-// 	    {
-// 		for(auto elem : Catalogo_Rech)
-// 		{
-// 		    for(auto wp : elem.path_tot.path_a)
-// 		    {
-// 			if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
-// 			{
-// 			    trovato = true;
-// 			    break;
-// 			}
-// 		    }
-// 		    if(trovato)
-// 		    {
-// 			rt.robot = elem.rob;
-// 			rt.task = elem.task;
-// 			temp = MinPath(rt);
-// 			replan_vect.push_back(temp.path_tot);
-// 			new_plan = true;
-// 			Catalogo_Rech = deleteAss(elem.rob.name, Catalogo_Rech);
-// 			
-// 			Catalogo_Rech.push_back(temp);
-// 		    }
-// 		    trovato = false;
-// 		}
-// 		
-// 		trovato = false;
-// 	    }	    
-// 	}
-// 	
-// 	
-// 	if(new_plan)
-// 	    publishRePlan();
+	if(do_replan)
+	{
+	    delNode(excl_dynobs_nodes);
+	    
+	    
+	    if(Catalogo_Ass.size()>0)
+	    {
+		for(auto obs : obstacles)
+		{
+		    for(auto elem : Catalogo_Ass)
+		    {
+			for(auto wp : elem.path_tot.path_a)
+			{
+			    if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+			    {
+				trovato = true;
+				break;
+			    }
+			}
+			if(!trovato)
+			{
+			    for(auto wp : elem.path_tot.path_b)
+			    {
+				if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+				{
+				    trovato = true;
+				    break;
+				}
+			    }
+			}
+			if(trovato)
+			{
+			    rt.robot = elem.rob;
+			    rt.task = elem.task;
+			    temp = MinPath(rt);
+			    replan_vect.push_back(temp.path_tot);
+			    new_plan = true;
+			    Catalogo_Ass = deleteAss(elem.rob.name, Catalogo_Ass);
+			    Catalogo_Ass.push_back(temp);
+			}
+			trovato = false;
+		    }
+		    
+		    trovato = false;
+		}	    
+	    }
+	    if(Catalogo_Rech.size()>0)
+	    {
+		for(auto obs : obstacles)
+		{
+		    for(auto elem : Catalogo_Rech)
+		    {
+			for(auto wp : elem.path_tot.path_a)
+			{
+			    if(floor((wp.x)+0.5)==floor((obs.x1)+0.5) && floor((wp.y)+0.5) == floor((obs.y1)+0.5))
+			    {
+				trovato = true;
+				break;
+			    }
+			}
+			if(trovato)
+			{
+			    rt.robot = elem.rob;
+			    rt.task = elem.task;
+			    temp = MinPath(rt);
+			    replan_vect.push_back(temp.path_tot);
+			    new_plan = true;
+			    Catalogo_Rech = deleteAss(elem.rob.name, Catalogo_Rech);
+			    
+			    Catalogo_Rech.push_back(temp);
+			}
+			trovato = false;
+		    }
+		    
+		    trovato = false;
+		}	    
+	    }
+	    
+	    
+	    if(new_plan)
+		publishRePlan();
+	}
 	
 	publishMarkerArray(obstacles);
     } 
@@ -1710,7 +1718,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "planner");
     ros::NodeHandle node;
     
-    obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
+    if(obs_dyn)
+	obs_sub = node.subscribe("obstacles_topic", 20, &ObsCallback);
     rt_sub = node.subscribe("rt_topic", 20, &RTCallback);
     rech_sub = node.subscribe("rech_topic", 20, &RechCallback);
     status_rob_sub = node.subscribe("status_rob_topic", 50, &StatusCallback);

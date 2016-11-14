@@ -66,6 +66,7 @@ double getDistance(double x1, double y1, double x2, double y2)
 ros::Time inizio;
 ros::Duration life(26.0);
 bool rottura = false;
+string rob_rotto = "robot3";
 
 
 class Robot
@@ -341,7 +342,7 @@ public:
     {
 	if(rottura)
 	{
-	    if(robot_name == "robot3" && ros::Time::now() > inizio)
+	    if(robot_name == rob_rotto && ros::Time::now() > inizio)
 	    {
 		cout << robot_name << "E' MORTOOOOOOOOO";
 		status = false;
@@ -390,7 +391,7 @@ public:
     {
 	if(rottura)
 	{
-	    if(robot_name == "robot3" && ros::Time::now() > inizio)
+	    if(robot_name == rob_rotto && ros::Time::now() > inizio)
 	    {
 		cout << robot_name << "E' MORTOOOOOOOOO";
 		status = false;

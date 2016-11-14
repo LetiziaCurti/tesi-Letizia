@@ -65,6 +65,7 @@ double getDistance(double x1, double y1, double x2, double y2)
 
 ros::Time inizio;
 ros::Duration life(26.0);
+bool rottura = false;
 
 
 class Robot
@@ -338,10 +339,13 @@ public:
     // Il robot pubblica il suo stato su "status_rob_topic"
     void publishStatus() 
     {
-	if(robot_name == "robot3" && ros::Time::now() > inizio)
+	if(rottura)
 	{
-	    cout << robot_name << "E' MORTOOOOOOOOO";
-	    status = false;
+	    if(robot_name == "robot3" && ros::Time::now() > inizio)
+	    {
+		cout << robot_name << "E' MORTOOOOOOOOO";
+		status = false;
+	    }
 	}
 	
 	task_assign::robot status_msg; 
@@ -368,8 +372,11 @@ public:
 	sleep(1);
 	status_pub.publish(status_msg);
 	
-	if(status == false)
-	    exit(0);
+	if(rottura)
+	{
+	    if(status == false)
+		exit(0);
+	}
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its status "<< BoolToString(status_msg.status));
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its position");
@@ -381,10 +388,13 @@ public:
         // Il robot pubblica il suo stato su "status_rob_topic"
     void publishWp() 
     {
-	if(robot_name == "robot3" && ros::Time::now() > inizio)
+	if(rottura)
 	{
-	    cout << robot_name << "E' MORTOOOOOOOOO";
-	    status = false;
+	    if(robot_name == "robot3" && ros::Time::now() > inizio)
+	    {
+		cout << robot_name << "E' MORTOOOOOOOOO";
+		status = false;
+	    }
 	}
 	
 	task_assign::robot status_msg; 
@@ -409,8 +419,11 @@ public:
 
 	status_pub.publish(status_msg);
 	
-	if(status == false)
-	    exit(0);
+	if(rottura)
+	{
+	    if(status == false)
+		exit(0);
+	}
 	
 	ROS_INFO_STREAM("Robot "<< robot_name <<" is publishing its WP");
 	ROS_INFO_STREAM("x: " << status_msg.x << " y: " << status_msg.y);

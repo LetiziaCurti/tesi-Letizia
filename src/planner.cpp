@@ -89,8 +89,8 @@ ros::Publisher replan_pub;
 #define BATTERY_THR_2 15
 #define SEC_DIST 4
 
-bool obs_dyn = true;
-bool do_replan = true;
+bool obs_dyn = false;
+bool do_replan = false;
 
 bool new_assign(false);
 bool new_in_rech(false);
@@ -375,15 +375,15 @@ Assign MinPath(task_assign::rt r_t)
 	taskb = SmartDigraph::nodeFromId(r_t.task.id2);
     
 
-    it=excl_task_nodes.find(r_t.task.id1);
-    if(it != excl_task_nodes.end())
-	excl_task_nodes.erase(it);
-    if(r_t.task.id1 != r_t.task.id2) 
-    {
-	it=excl_task_nodes.find(r_t.task.id2);
-	if(it != excl_task_nodes.end())
-	    excl_task_nodes.erase(it);
-    }
+//     it=excl_task_nodes.find(r_t.task.id1);
+//     if(it != excl_task_nodes.end())
+// 	excl_task_nodes.erase(it);
+//     if(r_t.task.id1 != r_t.task.id2) 
+//     {
+// 	it=excl_task_nodes.find(r_t.task.id2);
+// 	if(it != excl_task_nodes.end())
+// 	    excl_task_nodes.erase(it);
+//     }
     delNode(excl_task_nodes);
     delNode(excl_obs_nodes);
     
@@ -468,9 +468,9 @@ Assign MinPath(task_assign::rt r_t)
     
     
     insertNode(excl_task_nodes);
-    excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
-    if(r_t.task.id1 != r_t.task.id2) 
-	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
+//     excl_task_nodes[r_t.task.id1] = SmartDigraph::nodeFromId(r_t.task.id1);
+//     if(r_t.task.id1 != r_t.task.id2) 
+// 	excl_task_nodes[r_t.task.id2] = SmartDigraph::nodeFromId(r_t.task.id2);
 	    
     return ass;
 }
@@ -639,9 +639,7 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     //con l'alg. di Dijkstra trovo il percorso minimo che c'è tra i nodi che mi servono (quelli in corrispondenza delle 
     //posizioni di robot e task). il percorso consiste in una sequenza di nodi che viene memorizzata in un vettore, che 
     //poi viene ribaltato per avere la sequenza di wp che il robot deve percorrere per arrivare al task0
-    vector<task_assign::waypoint> path;
-    vector<SmartDigraph::Node> path_node;
-    SmartDigraph::Arc arc;
+    
     double time_a(0);
     double time_b(0);
     double dist(0);
@@ -651,33 +649,32 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
     map<int, SmartDigraph::Node> temp;
     
     delNode(excl_obs_nodes);
-   
+    delNode(excl_task_nodes);
     
     for(int i=0; i<robots.size(); i++)
     {
 	for(int j=0; j<tasks.size(); j++)
 	{
 	    task_assign::info info;
+	    vector<task_assign::waypoint> path;
+	    vector<SmartDigraph::Node> path_node;
 	    
 	    info.r_name = robots[i].name;
 	    info.t_name = tasks[j].name;
 	    dist = 0;
+	    time_a = 0;
+	    time_b = 0;
 	    	    	    	    
-	    it=excl_task_nodes.find(tasks[j].id1);
-	    if(it != excl_task_nodes.end())
-		excl_task_nodes.erase(it);
-	    if(tasks[j].id1 != tasks[j].id2)
-	    {
-		it=excl_task_nodes.find(tasks[j].id2);
-		if(it != excl_task_nodes.end())
-		    excl_task_nodes.erase(it);
-	    }
-	    delNode(excl_task_nodes);
-// 	    temp.clear();
-// 	    temp[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
+// 	    it=excl_task_nodes.find(tasks[j].id1);
+// 	    if(it != excl_task_nodes.end())
+// 		excl_task_nodes.erase(it);
 // 	    if(tasks[j].id1 != tasks[j].id2)
-// 		temp[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
-// 	    insertNode(temp);
+// 	    {
+// 		it=excl_task_nodes.find(tasks[j].id2);
+// 		if(it != excl_task_nodes.end())
+// 		    excl_task_nodes.erase(it);
+// 	    }
+// 	    delNode(excl_task_nodes);
 
 	    
 	    Dijkstra<SmartDigraph, SmartDigraph::ArcMap<double>> dijkstra_test(Mappa,len);
@@ -703,12 +700,6 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 		reverse(path.begin(),path.end());
 		reverse(path_node.begin(),path_node.end());
 		
-// 		// il tempo di esecuzione è la somma dei pesi di tutti gli archi del path trovato		
-// 		for(int k=0; k<path_node.size()-1; k++)
-// 		{
-// 		    arc = lemon::findArc(Mappa,path_node[k],path_node[k+1]);
-// 		    dist += len[arc];
-// 		}
 		dist = CalcPath(path);
 // 		ROS_INFO_STREAM("Distanza tra " << robots[i].name << " - " << tasks[j].name << " : " << dist);
 		time_a = dist/VELOCITY;
@@ -793,13 +784,15 @@ vector<task_assign::info> CalcTex(vector<task_assign::info> info_vect, vector<ta
 	    
 	    in = false;	    
 	    
-	    insertNode(excl_task_nodes);
-	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
-	    if(tasks[j].id1 != tasks[j].id2)
-		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
+// 	    insertNode(excl_task_nodes);
+// 	    excl_task_nodes[tasks[j].id1] = SmartDigraph::nodeFromId(tasks[j].id1);
+// 	    if(tasks[j].id1 != tasks[j].id2)
+// 		excl_task_nodes[tasks[j].id2] = SmartDigraph::nodeFromId(tasks[j].id2);
 // 	    delNode(temp);
 	}
     }
+    
+    insertNode(excl_task_nodes);
     
     return out;
 }
@@ -913,12 +906,12 @@ void publishMasterIn()
     {
 	ROS_INFO_STREAM(elem.name);
     }
-//     ROS_INFO_STREAM("tempi di esec. robot-task:");
-//     for(auto elem : rt_info_vect)
-//     {
-// 	ROS_INFO_STREAM("rob: " << elem.r_name << " - task: " << elem.t_name);
-// 	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
-//     }
+    ROS_INFO_STREAM("tempi di esec. robot-task:");
+    for(auto elem : rt_info_vect)
+    {
+	ROS_INFO_STREAM("rob: " << elem.r_name << " - task: " << elem.t_name);
+	ROS_INFO_STREAM("tex0: " << elem.t_ex0 << "	tex: " << elem.t_ex);
+    }
 //     ROS_INFO_STREAM("tempi di esec. robot-punto di ric.:");
 //     for(auto elem : rech_info_vect)
 //     {
@@ -1379,6 +1372,17 @@ void publishAssign()
     for(auto elem : msg.assign_vect)
     {
 	ROS_INFO_STREAM("The motion_planner is publishing to the robot: " << elem.r_name << " the assigned task " << elem.t_name);
+	
+	ROS_INFO_STREAM("wp di path_a");
+	for(auto el : elem.path_a)
+	{
+	  ROS_INFO_STREAM(el << "\n");
+	}
+	ROS_INFO_STREAM("wp di path_b");
+	for(auto el : elem.path_b)
+	{
+	  ROS_INFO_STREAM(el << "\n");
+	}
     }
 }
 
